@@ -4,7 +4,7 @@ package order
 type Position struct {
 	ID          string
 	Price       float64
-	Quantity    int64
+	Quantity    float64
 	Name        string
 	Description string
 	Custom      interface{}

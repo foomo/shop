@@ -1,42 +1,29 @@
-package order
+package order_test
 
 import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 	"reflect"
 	"testing"
 
 	"github.com/foomo/shop/examples"
+	"github.com/foomo/shop/order"
 	"gopkg.in/mgo.v2/bson"
 )
 
-func getMockPersistor() *Persistor {
-	url := os.Getenv("SHOP_MONGO_TEST_URL")
-	if len(url) == 0 {
-		panic("please export SHOP_MONGO_TEST_URL=mongodb://127.0.0.1/foomo-shop-orders")
-	}
-	p, err := NewPersistor(url)
-	if err != nil {
-		panic(err)
-	}
-	p.getCollection().DropCollection()
-	return p
-}
-
 func TestPersistor(t *testing.T) {
-	p := getMockPersistor()
+	p := examples.GetMockPersistor()
 	orderCustom := &examples.OrderCustom{
 		ResponsibleSmurf: "Pete",
 	}
-	newOrder := NewOrder(orderCustom)
+	newOrder := order.NewOrder(orderCustom)
 	err := p.Create(newOrder)
 	if err != nil {
 		panic(err)
 	}
 	customProvider := examples.FullOrderCustomProvider{}
-	loadedOrders, err := p.Find(&bson.M{}, nil, customProvider)
+	loadedOrders, err := p.Find(&bson.M{}, customProvider)
 	if err != nil {
 		panic(err)
 	}

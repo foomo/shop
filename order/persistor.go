@@ -39,12 +39,13 @@ func NewPersistor(mongoURL string) (p *Persistor, err error) {
 	return
 }
 
-func (p *Persistor) getCollection() *mgo.Collection {
+func (p *Persistor) GetCollection() *mgo.Collection {
 	return p.session.DB(p.db).C("orders")
 }
 
-func (p *Persistor) Find(query *bson.M, fields *bson.M, customProvider OrderCustomProvider) (orders []*Order, err error) {
-	q := p.getCollection().Find(query)
+func (p *Persistor) Find(query *bson.M, customProvider OrderCustomProvider) (iter func() (o *Order, err error), err error) {
+	q := p.GetCollection().Find(query)
+	fields := customProvider.Fields()
 	if fields != nil {
 		q.Select(fields)
 	}
@@ -52,30 +53,28 @@ func (p *Persistor) Find(query *bson.M, fields *bson.M, customProvider OrderCust
 	if err != nil {
 		return
 	}
-	orders = []*Order{}
-	iter := q.Iter()
-	for {
-		order := &Order{}
-		if iter.Next(order) {
+	mgoiter := q.Iter()
+	iter = func() (o *Order, err error) {
+		o = &Order{}
+		if mgoiter.Next(o) {
 			orderCustom := customProvider.NewOrderCustom()
 			if orderCustom != nil {
-
-				err = mapstructure.Decode(order.Custom, orderCustom)
+				err = mapstructure.Decode(o.Custom, orderCustom)
 				if err != nil {
-					return
+					return nil, err
 				}
-				order.Custom = orderCustom
+				o.Custom = orderCustom
 			}
-			orders = append(orders, order)
-		} else {
-			break
+			return o, nil
 		}
-
+		// eof ?!
+		return nil, nil
 	}
+
 	return
 }
 
-func (p *Persistor) Create(o *Order) error {
-	err := p.getCollection().Insert(o)
+func (p *Persistor) Insert(o *Order) error {
+	err := p.GetCollection().Insert(o)
 	return err
 }
