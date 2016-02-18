@@ -43,8 +43,11 @@ func (p *Persistor) getCollection() *mgo.Collection {
 	return p.session.DB(p.db).C("orders")
 }
 
-func (p *Persistor) Find(query *bson.M, customOrderConstructor func() interface{}) (orders []*Order, err error) {
+func (p *Persistor) Find(query *bson.M, fields *bson.M, customProvider OrderCustomProvider) (orders []*Order, err error) {
 	q := p.getCollection().Find(query)
+	if fields != nil {
+		q.Select(fields)
+	}
 	_, err = q.Count()
 	if err != nil {
 		return
@@ -54,12 +57,15 @@ func (p *Persistor) Find(query *bson.M, customOrderConstructor func() interface{
 	for {
 		order := &Order{}
 		if iter.Next(order) {
-			customOrder := customOrderConstructor()
-			err = mapstructure.Decode(order.Custom, customOrder)
-			if err != nil {
-				return
+			orderCustom := customProvider.NewOrderCustom()
+			if orderCustom != nil {
+
+				err = mapstructure.Decode(order.Custom, orderCustom)
+				if err != nil {
+					return
+				}
+				order.Custom = orderCustom
 			}
-			order.Custom = customOrder
 			orders = append(orders, order)
 		} else {
 			break

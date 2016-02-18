@@ -2,17 +2,20 @@ package order
 
 import (
 	"encoding/json"
+	"fmt"
+	"log"
 	"os"
 	"reflect"
 	"testing"
 
+	"github.com/foomo/shop/examples"
 	"gopkg.in/mgo.v2/bson"
 )
 
 func getMockPersistor() *Persistor {
 	url := os.Getenv("SHOP_MONGO_TEST_URL")
 	if len(url) == 0 {
-		panic("please export SHOP_MONGO_TEST_URL=127.0.0.1/foomo-shop-orders")
+		panic("please export SHOP_MONGO_TEST_URL=mongodb://127.0.0.1/foomo-shop-orders")
 	}
 	p, err := NewPersistor(url)
 	if err != nil {
@@ -22,27 +25,18 @@ func getMockPersistor() *Persistor {
 	return p
 }
 
-type TestOrder struct {
-	Foo       string
-	Bar       int
-	EmptyTest string `bson:"ämtü,omitempty" mapstructure:"ämtü"`
-	Order     *Order
-}
-
 func TestPersistor(t *testing.T) {
 	p := getMockPersistor()
-	customOrder := &TestOrder{
-		Foo:       "foo",
-		EmptyTest: "not that empty",
-		Bar:       3,
+	orderCustom := &examples.OrderCustom{
+		ResponsibleSmurf: "Pete",
 	}
-	o := NewOrder(customOrder)
-	o.Lala = " lalalala "
-	err := p.Create(o)
+	newOrder := NewOrder(orderCustom)
+	err := p.Create(newOrder)
 	if err != nil {
 		panic(err)
 	}
-	loadedOrders, err := p.Find(&bson.M{}, func() interface{} { return &TestOrder{} })
+	customProvider := examples.FullOrderCustomProvider{}
+	loadedOrders, err := p.Find(&bson.M{}, nil, customProvider)
 	if err != nil {
 		panic(err)
 	}
@@ -50,12 +44,19 @@ func TestPersistor(t *testing.T) {
 		t.Fatal("wrong number of orders returned")
 	}
 
-	loadedOrder := loadedOrders[0].Custom.(*TestOrder)
-	b, _ := json.MarshalIndent(loadedOrders[0], "", "   ")
-	t.Log(reflect.ValueOf(loadedOrder).Type(), string(b))
+	loadedOrder := loadedOrders[0].Custom.(*examples.OrderCustom)
 
-	if !reflect.DeepEqual(loadedOrder, customOrder) {
-		t.Fatal("should have been equal", loadedOrder, customOrder)
+	if !reflect.DeepEqual(loadedOrder, newOrder.Custom) {
+		dump("newOrder", newOrder)
+		dump("loadedOrder", loadedOrder)
+
+		t.Fatal("should have been equal", loadedOrder, newOrder)
 	}
 	//LoadOrder(query *bson.M{}, customOrder interface{})
+}
+
+func dump(label string, v interface{}) {
+	log.Println(label, "::")
+	b, _ := json.MarshalIndent(v, "", "   ")
+	fmt.Println(reflect.ValueOf(v).Type(), string(b))
 }
