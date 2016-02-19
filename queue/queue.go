@@ -30,7 +30,7 @@ type Queue struct {
 }
 
 func NewQueue(mongoURL string) (q *Queue, err error) {
-	p, err := order.NewPersistor(mongoURL)
+	p, err := order.NewPersistor(mongoURL, "orders-queue")
 	if err != nil {
 		return nil, err
 	}

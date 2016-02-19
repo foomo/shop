@@ -13,22 +13,41 @@ import (
 )
 
 func TestPersistor(t *testing.T) {
-	p := examples.GetMockPersistor()
+	p := examples.GetMockPersistor("orders-order")
+	ptp := "Pete the persistor"
 	orderCustom := &examples.OrderCustom{
-		ResponsibleSmurf: "Pete",
+		ResponsibleSmurf: ptp,
 	}
 	newOrder := order.NewOrder(orderCustom)
-	err := p.Create(newOrder)
+	err := p.Insert(newOrder)
 	if err != nil {
 		panic(err)
 	}
 	customProvider := examples.FullOrderCustomProvider{}
-	loadedOrders, err := p.Find(&bson.M{}, customProvider)
+	orderIter, err := p.Find(&bson.M{"custom.responsiblesmurf": ptp}, customProvider)
 	if err != nil {
 		panic(err)
 	}
+	loadedOrders := []*order.Order{}
+	for {
+		loadedOrder, err := orderIter()
+		if loadedOrder != nil {
+			loadedOrders = append(loadedOrders, loadedOrder)
+		} else {
+			break
+		}
+		if err != nil {
+			panic(err)
+		}
+	}
+	t.Log("loaded orders")
+	for i, loadedOrder := range loadedOrders {
+		t.Log(i, loadedOrder.Custom.(*examples.OrderCustom).ResponsibleSmurf)
+	}
+
 	if len(loadedOrders) != 1 {
-		t.Fatal("wrong number of orders returned")
+		t.Fatal("wrong number of orders returned", len(loadedOrders))
+
 	}
 
 	loadedOrder := loadedOrders[0].Custom.(*examples.OrderCustom)

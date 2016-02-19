@@ -25,7 +25,7 @@ func ExampleSmurfProcessor() {
 		joe:  200,
 	}
 
-	p := examples.GetMockPersistor()
+	p := examples.GetMockPersistor("orders-queue")
 	numberOfOrders := 0
 	for smurf, smurfOrderCount := range smurfOrders {
 		for i := 0; i < smurfOrderCount; i++ {

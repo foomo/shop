@@ -12,12 +12,13 @@ import (
 
 // Persistor persist *Orders
 type Persistor struct {
-	session *mgo.Session
-	db      string
+	session             *mgo.Session
+	orderCollectionName string
+	db                  string
 }
 
 // NewPersistor constructor
-func NewPersistor(mongoURL string) (p *Persistor, err error) {
+func NewPersistor(mongoURL string, orderCollectionName string) (p *Persistor, err error) {
 	parsedURL, err := url.Parse(mongoURL)
 	if err != nil {
 		return nil, err
@@ -33,14 +34,15 @@ func NewPersistor(mongoURL string) (p *Persistor, err error) {
 		return nil, err
 	}
 	p = &Persistor{
-		session: session,
-		db:      parsedURL.Path[1:],
+		session:             session,
+		db:                  parsedURL.Path[1:],
+		orderCollectionName: orderCollectionName,
 	}
 	return
 }
 
 func (p *Persistor) GetCollection() *mgo.Collection {
-	return p.session.DB(p.db).C("orders")
+	return p.session.DB(p.db).C(p.orderCollectionName)
 }
 
 func (p *Persistor) Find(query *bson.M, customProvider OrderCustomProvider) (iter func() (o *Order, err error), err error) {

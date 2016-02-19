@@ -17,8 +17,8 @@ func MockMongoURL() string {
 	return url
 }
 
-func GetMockPersistor() *order.Persistor {
-	p, err := order.NewPersistor(MockMongoURL())
+func GetMockPersistor(collectionName string) *order.Persistor {
+	p, err := order.NewPersistor(MockMongoURL(), collectionName)
 	if err != nil {
 		panic(err)
 	}
