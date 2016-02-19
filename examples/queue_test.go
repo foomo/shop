@@ -9,7 +9,7 @@ import (
 	"github.com/foomo/shop/examples"
 )
 
-func ExampleGarbageProcessor() {
+func ExampleSmurfProcessor() {
 	log.Println("runtime.GOMAXPROCS(16)", runtime.GOMAXPROCS(16))
 	q := examples.GetMockQueue()
 
@@ -21,8 +21,8 @@ func ExampleGarbageProcessor() {
 	// add some products in status a
 
 	smurfOrders := map[string]int{
-		pete: 100000,
-		joe:  100000,
+		pete: 100,
+		joe:  200,
 	}
 
 	p := examples.GetMockPersistor()
@@ -35,7 +35,6 @@ func ExampleGarbageProcessor() {
 			if numberOfOrders%1000 == 0 {
 				log.Println(smurf, numberOfOrders)
 			}
-
 		}
 	}
 
@@ -63,17 +62,8 @@ func ExampleGarbageProcessor() {
 	log.Println(<-chanDone)
 	log.Println(time.Now().Sub(start))
 	log.Println("done processing")
-	go a()
-	go b()
-	log.Println(<-chanDone)
-	log.Println(<-chanDone)
-
-	for i := 0; i < 20; i++ {
-		log.Println("sleeping", i)
-		time.Sleep(time.Second)
-	}
 
 	fmt.Println("number of orders:", numberOfOrders, ", processed by joe:", joeProcessor.CountProcessed, ", processed by pete:", peteProcessor.CountProcessed)
-	// Output: number of orders: 13 , processed by joe: 3 , processed by pete: 10
+	// Output: number of orders: 300 , processed by joe: 200 , processed by pete: 100
 
 }

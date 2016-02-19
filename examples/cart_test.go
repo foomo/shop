@@ -1,6 +1,5 @@
 package examples_test
 
-/*
 import (
 	"fmt"
 
@@ -57,4 +56,3 @@ func ExampleOrderCustom_createCart() {
 	)
 	// Output: responsible smurf: Pete , position foo: foo , qty: 3.01 , number of positions: 1
 }
-*/
