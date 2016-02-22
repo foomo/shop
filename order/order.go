@@ -38,9 +38,9 @@ type Order struct {
 	History   []*Event
 	Positions []*Position
 	Customer  *customer.Customer
-	Addresses []*customer.Address
-	Payments  []*payment.Payment
-	Custom    interface{}
+	//Addresses []*customer.Address
+	Payments []*payment.Payment
+	Custom   interface{}
 }
 
 // OrderCustomProvider custom object provider

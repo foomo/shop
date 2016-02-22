@@ -1,18 +1,22 @@
 package customer
 
-type base struct {
-	Type      string
-	FirstName string
-	LastName  string
-	Title     string
-	Email     string
-}
-
 type Customer struct {
-	base
-	Custom interface{}
+	FirstName   string
+	LastName    string
+	Title       string
+	Salutation  string
+	Email       string
+	PhoneNumber string
+	Address     Address
+	Custom      interface{}
 }
 
 type Address struct {
-	base
+	Description  string // e.g. Shipping or Billing Address
+	Street       string
+	StreetNumber string
+	ZIP          string
+	City         string
+	Country      string
+	Custom       interface{}
 }
