@@ -22,12 +22,30 @@ type Event struct {
 	Custom    interface{}
 }
 
+type OrderPriceInfo struct {
+	SumNet        float64
+	RebatesNet    float64
+	VouchersNet   float64
+	ShippingNet   float64
+	SumFinalNet   float64
+	Taxes         float64
+	SumFinalGross float64
+}
+
 // Order of item
 // create revisions
 type Order struct {
 	ID        bson.ObjectId `bson:"_id,omitempty"`
+	OrderID   string
 	Timestamp time.Time
 	Status    string
+	History   []*Event
+	Positions []*Position
+	Customer  *customer.Customer
+	Addresses []*customer.Address
+	Payments  []*payment.Payment
+	PriceInfo *OrderPriceInfo
+	Custom    interface{}
 	Queue     *struct {
 		Name           string
 		RetryAfter     time.Duration
@@ -35,12 +53,6 @@ type Order struct {
 
 		//BulkID string
 	}
-	History   []*Event
-	Positions []*Position
-	Customer  *customer.Customer
-	//Addresses []*customer.Address
-	Payments []*payment.Payment
-	Custom   interface{}
 }
 
 // OrderCustomProvider custom object provider
@@ -48,6 +60,7 @@ type OrderCustomProvider interface {
 	NewOrderCustom() interface{}
 	NewPositionCustom() interface{}
 	NewAddressCustom() interface{}
+	NewCustomerCustom() interface{}
 	Fields() *bson.M
 }
 

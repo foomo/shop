@@ -6,6 +6,7 @@ import (
 	"net/url"
 
 	"github.com/mitchellh/mapstructure"
+
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -58,7 +59,20 @@ func (p *Persistor) Find(query *bson.M, customProvider OrderCustomProvider) (ite
 	mgoiter := q.Iter()
 	iter = func() (o *Order, err error) {
 		o = &Order{}
+
 		if mgoiter.Next(o) {
+
+			/* Map CustomerCustom */
+			customerCustom := customProvider.NewCustomerCustom()
+			if customerCustom != nil {
+				err = mapstructure.Decode(o.Customer.Custom, customerCustom)
+				if err != nil {
+					return nil, err
+				}
+				o.Customer.Custom = customerCustom
+			}
+
+			/* Map OrderCustom */
 			orderCustom := customProvider.NewOrderCustom()
 			if orderCustom != nil {
 				err = mapstructure.Decode(o.Custom, orderCustom)
@@ -67,13 +81,80 @@ func (p *Persistor) Find(query *bson.M, customProvider OrderCustomProvider) (ite
 				}
 				o.Custom = orderCustom
 			}
+
+			/* Map PostionCustom */
+			for _, position := range o.Positions {
+				positionCustom := customProvider.NewPositionCustom()
+				if positionCustom != nil {
+
+					err = mapstructure.Decode(position.Custom, positionCustom)
+					if err != nil {
+						return nil, err
+					}
+					position.Custom = positionCustom
+				}
+			}
+
+			/* Map AddressCustom */
+			for _, address := range o.Addresses {
+				addressCustom := customProvider.NewAddressCustom()
+				if addressCustom != nil {
+
+					err = mapstructure.Decode(address.Custom, addressCustom)
+					if err != nil {
+						return nil, err
+					}
+					address.Custom = addressCustom
+				}
+			}
+
+			/* Map Customer.Custom */
+			// err := mapCustom(o.Customer.Custom, customProvider.NewCustomerCustom())
+			// if err != nil {
+			// 	return nil, err
+			// }
+			//
+			// /* Map Order.Custom */
+			// err = mapCustom(o.Custom, customProvider.NewOrderCustom())
+			// if err != nil {
+			// 	return nil, err
+			// }
+			// //
+			/* Map Postion.Custom */
+			// for _, position := range o.Positions {
+			// 	err := mapCustom(position.Custom, customProvider.NewPositionCustom())
+			// 	if err != nil {
+			// 		return nil, err
+			// 	}
+			// }
+			//
+			// /* Map Address.Custom */
+			// for _, address := range o.Addresses {
+			// 	err := mapCustom(address.Custom, customProvider.NewAddressCustom())
+			// 	if err != nil {
+			// 		return nil, err
+			// 	}
+			// }
+
 			return o, nil
 		}
-		// eof ?!
 		return nil, nil
 	}
 
 	return
+}
+
+/* this does not work yet */
+func mapCustom(m interface{}, raw interface{}) error {
+	if raw == nil {
+		return errors.New("raw must not be nil")
+	}
+	err := mapstructure.Decode(m, raw)
+	if err != nil {
+		return err
+	}
+	m = raw
+	return nil
 }
 
 func (p *Persistor) Insert(o *Order) error {

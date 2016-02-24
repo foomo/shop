@@ -21,6 +21,10 @@ type AddressCustom struct {
 	Bar string
 }
 
+type CustomerCustom struct {
+	FooBar string
+}
+
 // OrderCustom custom object provider
 type FullOrderCustomProvider struct{}
 
@@ -77,6 +81,10 @@ func (cp FullOrderCustomProvider) NewPositionCustom() interface{} {
 
 func (cp FullOrderCustomProvider) NewAddressCustom() interface{} {
 	return &AddressCustom{}
+}
+
+func (cp FullOrderCustomProvider) NewCustomerCustom() interface{} {
+	return &CustomerCustom{}
 }
 
 func (cp FullOrderCustomProvider) Fields() *bson.M {
