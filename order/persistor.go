@@ -62,24 +62,24 @@ func (p *Persistor) Find(query *bson.M, customProvider OrderCustomProvider) (ite
 
 		if mgoiter.Next(o) {
 
-			/* Map CustomerCustom */
-			customerCustom := customProvider.NewCustomerCustom()
-			if customerCustom != nil {
-				err = mapstructure.Decode(o.Customer.Custom, customerCustom)
-				if err != nil {
-					return nil, err
-				}
-				o.Customer.Custom = customerCustom
-			}
-
 			/* Map OrderCustom */
 			orderCustom := customProvider.NewOrderCustom()
-			if orderCustom != nil {
+			if orderCustom != nil && o.Custom != nil {
 				err = mapstructure.Decode(o.Custom, orderCustom)
 				if err != nil {
 					return nil, err
 				}
 				o.Custom = orderCustom
+			}
+
+			/* Map CustomerCustom */
+			customerCustom := customProvider.NewCustomerCustom()
+			if customerCustom != nil && o.Customer != nil {
+				err = mapstructure.Decode(o.Customer.Custom, customerCustom)
+				if err != nil {
+					return nil, err
+				}
+				o.Customer.Custom = customerCustom
 			}
 
 			/* Map PostionCustom */
@@ -108,17 +108,17 @@ func (p *Persistor) Find(query *bson.M, customProvider OrderCustomProvider) (ite
 				}
 			}
 
+			// /* Map Order.Custom */
+			// err = mapCustom(o.Custom, customProvider.NewOrderCustom())
+			// if err != nil {
+			// 	return nil, err
+			// }
 			/* Map Customer.Custom */
 			// err := mapCustom(o.Customer.Custom, customProvider.NewCustomerCustom())
 			// if err != nil {
 			// 	return nil, err
 			// }
 			//
-			// /* Map Order.Custom */
-			// err = mapCustom(o.Custom, customProvider.NewOrderCustom())
-			// if err != nil {
-			// 	return nil, err
-			// }
 			// //
 			/* Map Postion.Custom */
 			// for _, position := range o.Positions {
