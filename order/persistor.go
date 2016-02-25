@@ -74,7 +74,7 @@ func (p *Persistor) Find(query *bson.M, customProvider OrderCustomProvider) (ite
 
 			/* Map CustomerCustom */
 			customerCustom := customProvider.NewCustomerCustom()
-			if customerCustom != nil && o.Customer != nil {
+			if customerCustom != nil && o.Customer.Custom != nil {
 				err = mapstructure.Decode(o.Customer.Custom, customerCustom)
 				if err != nil {
 					return nil, err
@@ -85,7 +85,7 @@ func (p *Persistor) Find(query *bson.M, customProvider OrderCustomProvider) (ite
 			/* Map PostionCustom */
 			for _, position := range o.Positions {
 				positionCustom := customProvider.NewPositionCustom()
-				if positionCustom != nil {
+				if positionCustom != nil && position.Custom != nil {
 
 					err = mapstructure.Decode(position.Custom, positionCustom)
 					if err != nil {
@@ -98,7 +98,7 @@ func (p *Persistor) Find(query *bson.M, customProvider OrderCustomProvider) (ite
 			/* Map AddressCustom */
 			for _, address := range o.Addresses {
 				addressCustom := customProvider.NewAddressCustom()
-				if addressCustom != nil {
+				if addressCustom != nil && address.Custom != nil {
 
 					err = mapstructure.Decode(address.Custom, addressCustom)
 					if err != nil {
