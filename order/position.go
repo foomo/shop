@@ -3,7 +3,7 @@ package order
 // Position in an order
 type Position struct {
 	ID           string
-	ItemNumber   string
+	ItemID       string
 	Name         string
 	Description  string
 	Quantity     float64

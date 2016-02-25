@@ -27,7 +27,7 @@ const (
 
 // refactored from map because of validation
 type Contacts struct {
-	PhoneLandline string
+	PhoneLandLine string
 	PhoneMobile   string
 	Email         string
 	Skype         string
@@ -35,16 +35,21 @@ type Contacts struct {
 	Primary       ContactType
 }
 
-//
-// func NewPerson(title, salutation, firstName, lastName) *Person {
-// 	return &Person{
-// 		Title:      title,
-// 		Salutation: salutation,
-// 		FirstName:  firstName,
-// 		LastName:   lastName,
-// 		Contacts:   make(map[ContactType]*Contact),
-// 	}
-// }
+func (c *Contacts) GetPrimaryContact() string {
+	switch c.Primary {
+	case ContactTypePhoneLandline:
+		return string(ContactTypePhoneLandline) + ": " + c.PhoneLandLine
+	case ContactTypePhoneMobile:
+		return string(ContactTypePhoneMobile) + ": " + c.PhoneMobile
+	case ContactTypeEmail:
+		return string(ContactTypeEmail) + ": " + c.Email
+	case ContactTypeSkype:
+		return string(ContactTypeSkype) + ": " + c.Skype
+	case ContactTypeFax:
+		return string(ContactTypeFax) + ": " + c.Fax
+	}
+	return "No primary contact available!"
+}
 
 type Person struct {
 	FirstName  string
@@ -66,7 +71,7 @@ type Customer struct {
 	Person       *Person
 	Company      *Company `bson:",omitempty"`
 	Localization *Localization
-	Custom       interface{} `bson:"omitempty"`
+	Custom       interface{} `bson:",omitempty"`
 }
 
 type AddressType string
@@ -77,15 +82,16 @@ const (
 )
 
 type Address struct {
-	Person       *Person
-	Type         AddressType // e.g. Shipping or Billing Address
-	Street       string
-	StreetNumber string
-	ZIP          string
-	City         string
-	Country      string
-	Extra        *AddressExtra `bson:",omitempty"`
-	Custom       interface{}
+	Person        *Person
+	Type          AddressType // e.g. Shipping or Billing Address
+	Street        string
+	StreetNumber  string
+	ZIP           string
+	City          string
+	Country       string
+	PostOfficeBox string `bson:",omitempty"`
+	//Extra        *AddressExtra
+	Custom interface{} `bson:",omitempty"`
 }
 
 type AddressExtra struct {
@@ -94,6 +100,20 @@ type AddressExtra struct {
 }
 
 type Localization struct {
-	LanguageCode string
-	CountryCode  string
+	LanguageCode LanguageCode
+	CountryCode  CountryCode
 }
+
+type LanguageCode string
+
+const (
+	LanguageCodeGermany      LanguageCode = "DE"
+	LanguageCodeSwistzerland LanguageCode = "CH"
+)
+
+type CountryCode string
+
+const (
+	CountryCodeGermany      CountryCode = "DE"
+	CountryCodeSwistzerland CountryCode = "CH"
+)

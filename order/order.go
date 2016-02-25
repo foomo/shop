@@ -10,6 +10,7 @@ import (
 
 	"github.com/foomo/shop/customer"
 	"github.com/foomo/shop/payment"
+	"github.com/foomo/shop/shipping"
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -37,15 +38,17 @@ type OrderPriceInfo struct {
 type Order struct {
 	ID        bson.ObjectId `bson:"_id,omitempty"`
 	OrderID   string
+	OrderType OrderType
 	Timestamp time.Time
-	Status    string
+	Status    OrderStatus
 	History   []*Event
 	Positions []*Position
 	Customer  *customer.Customer
 	Addresses []*customer.Address
-	Payments  []*payment.Payment
+	Payment   *payment.Payment
 	PriceInfo *OrderPriceInfo
-	Custom    interface{}
+	Shipping  *shipping.ShippingProperties
+	Custom    interface{} `bson:",omitempty"`
 	Queue     *struct {
 		Name           string
 		RetryAfter     time.Duration
@@ -54,6 +57,21 @@ type Order struct {
 		//BulkID string
 	}
 }
+
+type OrderType string
+
+const (
+	OrderTypeOrder  OrderType = "order"
+	OrderTypeReturn OrderType = "return"
+)
+
+type OrderStatus string
+
+const (
+	OrderStatusCreated  OrderStatus = "created"
+	OrderStatusPocessed OrderStatus = "processed"
+	OrderStatusShipped  OrderStatus = "shipped"
+)
 
 // OrderCustomProvider custom object provider
 type OrderCustomProvider interface {
@@ -68,7 +86,6 @@ type OrderCustomProvider interface {
 func NewOrder(customOrder interface{}) *Order {
 	return &Order{
 		Timestamp: time.Now(),
-		Custom:    customOrder,
 	}
 }
 

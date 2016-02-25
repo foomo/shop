@@ -1,7 +1,7 @@
 package payment
 
 type Payment struct {
-	StateOfPayment  string
-	ESRNumber       string
-	OrderGrossValue float64
+	StateOfPayment string
+	ESRNumber      string
+	Currency       string
 }
