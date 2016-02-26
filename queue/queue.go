@@ -30,7 +30,8 @@ type Queue struct {
 }
 
 func NewQueue(mongoURL string) (q *Queue, err error) {
-	p, err := order.NewPersistor(mongoURL, "orders-queue")
+	log.Println("NewQueue()...")
+	p, err := order.NewPersistor(mongoURL, "queue_test")
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +106,6 @@ func (q *Queue) RunProcessor(processor OrderProcessor) error {
 			log.Println("could not get order", err)
 		}
 		if order != nil {
-
 			// send to concurrent processing
 			chanOrder <- order
 			// wait unit we are done

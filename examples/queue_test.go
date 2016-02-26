@@ -7,11 +7,12 @@ import (
 	"time"
 
 	"github.com/foomo/shop/examples"
+	"github.com/foomo/shop/mock"
 )
 
 func ExampleSmurfProcessor() {
 	log.Println("runtime.GOMAXPROCS(16)", runtime.GOMAXPROCS(16))
-	q := examples.GetMockQueue()
+	q := mock.GetMockQueue()
 
 	const (
 		pete = "pete"
@@ -25,14 +26,14 @@ func ExampleSmurfProcessor() {
 		joe:  200,
 	}
 
-	p := examples.GetMockPersistor("orders-queue")
+	p := mock.GetMockPersistor("queue_test")
 	numberOfOrders := 0
 	for smurf, smurfOrderCount := range smurfOrders {
 		for i := 0; i < smurfOrderCount; i++ {
-			o := examples.MakeMockOrder(smurf)
+			o := mock.MakeMockOrder(smurf)
 			p.Insert(o)
 			numberOfOrders++
-			if numberOfOrders%1000 == 0 {
+			if numberOfOrders%100 == 0 {
 				log.Println(smurf, numberOfOrders)
 			}
 		}

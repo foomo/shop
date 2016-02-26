@@ -1,9 +1,10 @@
-package examples
+package mock
 
 import (
 	"fmt"
 	"os"
 
+	"github.com/foomo/shop/examples"
 	"github.com/foomo/shop/order"
 	"github.com/foomo/shop/queue"
 )
@@ -35,16 +36,17 @@ func GetMockQueue() *queue.Queue {
 }
 
 func MakeMockOrder(smurf string) *order.Order {
-	o := order.NewOrder(&OrderCustom{
+	o := order.NewOrder()
+	o.Custom = &examples.SmurfOrderCustom{
 		ResponsibleSmurf: smurf,
-	})
+	}
 	for i := 0; i < 5; i++ {
 		// add a product
 		o.AddPosition(&order.Position{
 			ID:       "id-" + fmt.Sprint(i),
 			Name:     fmt.Sprintf("an awesome computer - %d", i),
 			Quantity: float64(i),
-			Custom: &PositionCustom{
+			Custom: &examples.SmurfPositionCustom{
 				Foo: fmt.Sprintf("foo - %d", i),
 			},
 		})

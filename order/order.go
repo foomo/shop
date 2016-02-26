@@ -83,9 +83,16 @@ type OrderCustomProvider interface {
 }
 
 // NewOrder
-func NewOrder(customOrder interface{}) *Order {
+func NewOrder() *Order {
 	return &Order{
 		Timestamp: time.Now(),
+		History:   []*Event{},
+		Positions: []*Position{},
+		Customer:  &customer.Customer{},
+		Addresses: []*customer.Address{},
+		Payment:   &payment.Payment{},
+		PriceInfo: &OrderPriceInfo{},
+		Shipping:  &shipping.ShippingProperties{},
 	}
 }
 

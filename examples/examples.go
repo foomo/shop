@@ -3,30 +3,31 @@ package examples
 
 import (
 	"log"
+	"time"
 
 	"github.com/foomo/shop/order"
 	"gopkg.in/mgo.v2/bson"
 )
 
-type OrderCustom struct {
+type SmurfOrderCustom struct {
 	ResponsibleSmurf string
 	Complete         bool
 }
 
-type PositionCustom struct {
+type SmurfPositionCustom struct {
 	Foo string
 }
 
-type AddressCustom struct {
+type SmurfAddressCustom struct {
 	Bar string
 }
 
-type CustomerCustom struct {
+type SmurfCustomerCustom struct {
 	FooBar string
 }
 
 // OrderCustom custom object provider
-type FullOrderCustomProvider struct{}
+type SmurfOrderCustomProvider struct{}
 
 type SmurfProcessor struct {
 	Smurf          string
@@ -56,7 +57,7 @@ func (sp *SmurfProcessor) Query() *bson.M {
 
 func (sp *SmurfProcessor) Process(o *order.Order) error {
 	sp.chanCount <- 1
-	//time.Sleep(time.Millisecond * 20)
+	time.Sleep(time.Millisecond * 20)
 	if sp.CountProcessed%100 == 0 {
 		log.Println(sp.Smurf, sp.CountProcessed)
 	}
@@ -68,25 +69,25 @@ func (sp *SmurfProcessor) Concurrency() int {
 }
 
 func (sp *SmurfProcessor) OrderCustomProvider() order.OrderCustomProvider {
-	return &FullOrderCustomProvider{}
+	return &SmurfOrderCustomProvider{}
 }
 
-func (cp FullOrderCustomProvider) NewOrderCustom() interface{} {
-	return &OrderCustom{}
+func (cp SmurfOrderCustomProvider) NewOrderCustom() interface{} {
+	return &SmurfOrderCustom{}
 }
 
-func (cp FullOrderCustomProvider) NewPositionCustom() interface{} {
-	return &PositionCustom{}
+func (cp SmurfOrderCustomProvider) NewPositionCustom() interface{} {
+	return &SmurfPositionCustom{}
 }
 
-func (cp FullOrderCustomProvider) NewAddressCustom() interface{} {
-	return &AddressCustom{}
+func (cp SmurfOrderCustomProvider) NewAddressCustom() interface{} {
+	return &SmurfAddressCustom{}
 }
 
-func (cp FullOrderCustomProvider) NewCustomerCustom() interface{} {
-	return &CustomerCustom{}
+func (cp SmurfOrderCustomProvider) NewCustomerCustom() interface{} {
+	return &SmurfCustomerCustom{}
 }
 
-func (cp FullOrderCustomProvider) Fields() *bson.M {
+func (cp SmurfOrderCustomProvider) Fields() *bson.M {
 	return nil
 }

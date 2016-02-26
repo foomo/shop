@@ -9,9 +9,10 @@ import (
 
 func ExampleOrderCustom_createCart() {
 	// a cart is an incomplete order
-	o := order.NewOrder(&examples.OrderCustom{
+	o := order.NewOrder()
+	o.Custom = &examples.SmurfOrderCustom{
 		ResponsibleSmurf: "Pete",
-	})
+	}
 	const (
 		positionIDA = "awesome-computer-a"
 		positionIDB = "awesome-computer-b"
@@ -22,7 +23,7 @@ func ExampleOrderCustom_createCart() {
 		ID:       positionIDA,
 		Name:     "an awesome computer",
 		Quantity: 1.0,
-		Custom: &examples.PositionCustom{
+		Custom: &examples.SmurfPositionCustom{
 			Foo: "foo",
 		},
 	})
@@ -37,7 +38,7 @@ func ExampleOrderCustom_createCart() {
 		ID:       positionIDB,
 		Name:     "an awesome computer",
 		Quantity: 1.0,
-		Custom: &examples.PositionCustom{
+		Custom: &examples.SmurfPositionCustom{
 			Foo: "bar",
 		},
 	})
@@ -46,9 +47,9 @@ func ExampleOrderCustom_createCart() {
 
 	fmt.Println(
 		"responsible smurf:",
-		o.Custom.(*examples.OrderCustom).ResponsibleSmurf,
+		o.Custom.(*examples.SmurfOrderCustom).ResponsibleSmurf,
 		", position foo:",
-		o.Positions[0].Custom.(*examples.PositionCustom).Foo,
+		o.Positions[0].Custom.(*examples.SmurfPositionCustom).Foo,
 		", qty:",
 		o.Positions[0].Quantity,
 		", number of positions:",

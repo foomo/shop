@@ -3,6 +3,7 @@ package order
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net/url"
 
 	"github.com/mitchellh/mapstructure"
@@ -47,6 +48,11 @@ func (p *Persistor) GetCollection() *mgo.Collection {
 }
 
 func (p *Persistor) Find(query *bson.M, customProvider OrderCustomProvider) (iter func() (o *Order, err error), err error) {
+	n, err := p.GetCollection().Find(query).Count()
+	if err != nil {
+		log.Println(err)
+	}
+	log.Println("Persistor.Find(): ", n, "items found")
 	q := p.GetCollection().Find(query)
 	fields := customProvider.Fields()
 	if fields != nil {
@@ -61,7 +67,6 @@ func (p *Persistor) Find(query *bson.M, customProvider OrderCustomProvider) (ite
 		o = &Order{}
 
 		if mgoiter.Next(o) {
-
 			/* Map OrderCustom */
 			orderCustom := customProvider.NewOrderCustom()
 			if orderCustom != nil && o.Custom != nil {
@@ -74,6 +79,9 @@ func (p *Persistor) Find(query *bson.M, customProvider OrderCustomProvider) (ite
 
 			/* Map CustomerCustom */
 			customerCustom := customProvider.NewCustomerCustom()
+			if o.Customer == nil {
+				return nil, errors.New("Error in Persistor.Find(): Order.Customer is nil. Order must have a Customer!")
+			}
 			if customerCustom != nil && o.Customer.Custom != nil {
 				err = mapstructure.Decode(o.Customer.Custom, customerCustom)
 				if err != nil {
@@ -158,6 +166,7 @@ func mapCustom(m interface{}, raw interface{}) error {
 }
 
 func (p *Persistor) Insert(o *Order) error {
+
 	err := p.GetCollection().Insert(o)
 	return err
 }
