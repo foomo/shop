@@ -5,28 +5,12 @@ import (
 	"log"
 
 	"github.com/foomo/shop/order"
-	"gopkg.in/mgo.v2/bson"
 )
-
-type OrderProcessor interface {
-	OrderCustomProvider() order.OrderCustomProvider
-	Process(*order.Order) error
-	Query() *bson.M
-	Concurrency() int
-}
-
-type BulkProcessor interface {
-	OrderCustomProvider() order.OrderCustomProvider
-	ProcessBulk([]*order.Order) []error
-	Query() *bson.M
-	Limit() int
-	Concurrency() int
-}
 
 type Queue struct {
 	persistor      *order.Persistor
-	processors     []OrderProcessor
-	bulkProcessors []BulkProcessor
+	processors     []order.Processor
+	bulkProcessors []order.BulkProcessor
 }
 
 func NewQueue(mongoURL string) (q *Queue, err error) {
@@ -41,15 +25,15 @@ func NewQueue(mongoURL string) (q *Queue, err error) {
 	}, nil
 }
 
-func (q *Queue) AddProcessor(processor OrderProcessor) {
+func (q *Queue) AddProcessor(processor order.Processor) {
 	q.processors = append(q.processors, processor)
 }
 
-func (q *Queue) AddBulkProcessor(processor BulkProcessor) {
+func (q *Queue) AddBulkProcessor(processor order.BulkProcessor) {
 	q.bulkProcessors = append(q.bulkProcessors, processor)
 }
 
-func (q *Queue) RunProcessor(processor OrderProcessor) error {
+func (q *Queue) RunProcessor(processor order.Processor) error {
 	chanDone := make(chan int)
 	chanOrder := make(chan *order.Order)
 	go func() {
@@ -95,7 +79,7 @@ func (q *Queue) RunProcessor(processor OrderProcessor) error {
 		chanDone <- 1
 	}()
 
-	iter, err := q.persistor.Find(processor.Query(), processor.OrderCustomProvider())
+	iter, err := q.persistor.Find(processor.GetQuery(), processor.OrderCustomProvider())
 	if err != nil {
 		return err
 	}

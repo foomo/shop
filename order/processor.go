@@ -6,7 +6,17 @@ import (
 
 type Processor interface {
 	OrderCustomProvider() OrderCustomProvider
-	Query() *bson.M
-	Process() error
+	GetQuery() *bson.M
+	SetQuery(*bson.M)
+	Process(*Order) error
+	Concurrency() int
+}
+
+type BulkProcessor interface {
+	OrderCustomProvider() OrderCustomProvider
+	ProcessBulk([]*Order) []error
+	GetQuery() *bson.M
+	SetQuery(*bson.M)
+	Limit() int
 	Concurrency() int
 }
