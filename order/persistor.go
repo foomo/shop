@@ -52,7 +52,7 @@ func (p *Persistor) Find(query *bson.M, customProvider OrderCustomProvider) (ite
 	if err != nil {
 		log.Println(err)
 	}
-	log.Println("Persistor.Find(): ", n, "items found")
+	log.Println("Persistor.Find(): ", n, "items found for query ", query)
 	q := p.GetCollection().Find(query)
 	fields := customProvider.Fields()
 	if fields != nil {

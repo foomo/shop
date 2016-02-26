@@ -30,6 +30,7 @@ type SmurfCustomerCustom struct {
 type SmurfOrderCustomProvider struct{}
 
 type SmurfProcessor struct {
+	query          *bson.M
 	Smurf          string
 	CountProcessed int
 	chanCount      chan int
@@ -51,8 +52,12 @@ func NewSmurfProcessor(name string) *SmurfProcessor {
 	return sp
 }
 
-func (sp *SmurfProcessor) Query() *bson.M {
+func (sp *SmurfProcessor) GetQuery() *bson.M {
 	return &bson.M{"custom.responsiblesmurf": sp.Smurf}
+}
+
+func (sp *SmurfProcessor) SetQuery(query *bson.M) {
+	sp.query = query
 }
 
 func (sp *SmurfProcessor) Process(o *order.Order) error {
