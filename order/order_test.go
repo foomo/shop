@@ -13,18 +13,24 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
+// amount of orders to be generated
+const NumOrders = 500
+
 func TestPersistor(t *testing.T) {
 	p := mock.GetMockPersistor("orders-order")
 	ptp := "Pete the persistor"
 
-	newOrder := order.NewOrder()
-	newOrder.Custom = &examples.SmurfOrderCustom{
-		ResponsibleSmurf: ptp,
+	for i := 0; i < NumOrders; i++ {
+		newOrder := order.NewOrder()
+		newOrder.Custom = &examples.SmurfOrderCustom{
+			ResponsibleSmurf: ptp,
+		}
+		err := p.Insert(newOrder)
+		if err != nil {
+			panic(err)
+		}
 	}
-	err := p.Insert(newOrder)
-	if err != nil {
-		panic(err)
-	}
+
 	customProvider := examples.SmurfOrderCustomProvider{}
 	orderIter, err := p.Find(&bson.M{"custom.responsiblesmurf": ptp}, customProvider)
 	if err != nil {
@@ -42,23 +48,24 @@ func TestPersistor(t *testing.T) {
 			panic(err)
 		}
 	}
+
 	t.Log("loaded orders")
 	for i, loadedOrder := range loadedOrders {
 		t.Log(i, loadedOrder.Custom.(*examples.SmurfOrderCustom).ResponsibleSmurf)
 	}
 
-	if len(loadedOrders) != 1 {
+	if len(loadedOrders) != NumOrders {
 		t.Fatal("wrong number of orders returned", len(loadedOrders))
-
 	}
 
-	loadedOrder := loadedOrders[0].Custom.(*examples.SmurfOrderCustom)
+	for i, newOrder := range loadedOrders {
+		loadedOrder := loadedOrders[i].Custom.(*examples.SmurfOrderCustom)
+		if !reflect.DeepEqual(loadedOrder, newOrder.Custom) {
+			dump("newOrder", newOrder)
+			dump("loadedOrder", loadedOrder)
 
-	if !reflect.DeepEqual(loadedOrder, newOrder.Custom) {
-		dump("newOrder", newOrder)
-		dump("loadedOrder", loadedOrder)
-
-		t.Fatal("should have been equal", loadedOrder, newOrder)
+			t.Fatal("should have been equal", loadedOrder, newOrder)
+		}
 	}
 	//LoadOrder(query *bson.M{}, customOrder interface{})
 }
