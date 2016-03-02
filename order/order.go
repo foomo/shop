@@ -68,6 +68,7 @@ const (
 type OrderStatus string
 
 const (
+	OrderStatusInvalid  OrderStatus = "invalid status"
 	OrderStatusCreated  OrderStatus = "created"
 	OrderStatusPocessed OrderStatus = "processed"
 	OrderStatusShipped  OrderStatus = "shipped"
@@ -151,4 +152,4 @@ func (o *Order) SaveRevision(revisionInfo interface{}) error {
 	return nil
 }
 
-//func (o *Order)Queue
+//func (o *Order) CreateATPRequests

@@ -170,3 +170,8 @@ func (p *Persistor) Insert(o *Order) error {
 	err := p.GetCollection().Insert(o)
 	return err
 }
+
+func (p *Persistor) Upsert(o *Order) (*mgo.ChangeInfo, error) {
+	info, err := p.GetCollection().UpsertId(o.ID, o)
+	return info, err
+}

@@ -3,7 +3,7 @@ package shop
 import (
 	"encoding/xml"
 
-	"git.bestbytes.net/Project-Globus-Services/types"
+	"time"
 )
 
 type ATPRequest struct {
@@ -32,7 +32,7 @@ type RequestItem struct {
 	QuantityUnit string `xml:"mengeneinheit,attr,omitempty" validate:”max=3"` // not required
 
 	// Wunschlieferdatum
-	DesiredDeliveryDate *types.XsdDateDay `xml:"wunschlieferdatum,attr,omitempty"` // not required
+	DesiredDeliveryDate time.Time `xml:"wunschlieferdatum,attr,omitempty"` // not required
 
 	// Lieferbetrieb (VZ oder Filiale)
 	ShippingProvider string `xml:"lieferbetrieb,attr,omitempty" validate:”max=4"` // not required
@@ -65,10 +65,10 @@ type ResponseItem struct {
 	QuantityUnit string `xml:"mengeneinheit,attr,omitempty" validate:"max=3"` // not required
 
 	// Wunschlieferdatum
-	DesiredDeliveryDate *types.XsdDateDay `xml:"wunschlieferdatum,attr,omitempty"` // not required
+	DesiredDeliveryDate time.Time `xml:"wunschlieferdatum,attr,omitempty"` // not required
 
 	// Lieferdatum 1: Datum an dem die Wunschmenge dem Kunden übergeben werden kann
-	DeliveryDate *types.XsdDateDay `xml:"lieferdatum_1,attr,omitempty" validate:"nonzero"` // required
+	DeliveryDate time.Time `xml:"lieferdatum_1,attr,omitempty" validate:"nonzero"` // required
 
 	// Lieferdatum 2: Nächst mögliches Lieferdatum (enthält Terminaufschlag für Filialabholung bzw. Heimlieferung
 	//DeliveryDate_2 *types.XsdDateDay `xml:"lieferdatum_2,attr,omitempty"` // not required
