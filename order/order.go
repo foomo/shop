@@ -111,7 +111,8 @@ func (o *Order) GetCustomer(customCustomer interface{}) (c *customer.Customer, e
 }
 
 func (o *Order) AddPosition(pos *Position) error {
-	existingPos := o.GetPositionById(pos.ID)
+
+	existingPos := o.GetPositionByItemId(pos.ItemID)
 	if existingPos != nil {
 		return errors.New("position already exists use SetPositionQuantity or GetPositionById to manipulate it")
 	}
@@ -119,29 +120,28 @@ func (o *Order) AddPosition(pos *Position) error {
 	return nil
 }
 
-func (o *Order) SetPositionQuantity(id string, quantity float64) error {
-	pos := o.GetPositionById(id)
+func (o *Order) SetPositionQuantity(itemID string, quantity float64) error {
+	pos := o.GetPositionByItemId(itemID)
 	if pos == nil {
-		return fmt.Errorf("position with %q not found in order", id)
+		return fmt.Errorf("position with %q not found in order", itemID)
 	}
 	pos.Quantity = quantity
 	if pos.Quantity == 0.0 {
 		positions := []*Position{}
 		for _, pos := range o.Positions {
-			if pos.ID == id {
+			if pos.ItemID == itemID {
 				continue
 			}
 			positions = append(positions, pos)
 		}
 		o.Positions = positions
-
 	}
 	return nil
 }
 
-func (o *Order) GetPositionById(id string) *Position {
+func (o *Order) GetPositionByItemId(itemID string) *Position {
 	for _, pos := range o.Positions {
-		if pos.ID == id {
+		if pos.ItemID == itemID {
 			return pos
 		}
 	}
