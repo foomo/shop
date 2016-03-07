@@ -1,20 +1,21 @@
-package order
+package processing
 
 import (
+	"github.com/foomo/shop/order"
 	"gopkg.in/mgo.v2/bson"
 )
 
 type Processor interface {
-	OrderCustomProvider() OrderCustomProvider
+	OrderCustomProvider() order.OrderCustomProvider
 	GetQuery() *bson.M
 	SetQuery(*bson.M)
-	Process(*Order) error
+	Process(*order.Order) error
 	Concurrency() int
 }
 
 type BulkProcessor interface {
-	OrderCustomProvider() OrderCustomProvider
-	ProcessBulk([]*Order) []error
+	OrderCustomProvider() order.OrderCustomProvider
+	ProcessBulk([]*order.Order) []error
 	GetQuery() *bson.M
 	SetQuery(*bson.M)
 	Limit() int

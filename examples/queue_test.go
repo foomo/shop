@@ -31,7 +31,7 @@ func ExampleSmurfProcessor() {
 	for smurf, smurfOrderCount := range smurfOrders {
 		for i := 0; i < smurfOrderCount; i++ {
 			o := mock.MakeMockOrder(smurf)
-			p.Insert(o)
+			p.InsertOrder(o)
 			numberOfOrders++
 			if numberOfOrders%100 == 0 {
 				log.Println(smurf, numberOfOrders)

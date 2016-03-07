@@ -1,4 +1,4 @@
-package order
+package processing
 
 import (
 	"errors"
@@ -6,6 +6,8 @@ import (
 	"log"
 	"net/url"
 
+	"github.com/foomo/shop/event_log"
+	"github.com/foomo/shop/order"
 	"github.com/mitchellh/mapstructure"
 
 	"gopkg.in/mgo.v2"
@@ -14,13 +16,13 @@ import (
 
 // Persistor persist *Orders
 type Persistor struct {
-	session             *mgo.Session
-	orderCollectionName string
-	db                  string
+	session        *mgo.Session
+	CollectionName string
+	db             string
 }
 
 // NewPersistor constructor
-func NewPersistor(mongoURL string, orderCollectionName string) (p *Persistor, err error) {
+func NewPersistor(mongoURL string, collectionName string) (p *Persistor, err error) {
 	parsedURL, err := url.Parse(mongoURL)
 	if err != nil {
 		return nil, err
@@ -36,18 +38,18 @@ func NewPersistor(mongoURL string, orderCollectionName string) (p *Persistor, er
 		return nil, err
 	}
 	p = &Persistor{
-		session:             session,
-		db:                  parsedURL.Path[1:],
-		orderCollectionName: orderCollectionName,
+		session:        session,
+		db:             parsedURL.Path[1:],
+		CollectionName: collectionName,
 	}
 	return
 }
 
 func (p *Persistor) GetCollection() *mgo.Collection {
-	return p.session.DB(p.db).C(p.orderCollectionName)
+	return p.session.DB(p.db).C(p.CollectionName)
 }
 
-func (p *Persistor) Find(query *bson.M, customProvider OrderCustomProvider) (iter func() (o *Order, err error), err error) {
+func (p *Persistor) Find(query *bson.M, customProvider order.OrderCustomProvider) (iter func() (o *order.Order, err error), err error) {
 	n, err := p.GetCollection().Find(query).Count()
 	if err != nil {
 		log.Println(err)
@@ -63,8 +65,8 @@ func (p *Persistor) Find(query *bson.M, customProvider OrderCustomProvider) (ite
 		return
 	}
 	mgoiter := q.Iter()
-	iter = func() (o *Order, err error) {
-		o = &Order{}
+	iter = func() (o *order.Order, err error) {
+		o = &order.Order{}
 
 		if mgoiter.Next(o) {
 			/* Map OrderCustom */
@@ -116,40 +118,47 @@ func (p *Persistor) Find(query *bson.M, customProvider OrderCustomProvider) (ite
 				}
 			}
 
-			// /* Map Order.Custom */
-			// err = mapCustom(o.Custom, customProvider.NewOrderCustom())
-			// if err != nil {
-			// 	return nil, err
-			// }
-			/* Map Customer.Custom */
-			// err := mapCustom(o.Customer.Custom, customProvider.NewCustomerCustom())
-			// if err != nil {
-			// 	return nil, err
-			// }
-			//
-			// //
-			/* Map Postion.Custom */
-			// for _, position := range o.Positions {
-			// 	err := mapCustom(position.Custom, customProvider.NewPositionCustom())
-			// 	if err != nil {
-			// 		return nil, err
-			// 	}
-			// }
-			//
-			// /* Map Address.Custom */
-			// for _, address := range o.Addresses {
-			// 	err := mapCustom(address.Custom, customProvider.NewAddressCustom())
-			// 	if err != nil {
-			// 		return nil, err
-			// 	}
-			// }
-
 			return o, nil
 		}
 		return nil, nil
 	}
 
 	return
+}
+
+/* Retrieve a single position for an order */
+// This example query works in mongo shell:
+// query: {orderid:"0009200001"}, fields: {positions:{$elemMatch:{"custom.positionnumber":1}}}
+// db.order_story.find({orderid:"0009200001"}, {positions:{$elemMatch:{"custom.positionnumber":1}}}).pretty()
+func (p *Persistor) GetPositionOfOrder(query *bson.M, fields *bson.M, customProvider order.OrderCustomProvider) (*order.Position, error) {
+	n, err := p.GetCollection().Find(query).Count()
+	if err != nil {
+		return nil, err
+	}
+	if n != 1 {
+		return nil, errors.New("Error: Query was not unique!")
+	}
+	log.Println("Persistor.Find(): ", n, "items found for query ", query)
+	q := p.GetCollection().Find(query)
+	q.Select(fields)
+	iter := q.Iter()
+	position := &order.Position{}
+	if iter.Next(position) {
+		// if unmarshalling into postion was successful, set PositionCustom
+		// TODO this is duplicate code, make separate function
+		positionCustom := customProvider.NewPositionCustom()
+		if positionCustom != nil && position.Custom != nil {
+
+			err = mapstructure.Decode(position.Custom, positionCustom)
+			if err != nil {
+				return nil, err
+			}
+			position.Custom = positionCustom
+		}
+		return position, nil
+	}
+	return nil, errors.New("Could not retrieve position: ")
+
 }
 
 /* this does not work yet */
@@ -165,13 +174,39 @@ func mapCustom(m interface{}, raw interface{}) error {
 	return nil
 }
 
-func (p *Persistor) Insert(o *Order) error {
-
+func (p *Persistor) InsertOrder(o *order.Order) error {
 	err := p.GetCollection().Insert(o)
+	event_log.SaveShopEvent(event_log.ActionInsertingOrder, o.OrderID, err)
 	return err
 }
 
-func (p *Persistor) Upsert(o *Order) (*mgo.ChangeInfo, error) {
+func (p *Persistor) UpsertOrder(o *order.Order) (*mgo.ChangeInfo, error) {
 	info, err := p.GetCollection().UpsertId(o.ID, o)
+	event_log.SaveShopEvent(event_log.ActionUpsertingOrder, o.OrderID, err)
 	return info, err
+}
+
+func GetPersistor(db string, collection string) *Persistor {
+	p, err := NewPersistor(db, collection)
+	if err != nil {
+		panic(err)
+	}
+	return p
+}
+
+func GetShopOrder(db string, collection string, orderID string, customOrderProvider order.OrderCustomProvider) (*order.Order, error) {
+	p := GetPersistor(db, collection)
+	iter, err := p.Find(&bson.M{"orderid": orderID}, customOrderProvider)
+	if err != nil {
+		panic(err)
+	}
+	order, err := iter()
+	if err != nil {
+		panic(err)
+	}
+	if order == nil {
+		log.Println("Could not find order ", orderID)
+		return nil, errors.New("Could not find order with id: " + orderID)
+	}
+	return order, nil
 }

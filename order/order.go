@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/foomo/shop/customer"
+	"github.com/foomo/shop/event_log"
 	"github.com/foomo/shop/payment"
 	"github.com/foomo/shop/shipping"
 	"gopkg.in/mgo.v2/bson"
@@ -16,12 +17,16 @@ import (
 
 // Event can be triggered and listended to in order to deal with changes of\
 // orders
-type Event struct {
-	Type      string
-	Comment   string
-	Timestamp time.Time
-	Custom    interface{}
-}
+
+type ActionOrder string
+
+const (
+	ActionStatusUpdateHead       ActionOrder = "actionStatusUpdateHead"
+	ActionStatusUpdatePosition   ActionOrder = "actionStatusUpdatePosition"
+	ActionNoATPResponseForItemID ActionOrder = "actionNoATPResponseForItemID"
+	ActionValidateStatusHead     ActionOrder = "actionValidateStatusHead"
+	ActionValidateStatusPosition ActionOrder = "actionValidateStatusPosition"
+)
 
 type OrderPriceInfo struct {
 	SumNet        float64
@@ -41,7 +46,7 @@ type Order struct {
 	OrderType OrderType
 	Timestamp time.Time
 	Status    OrderStatus
-	History   []*Event
+	History   *event_log.EventHistory
 	Positions []*Position
 	Customer  *customer.Customer
 	Addresses []*customer.Address
@@ -87,7 +92,7 @@ type OrderCustomProvider interface {
 func NewOrder() *Order {
 	return &Order{
 		Timestamp: time.Now(),
-		History:   []*Event{},
+		History:   &event_log.EventHistory{},
 		Positions: []*Position{},
 		Customer:  &customer.Customer{},
 		Addresses: []*customer.Address{},
@@ -97,8 +102,15 @@ func NewOrder() *Order {
 	}
 }
 
-func (o *Order) AddEventToHistory(e *Event) {
-	o.History = append(o.History, e)
+func (o *Order) AddEventErrorHistory(action ActionOrder, comment string) {
+	event := event_log.NewEvent()
+	event.Type = event_log.EventTypeError
+	event.Comment = comment
+	*o.History = append(*o.History, event)
+}
+
+func (o *Order) AddEventToHistory(e *event_log.Event) {
+	*o.History = append(*o.History, e)
 }
 
 // GetCustomer

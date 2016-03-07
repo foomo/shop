@@ -1,4 +1,4 @@
-package order_test
+package order
 
 import (
 	"encoding/json"
@@ -9,7 +9,6 @@ import (
 
 	"github.com/foomo/shop/examples"
 	"github.com/foomo/shop/mock"
-	"github.com/foomo/shop/order"
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -21,11 +20,11 @@ func TestPersistor(t *testing.T) {
 	ptp := "Pete the persistor"
 
 	for i := 0; i < NumOrders; i++ {
-		newOrder := order.NewOrder()
+		newOrder := NewOrder()
 		newOrder.Custom = &examples.SmurfOrderCustom{
 			ResponsibleSmurf: ptp,
 		}
-		err := p.Insert(newOrder)
+		err := p.InsertOrder(newOrder)
 		if err != nil {
 			panic(err)
 		}
@@ -36,7 +35,7 @@ func TestPersistor(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	loadedOrders := []*order.Order{}
+	loadedOrders := []*Order{}
 	for {
 		loadedOrder, err := orderIter()
 		if loadedOrder != nil {
