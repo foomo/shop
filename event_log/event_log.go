@@ -32,13 +32,16 @@ const (
 type ActionShop string
 
 const (
-	ActionInsertingOrder ActionShop = "actionInsertingOrder"
-	ActionUpsertingOrder ActionShop = "actionUpsertingOrder"
-	ActionCreateOrder    ActionShop = "actionCreatingOrder"
-	ActionDropCollection ActionShop = "actionDropCollection"
-	ActionValidate       ActionShop = "actionValidate"
-	ActionRetrieveOrder  ActionShop = "actionRetrieveOrder"
-	ActionStatusUpdate   ActionShop = "actionStatusUpdate"
+	ActionInsertingOrder   ActionShop = "actionInsertingOrder"
+	ActionUpsertingOrder   ActionShop = "actionUpsertingOrder"
+	ActionCreateOrder      ActionShop = "actionCreatingOrder"
+	ActionDropCollection   ActionShop = "actionDropCollection"
+	ActionValidate         ActionShop = "actionValidate"
+	ActionRetrieveOrder    ActionShop = "actionRetrieveOrder"
+	ActionStatusUpdate     ActionShop = "actionStatusUpdate"
+	ActionApplyATPResponse ActionShop = "actionApplyATPResponse"
+	ActionSendATPRequest   ActionShop = "actionSendATPRequest"
+	ActionSendOrder   ActionShop = "actionSendOrder"
 )
 
 type EventHistory []*Event
