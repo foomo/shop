@@ -4,10 +4,13 @@
 package order
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
+	"github.com/foomo/shop/configuration"
 	"github.com/foomo/shop/customer"
 	"github.com/foomo/shop/event_log"
 	"github.com/foomo/shop/payment"
@@ -26,6 +29,9 @@ const (
 	ActionNoATPResponseForItemID ActionOrder = "actionNoATPResponseForItemID"
 	ActionValidateStatusHead     ActionOrder = "actionValidateStatusHead"
 	ActionValidateStatusPosition ActionOrder = "actionValidateStatusPosition"
+	ActionAddPosition            ActionOrder = "actionAddPosition"
+	ActionRemovePosition         ActionOrder = "actionRemovePosition"
+	ActionChangeQuantityPosition ActionOrder = "actionChangeQuantityPosition"
 )
 
 type OrderPriceInfo struct {
@@ -102,15 +108,44 @@ func NewOrder() *Order {
 	}
 }
 
-func (o *Order) AddEventErrorHistory(action ActionOrder, comment string) {
-	event := event_log.NewEvent()
-	event.Type = event_log.EventTypeError
-	event.Comment = comment
-	*o.History = append(*o.History, event)
+func (o *Order) SaveOrderEvent(action ActionOrder, err error, positionItemNumber string) {
+	o.SaveOrderEventDetailed(action, err, "", "")
 }
 
-func (o *Order) AddEventToHistory(e *event_log.Event) {
-	*o.History = append(*o.History, e)
+func (o *Order) SaveOrderEventDetailed(action ActionOrder, err error, positionItemNumber string, comment string) {
+	event_log.Debug("Action", string(action), "OrderID", o.OrderID)
+	event := event_log.NewEvent()
+	if err != nil {
+		event.Type = event_log.EventTypeError
+	} else {
+		event.Type = event_log.EventTypeSuccess
+	}
+	event.Action = string(action)
+	event.OrderID = o.OrderID
+	event.PositionItemID = positionItemNumber
+	event.Comment = comment
+	if err != nil {
+		event.Error = err.Error()
+	}
+
+	if !saveOrderEventDB(event) {
+		jsonBytes, err := json.MarshalIndent(event, "", "	")
+		if err != nil {
+			log.Println("Could not jsonMarshal event")
+		}
+		log.Println("Saving Shop Event failed! ", string(jsonBytes))
+	}
+	jsonBytes, _ := json.MarshalIndent(event, "", "	")
+	event_log.Debug("Saved Shop Event! ", string(jsonBytes))
+}
+
+func saveOrderEventDB(e *event_log.Event) bool {
+	err := GetPersistor(configuration.MONGO_URL, configuration.MONGO_COLLECTION_SHOP_EVENT_LOG).InsertEvent(e)
+	if err != nil {
+		log.Println(err)
+		return false
+	}
+	return true
 }
 
 // GetCustomer
@@ -126,27 +161,32 @@ func (o *Order) AddPosition(pos *Position) error {
 
 	existingPos := o.GetPositionByItemId(pos.ItemID)
 	if existingPos != nil {
-		return errors.New("position already exists use SetPositionQuantity or GetPositionById to manipulate it")
+		err := errors.New("position already exists use SetPositionQuantity or GetPositionById to manipulate it")
+		o.SaveOrderEventDetailed(ActionAddPosition, err, pos.ItemID, "")
+		return err
 	}
 	o.Positions = append(o.Positions, pos)
+	o.SaveOrderEventDetailed(ActionAddPosition, nil, pos.ItemID, "")
 	return nil
 }
 
 func (o *Order) SetPositionQuantity(itemID string, quantity float64) error {
 	pos := o.GetPositionByItemId(itemID)
 	if pos == nil {
-		return fmt.Errorf("position with %q not found in order", itemID)
+		err := fmt.Errorf("position with %q not found in order", itemID)
+		o.SaveOrderEventDetailed(ActionChangeQuantityPosition, err, pos.ItemID, "Could not set quantity to "+fmt.Sprint(quantity))
+		return err
 	}
 	pos.Quantity = quantity
+	o.SaveOrderEventDetailed(ActionChangeQuantityPosition, nil, pos.ItemID, "Set quantity to "+fmt.Sprint(quantity))
+	// remove position if quantity is zero
 	if pos.Quantity == 0.0 {
-		positions := []*Position{}
-		for _, pos := range o.Positions {
+		for index := range o.Positions {
 			if pos.ItemID == itemID {
-				continue
+				o.Positions = append(o.Positions[:index], o.Positions[index+1:]...)
+				return nil
 			}
-			positions = append(positions, pos)
 		}
-		o.Positions = positions
 	}
 	return nil
 }
@@ -159,9 +199,3 @@ func (o *Order) GetPositionByItemId(itemID string) *Position {
 	}
 	return nil
 }
-
-func (o *Order) SaveRevision(revisionInfo interface{}) error {
-	return nil
-}
-
-//func (o *Order) CreateATPRequests

@@ -7,13 +7,14 @@ import (
 )
 
 type Event struct {
-	Type      EventType
-	Action    string
-	OrderID   string
-	Comment   string
-	Error     string // not type error, because jsonMarshal does not work on error
-	Timestamp time.Time
-	Custom    interface{}
+	Type           EventType
+	Action         string
+	OrderID        string
+	PositionItemID string
+	Comment        string
+	Error          string // not type error, because jsonMarshal does not work on error
+	Timestamp      time.Time
+	Custom         interface{}
 }
 
 func NewEvent() *Event {
@@ -41,7 +42,7 @@ const (
 	ActionStatusUpdate     ActionShop = "actionStatusUpdate"
 	ActionApplyATPResponse ActionShop = "actionApplyATPResponse"
 	ActionSendATPRequest   ActionShop = "actionSendATPRequest"
-	ActionSendOrder   ActionShop = "actionSendOrder"
+	ActionSendOrder        ActionShop = "actionSendOrder"
 )
 
 type EventHistory []*Event

@@ -101,6 +101,10 @@ func GetShopEventsFromDB(query *bson.M) string {
 }
 
 func SaveShopEvent(action ActionShop, orderID string, err error) {
+	SaveShopEventWithComment(action, orderID, err, "")
+}
+
+func SaveShopEventWithComment(action ActionShop, orderID string, err error, comment string) {
 	Debug("Action", string(action), "OrderID", orderID)
 	event := NewEvent()
 	if err != nil {
@@ -113,6 +117,7 @@ func SaveShopEvent(action ActionShop, orderID string, err error) {
 	if err != nil {
 		event.Error = err.Error()
 	}
+	event.Comment = comment
 
 	if !saveShopEventDB(event) {
 		jsonBytes, err := json.MarshalIndent(event, "", "	")

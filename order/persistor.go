@@ -1,4 +1,4 @@
-package processing
+package order
 
 import (
 	"errors"
@@ -7,7 +7,6 @@ import (
 	"net/url"
 
 	"github.com/foomo/shop/event_log"
-	"github.com/foomo/shop/order"
 	"github.com/mitchellh/mapstructure"
 
 	"gopkg.in/mgo.v2"
@@ -49,7 +48,7 @@ func (p *Persistor) GetCollection() *mgo.Collection {
 	return p.session.DB(p.db).C(p.CollectionName)
 }
 
-func (p *Persistor) Find(query *bson.M, customProvider order.OrderCustomProvider) (iter func() (o *order.Order, err error), err error) {
+func (p *Persistor) Find(query *bson.M, customProvider OrderCustomProvider) (iter func() (o *Order, err error), err error) {
 	n, err := p.GetCollection().Find(query).Count()
 	if err != nil {
 		log.Println(err)
@@ -65,8 +64,8 @@ func (p *Persistor) Find(query *bson.M, customProvider order.OrderCustomProvider
 		return
 	}
 	mgoiter := q.Iter()
-	iter = func() (o *order.Order, err error) {
-		o = &order.Order{}
+	iter = func() (o *Order, err error) {
+		o = &Order{}
 
 		if mgoiter.Next(o) {
 			/* Map OrderCustom */
@@ -82,7 +81,7 @@ func (p *Persistor) Find(query *bson.M, customProvider order.OrderCustomProvider
 			/* Map CustomerCustom */
 			customerCustom := customProvider.NewCustomerCustom()
 			if o.Customer == nil {
-				return nil, errors.New("Error in Persistor.Find(): Order.Customer is nil. Order must have a Customer!")
+				return nil, errors.New("Error in Persistor.Find(): Customer is nil. Order must have a Customer!")
 			}
 			if customerCustom != nil && o.Customer.Custom != nil {
 				err = mapstructure.Decode(o.Customer.Custom, customerCustom)
@@ -130,7 +129,7 @@ func (p *Persistor) Find(query *bson.M, customProvider order.OrderCustomProvider
 // This example query works in mongo shell:
 // query: {orderid:"0009200001"}, fields: {positions:{$elemMatch:{"custom.positionnumber":1}}}
 // db.order_story.find({orderid:"0009200001"}, {positions:{$elemMatch:{"custom.positionnumber":1}}}).pretty()
-func (p *Persistor) GetPositionOfOrder(query *bson.M, fields *bson.M, customProvider order.OrderCustomProvider) (*order.Position, error) {
+func (p *Persistor) GetPositionOfOrder(query *bson.M, fields *bson.M, customProvider OrderCustomProvider) (*Position, error) {
 	n, err := p.GetCollection().Find(query).Count()
 	if err != nil {
 		return nil, err
@@ -142,7 +141,7 @@ func (p *Persistor) GetPositionOfOrder(query *bson.M, fields *bson.M, customProv
 	q := p.GetCollection().Find(query)
 	q.Select(fields)
 	iter := q.Iter()
-	position := &order.Position{}
+	position := &Position{}
 	if iter.Next(position) {
 		// if unmarshalling into postion was successful, set PositionCustom
 		// TODO this is duplicate code, make separate function
@@ -174,16 +173,21 @@ func mapCustom(m interface{}, raw interface{}) error {
 	return nil
 }
 
-func (p *Persistor) InsertOrder(o *order.Order) error {
+func (p *Persistor) InsertOrder(o *Order) error {
 	err := p.GetCollection().Insert(o)
 	event_log.SaveShopEvent(event_log.ActionInsertingOrder, o.OrderID, err)
 	return err
 }
 
-func (p *Persistor) UpsertOrder(o *order.Order) (*mgo.ChangeInfo, error) {
+func (p *Persistor) UpsertOrder(o *Order) (*mgo.ChangeInfo, error) {
 	info, err := p.GetCollection().UpsertId(o.ID, o)
 	event_log.SaveShopEvent(event_log.ActionUpsertingOrder, o.OrderID, err)
 	return info, err
+}
+
+func (p *Persistor) InsertEvent(e *event_log.Event) error {
+	err := p.GetCollection().Insert(e)
+	return err
 }
 
 func GetPersistor(db string, collection string) *Persistor {
@@ -194,7 +198,7 @@ func GetPersistor(db string, collection string) *Persistor {
 	return p
 }
 
-func GetShopOrder(db string, collection string, orderID string, customOrderProvider order.OrderCustomProvider) (*order.Order, error) {
+func GetShopOrder(db string, collection string, orderID string, customOrderProvider OrderCustomProvider) (*Order, error) {
 	p := GetPersistor(db, collection)
 	iter, err := p.Find(&bson.M{"orderid": orderID}, customOrderProvider)
 	if err != nil {
