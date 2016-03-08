@@ -20,7 +20,7 @@ type Persistor struct {
 }
 
 const (
-	VERBOSE = true
+	VERBOSE = false
 )
 
 // NewPersistor constructor

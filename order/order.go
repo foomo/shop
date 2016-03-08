@@ -7,10 +7,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"time"
 
-	"github.com/foomo/shop/configuration"
+	foomo_shop_configuration "github.com/foomo/shop/configuration"
 	"github.com/foomo/shop/customer"
 	"github.com/foomo/shop/event_log"
 	"github.com/foomo/shop/payment"
@@ -32,6 +31,7 @@ const (
 	ActionAddPosition            ActionOrder = "actionAddPosition"
 	ActionRemovePosition         ActionOrder = "actionRemovePosition"
 	ActionChangeQuantityPosition ActionOrder = "actionChangeQuantityPosition"
+	ActionCreateCustomOrder      ActionOrder = "actionCreateCustomOrder"
 )
 
 type OrderPriceInfo struct {
@@ -52,7 +52,7 @@ type Order struct {
 	OrderType OrderType
 	Timestamp time.Time
 	Status    OrderStatus
-	History   *event_log.EventHistory
+	History   event_log.EventHistory
 	Positions []*Position
 	Customer  *customer.Customer
 	Addresses []*customer.Address
@@ -98,7 +98,7 @@ type OrderCustomProvider interface {
 func NewOrder() *Order {
 	return &Order{
 		Timestamp: time.Now(),
-		History:   &event_log.EventHistory{},
+		History:   event_log.EventHistory{},
 		Positions: []*Position{},
 		Customer:  &customer.Customer{},
 		Addresses: []*customer.Address{},
@@ -127,25 +127,11 @@ func (o *Order) SaveOrderEventDetailed(action ActionOrder, err error, positionIt
 	if err != nil {
 		event.Error = err.Error()
 	}
+	o.History = append(o.History, event)
+	GetPersistor(foomo_shop_configuration.MONGO_URL, foomo_shop_configuration.MONGO_COLLECTION_ORDERS).UpsertOrder(o) // Error is ignored because it gets already logged in UpsertOrder()
 
-	if !saveOrderEventDB(event) {
-		jsonBytes, err := json.MarshalIndent(event, "", "	")
-		if err != nil {
-			log.Println("Could not jsonMarshal event")
-		}
-		log.Println("Saving Shop Event failed! ", string(jsonBytes))
-	}
 	jsonBytes, _ := json.MarshalIndent(event, "", "	")
 	event_log.Debug("Saved Shop Event! ", string(jsonBytes))
-}
-
-func saveOrderEventDB(e *event_log.Event) bool {
-	err := GetPersistor(configuration.MONGO_URL, configuration.MONGO_COLLECTION_SHOP_EVENT_LOG).InsertEvent(e)
-	if err != nil {
-		log.Println(err)
-		return false
-	}
-	return true
 }
 
 // GetCustomer
@@ -166,7 +152,10 @@ func (o *Order) AddPosition(pos *Position) error {
 		return err
 	}
 	o.Positions = append(o.Positions, pos)
-	o.SaveOrderEventDetailed(ActionAddPosition, nil, pos.ItemID, "")
+	if _, err := GetPersistor(foomo_shop_configuration.MONGO_URL, foomo_shop_configuration.MONGO_COLLECTION_ORDERS).UpsertOrder(o); err != nil {
+		o.SaveOrderEventDetailed(ActionAddPosition, err, pos.ItemID, "Error while adding position to order. Could not upsert order")
+		return err
+	}
 	return nil
 }
 
@@ -187,6 +176,10 @@ func (o *Order) SetPositionQuantity(itemID string, quantity float64) error {
 				return nil
 			}
 		}
+	}
+	if _, err := GetPersistor(foomo_shop_configuration.MONGO_URL, foomo_shop_configuration.MONGO_COLLECTION_ORDERS).UpsertOrder(o); err != nil {
+		o.SaveOrderEventDetailed(ActionChangeQuantityPosition, err, pos.ItemID, "Error while updating position quantity. Could not upsert order")
+		return err
 	}
 	return nil
 }

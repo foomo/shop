@@ -43,7 +43,7 @@ func MakeMockOrder(smurf string) *order.Order {
 	for i := 0; i < 5; i++ {
 		// add a product
 		o.AddPosition(&order.Position{
-			ID:       "id-" + fmt.Sprint(i),
+			ItemID:   "asdf",
 			Name:     fmt.Sprintf("an awesome computer - %d", i),
 			Quantity: float64(i),
 			Custom: &examples.SmurfPositionCustom{

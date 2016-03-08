@@ -20,7 +20,7 @@ func ExampleOrderCustom_createCart() {
 
 	// add a product
 	o.AddPosition(&order.Position{
-		ID:       positionIDA,
+		ItemID:   positionIDA,
 		Name:     "an awesome computer",
 		Quantity: 1.0,
 		Custom: &examples.SmurfPositionCustom{
@@ -35,7 +35,7 @@ func ExampleOrderCustom_createCart() {
 
 	// add another position
 	o.AddPosition(&order.Position{
-		ID:       positionIDB,
+		ItemID:   positionIDB,
 		Name:     "an awesome computer",
 		Quantity: 1.0,
 		Custom: &examples.SmurfPositionCustom{

@@ -46,6 +46,9 @@ func NewSmurfProcessor(name string) *SmurfProcessor {
 			select {
 			case addCount := <-sp.chanCount:
 				sp.CountProcessed += addCount
+				if sp.CountProcessed%100 == 0 {
+					log.Println(sp.Smurf, sp.CountProcessed)
+				}
 			}
 		}
 	}()
@@ -63,9 +66,6 @@ func (sp *SmurfProcessor) SetQuery(query *bson.M) {
 func (sp *SmurfProcessor) Process(o *order.Order) error {
 	sp.chanCount <- 1
 	time.Sleep(time.Millisecond * 20)
-	if sp.CountProcessed%100 == 0 {
-		log.Println(sp.Smurf, sp.CountProcessed)
-	}
 	return nil
 }
 

@@ -198,19 +198,21 @@ func GetPersistor(db string, collection string) *Persistor {
 	return p
 }
 
-func GetShopOrder(db string, collection string, orderID string, customOrderProvider OrderCustomProvider) (*Order, error) {
+func GetShopOrder(db string, collection string, orderID string, customOrderProvider OrderCustomProvider) *Order {
 	p := GetPersistor(db, collection)
 	iter, err := p.Find(&bson.M{"orderid": orderID}, customOrderProvider)
 	if err != nil {
+		log.Println("GetShopOrder(): Found no matching order for orderID " + orderID)
 		panic(err)
 	}
 	order, err := iter()
 	if err != nil {
+		log.Println("GetShopOrder(): Found no matching order for orderID " + orderID)
 		panic(err)
 	}
 	if order == nil {
-		log.Println("Could not find order ", orderID)
-		return nil, errors.New("Could not find order with id: " + orderID)
+		log.Println("GetShopOrder(): Found no matching order for orderID " + orderID)
+		return nil
 	}
-	return order, nil
+	return order
 }
