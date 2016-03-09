@@ -21,7 +21,7 @@ func TestPersistor(t *testing.T) {
 
 	for i := 0; i < NumOrders; i++ {
 		newOrder := NewOrder()
-		newOrder.Custom = &examples.SmurfOrderCustom{
+		newOrder.Custom = &examples_test.SmurfOrderCustom{
 			ResponsibleSmurf: ptp,
 		}
 		err := p.InsertOrder(newOrder)
@@ -30,7 +30,7 @@ func TestPersistor(t *testing.T) {
 		}
 	}
 
-	customProvider := examples.SmurfOrderCustomProvider{}
+	customProvider := examples_test.SmurfOrderCustomProvider{}
 	orderIter, err := p.Find(&bson.M{"custom.responsiblesmurf": ptp}, customProvider)
 	if err != nil {
 		panic(err)
@@ -50,7 +50,7 @@ func TestPersistor(t *testing.T) {
 
 	t.Log("loaded orders")
 	for i, loadedOrder := range loadedOrders {
-		t.Log(i, loadedOrder.Custom.(*examples.SmurfOrderCustom).ResponsibleSmurf)
+		t.Log(i, loadedOrder.Custom.(*examples_test.SmurfOrderCustom).ResponsibleSmurf)
 	}
 
 	if len(loadedOrders) != NumOrders {
@@ -58,7 +58,7 @@ func TestPersistor(t *testing.T) {
 	}
 
 	for i, newOrder := range loadedOrders {
-		loadedOrder := loadedOrders[i].Custom.(*examples.SmurfOrderCustom)
+		loadedOrder := loadedOrders[i].Custom.(*examples_test.SmurfOrderCustom)
 		if !reflect.DeepEqual(loadedOrder, newOrder.Custom) {
 			dump("newOrder", newOrder)
 			dump("loadedOrder", loadedOrder)
