@@ -9,6 +9,11 @@ import (
 	"github.com/foomo/shop/event_log"
 	"github.com/mitchellh/mapstructure"
 
+	"strconv"
+
+	"sync"
+
+	"github.com/foomo/shop/configuration"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -21,13 +26,15 @@ type Persistor struct {
 }
 
 var GLOBAL_PERSISTOR *Persistor
+var LAST_ASSIGNED_ID int = -1
+var OrderIDLock sync.Mutex
 
+type OrderIDWrapper struct {
+	OrderID string
+}
 
 // NewPersistor constructor
 func NewPersistor(mongoURL string, collectionName string) (p *Persistor, err error) {
-	if GLOBAL_PERSISTOR != nil {
-		return GLOBAL_PERSISTOR, nil
-	}
 	parsedURL, err := url.Parse(mongoURL)
 	if err != nil {
 		return nil, err
@@ -42,12 +49,12 @@ func NewPersistor(mongoURL string, collectionName string) (p *Persistor, err err
 	if err != nil {
 		return nil, err
 	}
-	GLOBAL_PERSISTOR = &Persistor{
+	p = &Persistor{
 		session:        session,
 		db:             parsedURL.Path[1:],
 		CollectionName: collectionName,
 	}
-	return GLOBAL_PERSISTOR, nil
+	return p, nil
 }
 
 func (p *Persistor) GetCollection() *mgo.Collection {
@@ -179,11 +186,66 @@ func mapCustom(m interface{}, raw interface{}) error {
 	return nil
 }
 
+/*
+Create new orderID within specified range (ids cycle when range is exceeded).
+*/
+func createOrderID() (id string, err error) {
+	// Globus specifec prefix
+	prefix := "000"
+	p := GetPersistor(configuration.MONGO_URL, configuration.MONGO_COLLECTION_ORDERS)
+
+	OrderIDLock.Lock()
+
+	// Application has been restarted. LAST_ASSIGNED_ID is not yet initialized
+	if LAST_ASSIGNED_ID == -1 {
+		// Retrieve orderID of the most recent order
+		q := p.GetCollection().Find(&bson.M{}).Sort("-_id").Limit(1).Select(&bson.M{"orderid": true})
+		iter := q.Iter()
+		c, err := q.Count()
+		if err != nil {
+			OrderIDLock.Unlock()
+			return id, err
+		}
+		// If no orders exist, start with first value of range
+		if c == 0 {
+			// Database is emtpy. Use first id from specified id range
+			fmt.Println("Database is emtpy. Use first id from specified id range")
+			LAST_ASSIGNED_ID = configuration.ORDER_ID_RANGE[0]
+			OrderIDLock.Unlock()
+			return prefix + strconv.Itoa(LAST_ASSIGNED_ID), nil // "000" prefix is custom for Globus
+		}
+		orderIDWrapper := &OrderIDWrapper{}
+		iter.Next(orderIDWrapper)
+		idInt, err := strconv.Atoi(orderIDWrapper.OrderID)
+		if err != nil {
+			panic(err)
+		}
+		LAST_ASSIGNED_ID = idInt + 1
+		OrderIDLock.Unlock()
+		return prefix + strconv.Itoa(LAST_ASSIGNED_ID), nil
+	}
+	// if range is exceeded, use first value of range again
+	if LAST_ASSIGNED_ID == configuration.ORDER_ID_RANGE[1] {
+		LAST_ASSIGNED_ID = configuration.ORDER_ID_RANGE[0]
+		OrderIDLock.Unlock()
+		return prefix + strconv.Itoa(LAST_ASSIGNED_ID), nil
+	}
+
+	// increment orderID
+	LAST_ASSIGNED_ID = LAST_ASSIGNED_ID + 1
+	OrderIDLock.Unlock()
+	return prefix + strconv.Itoa(LAST_ASSIGNED_ID), nil
+
+}
 
 // Create unique OrderID and insert order in database
-func (p *Persistor) InsertOrder(o *Order) error {
-
-	err := p.GetCollection().Insert(o)
+func (p *Persistor) InsertOrder(o *Order) (err error) {
+	o.OrderID, err = createOrderID()
+	if err != nil {
+		return err
+	}
+	//log.Println("Created orderID:", o.OrderID)
+	err = p.GetCollection().Insert(o)
 	event_log.SaveShopEvent(event_log.ActionInsertingOrder, o.OrderID, err)
 	return err
 }
@@ -200,6 +262,16 @@ func (p *Persistor) InsertEvent(e *event_log.Event) error {
 }
 
 func GetPersistor(db string, collection string) *Persistor {
+	if GLOBAL_PERSISTOR == nil {
+		p, err := NewPersistor(db, collection)
+		if err != nil {
+			panic(err)
+		}
+		return p
+	}
+	if db == GLOBAL_PERSISTOR.db && collection == GLOBAL_PERSISTOR.CollectionName {
+		return GLOBAL_PERSISTOR
+	}
 	p, err := NewPersistor(db, collection)
 	if err != nil {
 		panic(err)
