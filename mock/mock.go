@@ -18,15 +18,6 @@ func MockMongoURL() string {
 	return url
 }
 
-func GetMockPersistor(collectionName string) *order.Persistor {
-	p, err := order.NewPersistor(MockMongoURL(), collectionName)
-	if err != nil {
-		panic(err)
-	}
-	p.GetCollection().DropCollection()
-	return p
-}
-
 func GetMockQueue() *queue.Queue {
 	q, err := queue.NewQueue(MockMongoURL())
 	if err != nil {

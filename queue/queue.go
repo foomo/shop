@@ -15,13 +15,8 @@ type Queue struct {
 
 func NewQueue(mongoURL string) (q *Queue, err error) {
 	log.Println("NewQueue()...")
-	p, err := order.NewPersistor(mongoURL, "queue_test")
-	if err != nil {
-		return nil, err
-	}
-
 	return &Queue{
-		persistor: p,
+		persistor: order.GetPersistor(mongoURL, "queue_test"),
 	}, nil
 }
 

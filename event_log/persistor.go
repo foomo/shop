@@ -27,11 +27,6 @@ var GLOBAL_PERSISTOR *Persistor
 
 // NewPersistor constructor
 func NewPersistor(mongoURL string, collectionName string) (p *Persistor, err error) {
-
-	if GLOBAL_PERSISTOR != nil {
-		return GLOBAL_PERSISTOR, nil
-	}
-
 	parsedURL, err := url.Parse(mongoURL)
 	if err != nil {
 		return nil, err
@@ -46,12 +41,12 @@ func NewPersistor(mongoURL string, collectionName string) (p *Persistor, err err
 	if err != nil {
 		return nil, err
 	}
-	GLOBAL_PERSISTOR = &Persistor{
+	p = &Persistor{
 		session:        session,
 		db:             parsedURL.Path[1:],
 		CollectionName: collectionName,
 	}
-	return GLOBAL_PERSISTOR, nil
+	return p, nil
 }
 
 func (p *Persistor) GetCollection() *mgo.Collection {
@@ -59,6 +54,16 @@ func (p *Persistor) GetCollection() *mgo.Collection {
 }
 
 func GetPersistor(db string, collection string) *Persistor {
+	if GLOBAL_PERSISTOR == nil {
+		p, err := NewPersistor(db, collection)
+		if err != nil {
+			panic(err)
+		}
+		return p
+	}
+	if db == GLOBAL_PERSISTOR.db && collection == GLOBAL_PERSISTOR.CollectionName {
+		return GLOBAL_PERSISTOR
+	}
 	p, err := NewPersistor(db, collection)
 	if err != nil {
 		panic(err)

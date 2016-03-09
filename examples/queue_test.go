@@ -6,8 +6,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/foomo/shop/configuration"
 	"github.com/foomo/shop/examples"
 	"github.com/foomo/shop/mock"
+	"github.com/foomo/shop/order"
 )
 
 func TestSmurfProcessor(t *testing.T) {
@@ -26,7 +28,8 @@ func TestSmurfProcessor(t *testing.T) {
 		joe:  2000,
 	}
 
-	p := mock.GetMockPersistor("queue_test")
+	p := order.GetPersistor(configuration.MONGO_URL, configuration.MONGO_COLLECTION_QUEUE_TEST)
+	p.GetCollection().DropCollection()
 	numberOfOrders := 0
 	for smurf, smurfOrderCount := range smurfOrders {
 		for i := 0; i < smurfOrderCount; i++ {
