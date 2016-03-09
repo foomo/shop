@@ -7,8 +7,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/foomo/shop/configuration"
 	"github.com/foomo/shop/examples"
-	"github.com/foomo/shop/mock"
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -16,12 +16,12 @@ import (
 const NumOrders = 500
 
 func TestPersistor(t *testing.T) {
-	p := mock.GetMockPersistor("orders-order")
+	p := GetPersistor(configuration.MONGO_URL, configuration.MONGO_COLLECTION_ORDERS)
 	ptp := "Pete the persistor"
 
 	for i := 0; i < NumOrders; i++ {
 		newOrder := NewOrder()
-		newOrder.Custom = &examples_test.SmurfOrderCustom{
+		newOrder.Custom = &examples.SmurfOrderCustom{
 			ResponsibleSmurf: ptp,
 		}
 		err := p.InsertOrder(newOrder)
@@ -30,7 +30,7 @@ func TestPersistor(t *testing.T) {
 		}
 	}
 
-	customProvider := examples_test.SmurfOrderCustomProvider{}
+	customProvider := examples.SmurfOrderCustomProvider{}
 	orderIter, err := p.Find(&bson.M{"custom.responsiblesmurf": ptp}, customProvider)
 	if err != nil {
 		panic(err)
@@ -50,7 +50,7 @@ func TestPersistor(t *testing.T) {
 
 	t.Log("loaded orders")
 	for i, loadedOrder := range loadedOrders {
-		t.Log(i, loadedOrder.Custom.(*examples_test.SmurfOrderCustom).ResponsibleSmurf)
+		t.Log(i, loadedOrder.Custom.(*examples.SmurfOrderCustom).ResponsibleSmurf)
 	}
 
 	if len(loadedOrders) != NumOrders {
@@ -58,7 +58,7 @@ func TestPersistor(t *testing.T) {
 	}
 
 	for i, newOrder := range loadedOrders {
-		loadedOrder := loadedOrders[i].Custom.(*examples_test.SmurfOrderCustom)
+		loadedOrder := loadedOrders[i].Custom.(*examples.SmurfOrderCustom)
 		if !reflect.DeepEqual(loadedOrder, newOrder.Custom) {
 			dump("newOrder", newOrder)
 			dump("loadedOrder", loadedOrder)

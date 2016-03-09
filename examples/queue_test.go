@@ -28,7 +28,7 @@ func TestSmurfProcessor(t *testing.T) {
 		joe:  2000,
 	}
 
-	p := order.GetPersistor(configuration.MONGO_URL, configuration.MONGO_COLLECTION_QUEUE_TEST)
+	p := order.GetPersistor(configuration.MONGO_URL, configuration.MONGO_COLLECTION_ORDERS)
 	p.GetCollection().DropCollection()
 	numberOfOrders := 0
 	for smurf, smurfOrderCount := range smurfOrders {

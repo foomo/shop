@@ -21,8 +21,9 @@ import (
 // Persistor persist *Orders
 type Persistor struct {
 	session        *mgo.Session
-	CollectionName string
+	url            string
 	db             string
+	CollectionName string
 }
 
 var GLOBAL_PERSISTOR *Persistor
@@ -35,6 +36,7 @@ type OrderIDWrapper struct {
 
 // NewPersistor constructor
 func NewPersistor(mongoURL string, collectionName string) (p *Persistor, err error) {
+	log.Println("creating new persistor with db:", mongoURL, "and collection:", collectionName)
 	parsedURL, err := url.Parse(mongoURL)
 	if err != nil {
 		return nil, err
@@ -51,6 +53,7 @@ func NewPersistor(mongoURL string, collectionName string) (p *Persistor, err err
 	}
 	p = &Persistor{
 		session:        session,
+		url:            mongoURL,
 		db:             parsedURL.Path[1:],
 		CollectionName: collectionName,
 	}
@@ -261,38 +264,40 @@ func (p *Persistor) InsertEvent(e *event_log.Event) error {
 	return err
 }
 
-func GetPersistor(db string, collection string) *Persistor {
+// Returns GLOBAL_PERSISTOR. If GLOBAL_PERSISTOR is nil, a new persistor is created, set as GLOBAL_PERSISTOR and returned
+func GetPersistor(url string, collection string) *Persistor {
 	if GLOBAL_PERSISTOR == nil {
-		p, err := NewPersistor(db, collection)
-		if err != nil {
+		p, err := NewPersistor(url, collection)
+		if err != nil || p == nil {
 			panic(err)
 		}
-		return p
-	}
-	if db == GLOBAL_PERSISTOR.db && collection == GLOBAL_PERSISTOR.CollectionName {
+		GLOBAL_PERSISTOR = p
 		return GLOBAL_PERSISTOR
 	}
-	p, err := NewPersistor(db, collection)
-	if err != nil {
+
+	if url == GLOBAL_PERSISTOR.url && collection == GLOBAL_PERSISTOR.CollectionName {
+		return GLOBAL_PERSISTOR
+	}
+
+	p, err := NewPersistor(url, collection)
+	if err != nil || p == nil {
 		panic(err)
 	}
-	return p
+	GLOBAL_PERSISTOR = p
+	return GLOBAL_PERSISTOR
 }
 
 func GetShopOrder(db string, collection string, orderID string, customOrderProvider OrderCustomProvider) *Order {
 	p := GetPersistor(db, collection)
 	iter, err := p.Find(&bson.M{"orderid": orderID}, customOrderProvider)
 	if err != nil {
-		log.Println("GetShopOrder(): Found no matching order for orderID " + orderID)
 		panic(err)
 	}
 	order, err := iter()
 	if err != nil {
-		log.Println("GetShopOrder(): Found no matching order for orderID " + orderID)
 		panic(err)
 	}
 	if order == nil {
-		log.Println("GetShopOrder(): Found no matching order for orderID " + orderID)
 		return nil
 	}
 	return order
