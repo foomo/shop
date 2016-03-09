@@ -58,7 +58,7 @@ type Person struct {
 	Title      TitleType `bson:",omitempty"`
 	Salutation SalutationType
 	Contacts   *Contacts
-	Address    []*Address
+	//Address    []*Address
 }
 
 type Company struct {

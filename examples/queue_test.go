@@ -3,15 +3,15 @@ package examples_test
 import (
 	"fmt"
 	"log"
-	"runtime"
+	"testing"
 	"time"
 
 	"github.com/foomo/shop/examples"
 	"github.com/foomo/shop/mock"
 )
 
-func ExampleSmurfProcessor() {
-	log.Println("runtime.GOMAXPROCS(16)", runtime.GOMAXPROCS(16))
+func TestSmurfProcessor(t *testing.T) {
+	//log.Println("runtime.GOMAXPROCS(16)", runtime.GOMAXPROCS(16))
 	q := mock.GetMockQueue()
 
 	const (
@@ -22,8 +22,8 @@ func ExampleSmurfProcessor() {
 	// add some products in status a
 
 	smurfOrders := map[string]int{
-		pete: 100,
-		joe:  200,
+		pete: 1000,
+		joe:  2000,
 	}
 
 	p := mock.GetMockPersistor("queue_test")
@@ -31,7 +31,9 @@ func ExampleSmurfProcessor() {
 	for smurf, smurfOrderCount := range smurfOrders {
 		for i := 0; i < smurfOrderCount; i++ {
 			o := mock.MakeMockOrder(smurf)
+
 			p.InsertOrder(o)
+
 			numberOfOrders++
 			if numberOfOrders%100 == 0 {
 				log.Println(smurf, numberOfOrders)
@@ -66,5 +68,8 @@ func ExampleSmurfProcessor() {
 
 	fmt.Println("number of orders:", numberOfOrders, ", processed by joe:", joeProcessor.CountProcessed, ", processed by pete:", peteProcessor.CountProcessed)
 	// Output: number of orders: 300 , processed by joe: 200 , processed by pete: 100
+	if numberOfOrders != smurfOrders["pete"]+smurfOrders["joe"] || joeProcessor.CountProcessed != smurfOrders["joe"] || peteProcessor.CountProcessed != smurfOrders["pete"] {
+		t.Fatal("number of orders:", numberOfOrders, ", processed by joe:", joeProcessor.CountProcessed, ", processed by pete:", peteProcessor.CountProcessed)
+	}
 
 }
