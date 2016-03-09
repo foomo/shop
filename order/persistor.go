@@ -22,6 +22,7 @@ type Persistor struct {
 
 var GLOBAL_PERSISTOR *Persistor
 
+
 // NewPersistor constructor
 func NewPersistor(mongoURL string, collectionName string) (p *Persistor, err error) {
 	if GLOBAL_PERSISTOR != nil {
@@ -178,7 +179,10 @@ func mapCustom(m interface{}, raw interface{}) error {
 	return nil
 }
 
+
+// Create unique OrderID and insert order in database
 func (p *Persistor) InsertOrder(o *Order) error {
+
 	err := p.GetCollection().Insert(o)
 	event_log.SaveShopEvent(event_log.ActionInsertingOrder, o.OrderID, err)
 	return err
