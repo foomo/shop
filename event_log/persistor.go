@@ -13,20 +13,23 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
+// Persistor persist *Events
 type Persistor struct {
 	session        *mgo.Session
-	CollectionName string
+	url            string
 	db             string
+	CollectionName string
 }
 
 const (
 	VERBOSE = false
 )
 
-var GLOBAL_PERSISTOR *Persistor
+var GLOBAL_EVENT_PERSISTOR *Persistor
 
 // NewPersistor constructor
 func NewPersistor(mongoURL string, collectionName string) (p *Persistor, err error) {
+	log.Println("creating new persistor with db:", mongoURL, "and collection:", collectionName)
 	parsedURL, err := url.Parse(mongoURL)
 	if err != nil {
 		return nil, err
@@ -43,6 +46,7 @@ func NewPersistor(mongoURL string, collectionName string) (p *Persistor, err err
 	}
 	p = &Persistor{
 		session:        session,
+		url:            mongoURL,
 		db:             parsedURL.Path[1:],
 		CollectionName: collectionName,
 	}
@@ -53,26 +57,33 @@ func (p *Persistor) GetCollection() *mgo.Collection {
 	return p.session.DB(p.db).C(p.CollectionName)
 }
 
-func GetPersistor(db string, collection string) *Persistor {
-	if GLOBAL_PERSISTOR == nil {
-		p, err := NewPersistor(db, collection)
-		if err != nil {
+// Returns GLOBAL_PERSISTOR. If GLOBAL_PERSISTOR is nil, a new persistor is created, set as GLOBAL_PERSISTOR and returned
+func GetEventPersistor() *Persistor {
+	url := configuration.MONGO_URL
+	collection := configuration.MONGO_COLLECTION_SHOP_EVENT_LOG
+	if GLOBAL_EVENT_PERSISTOR == nil {
+		p, err := NewPersistor(url, collection)
+		if err != nil || p == nil {
 			panic(err)
 		}
-		return p
+		GLOBAL_EVENT_PERSISTOR = p
+		return GLOBAL_EVENT_PERSISTOR
 	}
-	if db == GLOBAL_PERSISTOR.db && collection == GLOBAL_PERSISTOR.CollectionName {
-		return GLOBAL_PERSISTOR
+
+	if url == GLOBAL_EVENT_PERSISTOR.url && collection == GLOBAL_EVENT_PERSISTOR.CollectionName {
+		return GLOBAL_EVENT_PERSISTOR
 	}
-	p, err := NewPersistor(db, collection)
-	if err != nil {
+
+	p, err := NewPersistor(url, collection)
+	if err != nil || p == nil {
 		panic(err)
 	}
-	return p
+	GLOBAL_EVENT_PERSISTOR = p
+	return GLOBAL_EVENT_PERSISTOR
 }
 
 func ResetShopEventLog() bool {
-	err := GetPersistor(configuration.MONGO_URL, configuration.MONGO_COLLECTION_SHOP_EVENT_LOG).GetCollection().DropCollection()
+	err := GetEventPersistor().GetCollection().DropCollection()
 	if err != nil {
 		log.Println(err)
 		return false
@@ -97,7 +108,7 @@ func LogShopErrors() {
 }
 
 func GetShopEventsFromDB(query *bson.M) string {
-	p := GetPersistor(configuration.MONGO_URL, configuration.MONGO_COLLECTION_SHOP_EVENT_LOG)
+	p := GetEventPersistor()
 	var result string
 
 	iter := p.GetCollection().Find(query).Iter()
@@ -143,7 +154,7 @@ func SaveShopEventWithComment(action ActionShop, orderID string, err error, comm
 }
 
 func saveShopEventDB(e *Event) bool {
-	err := GetPersistor(configuration.MONGO_URL, configuration.MONGO_COLLECTION_SHOP_EVENT_LOG).InsertEvent(e)
+	err := GetEventPersistor().InsertEvent(e)
 	if err != nil {
 		log.Println(err)
 		return false

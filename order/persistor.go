@@ -26,7 +26,7 @@ type Persistor struct {
 	CollectionName string
 }
 
-var GLOBAL_PERSISTOR *Persistor
+var GLOBAL_ORDER_PERSISTOR *Persistor
 var LAST_ASSIGNED_ID int = -1
 var OrderIDLock sync.Mutex
 
@@ -65,11 +65,11 @@ func (p *Persistor) GetCollection() *mgo.Collection {
 }
 
 func (p *Persistor) Find(query *bson.M, customProvider OrderCustomProvider) (iter func() (o *Order, err error), err error) {
-	n, err := p.GetCollection().Find(query).Count()
+	_, err = p.GetCollection().Find(query).Count()
 	if err != nil {
 		log.Println(err)
 	}
-	log.Println("Persistor.Find(): ", n, "items found for query ", query)
+	//log.Println("Persistor.Find(): ", n, "items found for query ", query)
 	q := p.GetCollection().Find(query)
 	fields := customProvider.Fields()
 	if fields != nil {
@@ -153,7 +153,7 @@ func (p *Persistor) GetPositionOfOrder(query *bson.M, fields *bson.M, customProv
 	if n != 1 {
 		return nil, errors.New("Error: Query was not unique!")
 	}
-	log.Println("Persistor.Find(): ", n, "items found for query ", query)
+	event_log.Debug("Persistor.Find(): ", n, "items found for query ", query)
 	q := p.GetCollection().Find(query)
 	q.Select(fields)
 	iter := q.Iter()
@@ -190,13 +190,12 @@ func mapCustom(m interface{}, raw interface{}) error {
 }
 
 /*
-Create new orderID within specified range (ids cycle when range is exceeded).
+Create new orderID within specified range in foomo/shop/configuration (ids cycle when range is exceeded).
 */
 func createOrderID() (id string, err error) {
 	// Globus specifec prefix
 	prefix := "000"
-	p := GetPersistor(configuration.MONGO_URL, configuration.MONGO_COLLECTION_ORDERS)
-
+	p := GetOrderPersistor()
 	OrderIDLock.Lock()
 
 	// Application has been restarted. LAST_ASSIGNED_ID is not yet initialized
@@ -247,16 +246,21 @@ func (p *Persistor) InsertOrder(o *Order) (err error) {
 	if err != nil {
 		return err
 	}
+	o.Status = OrderStatusCreated
 	//log.Println("Created orderID:", o.OrderID)
 	err = p.GetCollection().Insert(o)
 	event_log.SaveShopEvent(event_log.ActionInsertingOrder, o.OrderID, err)
 	return err
 }
 
-func (p *Persistor) UpsertOrder(o *Order) (*mgo.ChangeInfo, error) {
-	info, err := p.GetCollection().UpsertId(o.ID, o)
+func (p *Persistor) UpsertOrder(o *Order) error {
+
+	_, err := p.GetCollection().UpsertId(o.ID, o)
+	if err != nil {
+		panic(err)
+	}
 	event_log.SaveShopEvent(event_log.ActionUpsertingOrder, o.OrderID, err)
-	return info, err
+	return err
 }
 
 func (p *Persistor) InsertEvent(e *event_log.Event) error {
@@ -265,30 +269,32 @@ func (p *Persistor) InsertEvent(e *event_log.Event) error {
 }
 
 // Returns GLOBAL_PERSISTOR. If GLOBAL_PERSISTOR is nil, a new persistor is created, set as GLOBAL_PERSISTOR and returned
-func GetPersistor(url string, collection string) *Persistor {
-	if GLOBAL_PERSISTOR == nil {
+func GetOrderPersistor() *Persistor {
+	url := configuration.MONGO_URL
+	collection := configuration.MONGO_COLLECTION_ORDERS
+	if GLOBAL_ORDER_PERSISTOR == nil {
 		p, err := NewPersistor(url, collection)
 		if err != nil || p == nil {
 			panic(err)
 		}
-		GLOBAL_PERSISTOR = p
-		return GLOBAL_PERSISTOR
+		GLOBAL_ORDER_PERSISTOR = p
+		return GLOBAL_ORDER_PERSISTOR
 	}
 
-	if url == GLOBAL_PERSISTOR.url && collection == GLOBAL_PERSISTOR.CollectionName {
-		return GLOBAL_PERSISTOR
+	if url == GLOBAL_ORDER_PERSISTOR.url && collection == GLOBAL_ORDER_PERSISTOR.CollectionName {
+		return GLOBAL_ORDER_PERSISTOR
 	}
 
 	p, err := NewPersistor(url, collection)
 	if err != nil || p == nil {
 		panic(err)
 	}
-	GLOBAL_PERSISTOR = p
-	return GLOBAL_PERSISTOR
+	GLOBAL_ORDER_PERSISTOR = p
+	return GLOBAL_ORDER_PERSISTOR
 }
 
-func GetShopOrder(db string, collection string, orderID string, customOrderProvider OrderCustomProvider) *Order {
-	p := GetPersistor(db, collection)
+func GetShopOrder(orderID string, customOrderProvider OrderCustomProvider) *Order {
+	p := GetOrderPersistor()
 	iter, err := p.Find(&bson.M{"orderid": orderID}, customOrderProvider)
 	if err != nil {
 		panic(err)

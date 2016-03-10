@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"time"
 
-	foomo_shop_configuration "github.com/foomo/shop/configuration"
 	"github.com/foomo/shop/customer"
 	"github.com/foomo/shop/event_log"
 	"github.com/foomo/shop/payment"
@@ -128,7 +127,7 @@ func (o *Order) SaveOrderEventDetailed(action ActionOrder, err error, positionIt
 		event.Error = err.Error()
 	}
 	o.History = append(o.History, event)
-	GetPersistor(foomo_shop_configuration.MONGO_URL, foomo_shop_configuration.MONGO_COLLECTION_ORDERS).UpsertOrder(o) // Error is ignored because it gets already logged in UpsertOrder()
+	GetOrderPersistor().UpsertOrder(o) // Error is ignored because it gets already logged in UpsertOrder()
 
 	jsonBytes, _ := json.MarshalIndent(event, "", "	")
 	event_log.Debug("Saved Shop Event! ", string(jsonBytes))
@@ -143,8 +142,21 @@ func (o *Order) GetCustomer(customCustomer interface{}) (c *customer.Customer, e
 	return
 }
 
-func (o *Order) AddPosition(pos *Position) error {
+func (o *Order) Insert() error {
+	return GetOrderPersistor().InsertOrder(o)
+}
 
+func (o *Order) Upsert() error {
+	return GetOrderPersistor().UpsertOrder(o)
+}
+
+// Convenience method for the default case of adding a position with following upsert in db
+func (order *Order) AddPosition(pos *Position) error {
+	return order.AddPositionAndUpsert(pos, true)
+}
+
+/* Add Position to Order. Use upsert=false when adding multiple positions. Upsert only once when adding last position for better performacne  */
+func (o *Order) AddPositionAndUpsert(pos *Position, upsert bool) error {
 	existingPos := o.GetPositionByItemId(pos.ItemID)
 	if existingPos != nil {
 		err := errors.New("position already exists use SetPositionQuantity or GetPositionById to manipulate it")
@@ -152,10 +164,20 @@ func (o *Order) AddPosition(pos *Position) error {
 		return err
 	}
 	o.Positions = append(o.Positions, pos)
-	if _, err := GetPersistor(foomo_shop_configuration.MONGO_URL, foomo_shop_configuration.MONGO_COLLECTION_ORDERS).UpsertOrder(o); err != nil {
-		o.SaveOrderEventDetailed(ActionAddPosition, err, pos.ItemID, "Error while adding position to order. Could not upsert order")
-		return err
+
+	//comment := ""
+	if upsert {
+		if err := GetOrderPersistor().UpsertOrder(o); err != nil {
+			o.SaveOrderEventDetailed(ActionAddPosition, err, pos.ItemID, "Error while adding position to order. Could not upsert order")
+			return err
+		}
+	} else {
+		// TODO log if upsert was skipped
+		//comment = "Did not perform upsert"
+		//log.Println(comment)
 	}
+	//o.SaveOrderEventDetailed(ActionAddPosition, nil, pos.ItemID, comment)
+
 	return nil
 }
 
@@ -177,7 +199,7 @@ func (o *Order) SetPositionQuantity(itemID string, quantity float64) error {
 			}
 		}
 	}
-	if _, err := GetPersistor(foomo_shop_configuration.MONGO_URL, foomo_shop_configuration.MONGO_COLLECTION_ORDERS).UpsertOrder(o); err != nil {
+	if err := GetOrderPersistor().UpsertOrder(o); err != nil {
 		o.SaveOrderEventDetailed(ActionChangeQuantityPosition, err, pos.ItemID, "Error while updating position quantity. Could not upsert order")
 		return err
 	}
