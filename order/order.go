@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/foomo/shop/customer"
@@ -31,6 +32,7 @@ const (
 	ActionRemovePosition         ActionOrder = "actionRemovePosition"
 	ActionChangeQuantityPosition ActionOrder = "actionChangeQuantityPosition"
 	ActionCreateCustomOrder      ActionOrder = "actionCreateCustomOrder"
+	ActionValidation             ActionOrder = "actionValidation"
 )
 
 type OrderPriceInfo struct {
@@ -130,7 +132,23 @@ func (o *Order) SaveOrderEventDetailed(action ActionOrder, err error, positionIt
 	GetOrderPersistor().UpsertOrder(o) // Error is ignored because it gets already logged in UpsertOrder()
 
 	jsonBytes, _ := json.MarshalIndent(event, "", "	")
-	event_log.Debug("Saved Shop Event! ", string(jsonBytes))
+	event_log.Debug("Saved Order Event! ", string(jsonBytes))
+}
+
+// Event will only be saved if is an error
+func (o *Order) SaveOrderEventOnError(action ActionOrder, err error, positionItemNumber string, comment string) {
+	if err == nil {
+		return
+	}
+	o.SaveOrderEventDetailed(action, err, positionItemNumber, comment)
+}
+
+func (o *Order) SaveOrderEventCustomEvent(e event_log.Event) {
+	o.History = append(o.History, &e)
+	GetOrderPersistor().UpsertOrder(o) // Error is ignored because it gets already logged in UpsertOrder()
+
+	jsonBytes, _ := json.MarshalIndent(&e, "", "	")
+	event_log.Debug("Saved Order Event! ", string(jsonBytes))
 }
 
 // GetCustomer
@@ -213,4 +231,23 @@ func (o *Order) GetPositionByItemId(itemID string) *Position {
 		}
 	}
 	return nil
+}
+
+func (o *Order) ReportErrors(printOnConsole bool) string {
+	errCount := 0
+	if len(o.History) > 0 {
+		errCount++
+		jsonBytes, err := json.MarshalIndent(o.History, "", "	")
+		if err != nil {
+			panic(err)
+		}
+		s := string(jsonBytes)
+		if printOnConsole {
+			log.Println("Errors logged for order with orderID:")
+			log.Println(s)
+		}
+
+		return s
+	}
+	return "No errors logged for order with orderID " + o.OrderID
 }
