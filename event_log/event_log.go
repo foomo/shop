@@ -10,14 +10,14 @@ import (
 
 type Event struct {
 	ID             bson.ObjectId `bson:"_id,omitempty"`
-	Type           EventType
+	Type           EventType     // Success or Error. This is not set explicitely but derived from err == nil or err != nil
+	UserFeedBack   bool
 	Action         string
 	OrderID        string
-	PositionItemID string
+	PositionItemID string // used only for Actions, where a specific position was involved
 	Comment        string
 	Error          string // not type error, because jsonMarshal does not work on error
 	Timestamp      time.Time
-	Custom         interface{}
 }
 
 func NewEvent() *Event {
