@@ -65,7 +65,6 @@ type Order struct {
 		Name           string
 		RetryAfter     time.Duration
 		LastProcessing time.Time
-
 		//BulkID string
 	}
 }
@@ -80,10 +79,11 @@ const (
 type OrderStatus string
 
 const (
-	OrderStatusInvalid  OrderStatus = "invalid status"
-	OrderStatusCreated  OrderStatus = "created"
-	OrderStatusPocessed OrderStatus = "processed"
-	OrderStatusShipped  OrderStatus = "shipped"
+	OrderStatusInvalid     OrderStatus = "orderStatusInvalid"
+	OrderStatusCreated     OrderStatus = "orderStatusCreated"
+	OrderStatusPocessed    OrderStatus = "orderStatusProcessed"
+	OrderStatusShipped     OrderStatus = "orderStatusShipped"
+	OrderStatusReadyForATP OrderStatus = "orderStatusReadyForATP"
 )
 
 // OrderCustomProvider custom object provider
