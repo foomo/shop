@@ -297,13 +297,16 @@ func GetShopOrder(orderID string, customOrderProvider OrderCustomProvider) *Orde
 	p := GetOrderPersistor()
 	iter, err := p.Find(&bson.M{"orderid": orderID}, customOrderProvider)
 	if err != nil {
-		panic(err)
+		event_log.SaveShopEvent(event_log.ActionRetrieveOrder, orderID, err)
+		return nil
 	}
 	order, err := iter()
 	if err != nil {
-		panic(err)
+		event_log.SaveShopEvent(event_log.ActionRetrieveOrder, orderID, err)
+		return nil
 	}
 	if order == nil {
+		event_log.SaveShopEvent(event_log.ActionRetrieveOrder, orderID, errors.New("Order is nil"))
 		return nil
 	}
 	return order
