@@ -275,7 +275,7 @@ func GetOrderPersistor() *Persistor {
 	if GLOBAL_ORDER_PERSISTOR == nil {
 		p, err := NewPersistor(url, collection)
 		if err != nil || p == nil {
-			panic(err)
+			panic(errors.New("failed to create mongoDB order persistor: " + err.Error()))
 		}
 		GLOBAL_ORDER_PERSISTOR = p
 		return GLOBAL_ORDER_PERSISTOR

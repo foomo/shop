@@ -64,7 +64,7 @@ func GetEventPersistor() *Persistor {
 	if GLOBAL_EVENT_PERSISTOR == nil {
 		p, err := NewPersistor(url, collection)
 		if err != nil || p == nil {
-			panic(err)
+			panic(errors.New("failed to create mongoDB global persistor: " + err.Error()))
 		}
 		GLOBAL_EVENT_PERSISTOR = p
 		return GLOBAL_EVENT_PERSISTOR
