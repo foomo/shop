@@ -1,31 +1,51 @@
 package customer
 
+/* ++++++++++++++++++++++++++++++++++++++++++++++++
+			CONSTANTS
++++++++++++++++++++++++++++++++++++++++++++++++++ */
+
+const (
+	ContactTypePhoneLandline ContactType    = "landline"
+	ContactTypePhoneMobile   ContactType    = "mobile"
+	ContactTypeEmail         ContactType    = "email"
+	ContactTypeSkype         ContactType    = "skype"
+	ContactTypeFax           ContactType    = "fax"
+	SalutationTypeMr         SalutationType = "Herr"
+	SalutationTypeMrs        SalutationType = "Frau"
+	TitleTypeDr              TitleType      = "Dr"
+	TitleTypeProf            TitleType      = "Prof"
+	TitleTypeProfDr          TitleType      = "ProfDr"
+	AddressTypeDelivery      AddressType    = "delivery"
+	AddressTypeBilling       AddressType    = "billing"
+	CountryCodeGermany       CountryCode    = "DE"
+	CountryCodeSwistzerland  CountryCode    = "CH"
+	LanguageCodeGermany      LanguageCode   = "DE"
+	LanguageCodeSwistzerland LanguageCode   = "CH"
+)
+
+/* ++++++++++++++++++++++++++++++++++++++++++++++++
+			PUBLIC TYPES
++++++++++++++++++++++++++++++++++++++++++++++++++ */
+
+type AddressType string
 type ContactType string
-
-const (
-	ContactTypePhoneLandline ContactType = "landline"
-	ContactTypePhoneMobile   ContactType = "mobile"
-	ContactTypeEmail         ContactType = "email"
-	ContactTypeSkype         ContactType = "skype"
-	ContactTypeFax           ContactType = "fax"
-)
-
 type SalutationType string
-
-const (
-	SalutationTypeMr  SalutationType = "Herr"
-	SalutationTypeMrs SalutationType = "Frau"
-)
-
 type TitleType string
+type LanguageCode string
+type CountryCode string
 
-const (
-	TitleTypeDr     TitleType = "Dr"
-	TitleTypeProf   TitleType = "Prof"
-	TitleTypeProfDr TitleType = "ProfDr"
-)
+// TOP LEVEL OBJECT
+type Customer struct {
+	CustomerID      string
+	Person          *Person
+	Company         *Company `bson:",omitempty"`
+	AddressBilling  *Address
+	AddressShipping *Address
 
-// refactored from map because of validation
+	Localization *Localization
+	Custom       interface{} `bson:",omitempty"`
+}
+
 type Contacts struct {
 	PhoneLandLine string
 	PhoneMobile   string
@@ -35,22 +55,8 @@ type Contacts struct {
 	Primary       ContactType
 }
 
-func (c *Contacts) GetPrimaryContact() string {
-	switch c.Primary {
-	case ContactTypePhoneLandline:
-		return string(ContactTypePhoneLandline) + ": " + c.PhoneLandLine
-	case ContactTypePhoneMobile:
-		return string(ContactTypePhoneMobile) + ": " + c.PhoneMobile
-	case ContactTypeEmail:
-		return string(ContactTypeEmail) + ": " + c.Email
-	case ContactTypeSkype:
-		return string(ContactTypeSkype) + ": " + c.Skype
-	case ContactTypeFax:
-		return string(ContactTypeFax) + ": " + c.Fax
-	}
-	return "No primary contact available!"
-}
-
+// Person is a field Customer and of Address
+// Only Customer->Person has Contacts
 type Person struct {
 	FirstName  string
 	MiddleName string `bson:",omitempty"`
@@ -62,25 +68,9 @@ type Person struct {
 }
 
 type Company struct {
-	Name     string
-	Type     string
-	Contacts *Contacts
+	Name string
+	Type string
 }
-
-type Customer struct {
-	CustomerID   string
-	Person       *Person
-	Company      *Company `bson:",omitempty"`
-	Localization *Localization
-	Custom       interface{} `bson:",omitempty"`
-}
-
-type AddressType string
-
-const (
-	AddressTypeDelivery AddressType = "delivery"
-	AddressTypeBilling  AddressType = "billing"
-)
 
 type Address struct {
 	Person        *Person
@@ -99,16 +89,29 @@ type Localization struct {
 	CountryCode  CountryCode
 }
 
-type LanguageCode string
+/* ++++++++++++++++++++++++++++++++++++++++++++++++
+			PUBLIC METHODS
++++++++++++++++++++++++++++++++++++++++++++++++++ */
 
-const (
-	LanguageCodeGermany      LanguageCode = "DE"
-	LanguageCodeSwistzerland LanguageCode = "CH"
-)
+func (customer *Customer) GetAddresses() []*Address {
+	addresses := []*Address{}
+	addresses = append(addresses, customer.AddressBilling)
+	addresses = append(addresses, customer.AddressShipping)
+	return addresses
+}
 
-type CountryCode string
-
-const (
-	CountryCodeGermany      CountryCode = "DE"
-	CountryCodeSwistzerland CountryCode = "CH"
-)
+func (c *Contacts) GetPrimaryContact() string {
+	switch c.Primary {
+	case ContactTypePhoneLandline:
+		return string(ContactTypePhoneLandline) + ": " + c.PhoneLandLine
+	case ContactTypePhoneMobile:
+		return string(ContactTypePhoneMobile) + ": " + c.PhoneMobile
+	case ContactTypeEmail:
+		return string(ContactTypeEmail) + ": " + c.Email
+	case ContactTypeSkype:
+		return string(ContactTypeSkype) + ": " + c.Skype
+	case ContactTypeFax:
+		return string(ContactTypeFax) + ": " + c.Fax
+	}
+	return "No primary contact available!"
+}

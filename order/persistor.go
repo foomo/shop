@@ -121,7 +121,7 @@ func (p *Persistor) Find(query *bson.M, customProvider OrderCustomProvider) (ite
 			}
 
 			/* Map AddressCustom */
-			for _, address := range o.Addresses {
+			for _, address := range o.Customer.GetAddresses() {
 				addressCustom := customProvider.NewAddressCustom()
 				if addressCustom != nil && address.Custom != nil {
 

@@ -56,7 +56,7 @@ type Order struct {
 	History   event_log.EventHistory
 	Positions []*Position
 	Customer  *customer.Customer
-	Addresses []*customer.Address
+	//Addresses []*customer.Address
 	Payment   *payment.Payment
 	PriceInfo *OrderPriceInfo
 	Shipping  *shipping.ShippingProperties
@@ -102,7 +102,7 @@ func NewOrder() *Order {
 		History:   event_log.EventHistory{},
 		Positions: []*Position{},
 		Customer:  &customer.Customer{},
-		Addresses: []*customer.Address{},
+		//Addresses: []*customer.Address{},
 		Payment:   &payment.Payment{},
 		PriceInfo: &OrderPriceInfo{},
 		Shipping:  &shipping.ShippingProperties{},
