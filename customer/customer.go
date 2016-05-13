@@ -90,14 +90,8 @@ type Address struct {
 	ZIP           string
 	City          string
 	Country       string
-	PostOfficeBox string `bson:",omitempty"`
-	//Extra        *AddressExtra
-	Custom interface{} `bson:",omitempty"`
-}
-
-type AddressExtra struct {
-	PostOfficeBox string
-	// e.g. Packstation etc.
+	PostOfficeBox string      `bson:",omitempty"`
+	Custom        interface{} `bson:",omitempty"`
 }
 
 type Localization struct {
