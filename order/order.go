@@ -17,10 +17,9 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
-// Event can be triggered and listended to in order to deal with changes of\
-// orders
-
-type ActionOrder string
+/* ++++++++++++++++++++++++++++++++++++++++++++++++
+			CONSTANTS
++++++++++++++++++++++++++++++++++++++++++++++++++ */
 
 const (
 	ActionStatusUpdateHead       ActionOrder = "actionStatusUpdateHead"
@@ -33,17 +32,22 @@ const (
 	ActionChangeQuantityPosition ActionOrder = "actionChangeQuantityPosition"
 	ActionCreateCustomOrder      ActionOrder = "actionCreateCustomOrder"
 	ActionValidation             ActionOrder = "actionValidation"
+	OrderTypeOrder               OrderType   = "order"
+	OrderTypeReturn              OrderType   = "return"
+	OrderStatusInvalid           OrderStatus = "orderStatusInvalid"
+	OrderStatusCreated           OrderStatus = "orderStatusCreated"
+	OrderStatusPocessed          OrderStatus = "orderStatusProcessed"
+	OrderStatusShipped           OrderStatus = "orderStatusShipped"
+	OrderStatusReadyForATP       OrderStatus = "orderStatusReadyForATP"
 )
 
-type OrderPriceInfo struct {
-	SumNet        float64
-	RebatesNet    float64
-	VouchersNet   float64
-	ShippingNet   float64
-	SumFinalNet   float64
-	Taxes         float64
-	SumFinalGross float64
-}
+/* ++++++++++++++++++++++++++++++++++++++++++++++++
+			PUBLIC TYPES
++++++++++++++++++++++++++++++++++++++++++++++++++ */
+
+type ActionOrder string
+type OrderType string
+type OrderStatus string
 
 // Order of item
 // create revisions
@@ -56,7 +60,6 @@ type Order struct {
 	History   event_log.EventHistory
 	Positions []*Position
 	Customer  *customer.Customer
-	//Addresses []*customer.Address
 	Payment   *payment.Payment
 	PriceInfo *OrderPriceInfo
 	Shipping  *shipping.ShippingProperties
@@ -65,28 +68,19 @@ type Order struct {
 		Name           string
 		RetryAfter     time.Duration
 		LastProcessing time.Time
-		//BulkID string
 	}
 }
 
-type OrderType string
+type OrderPriceInfo struct {
+	SumNet        float64
+	RebatesNet    float64
+	VouchersNet   float64
+	ShippingNet   float64
+	SumFinalNet   float64
+	Taxes         float64
+	SumFinalGross float64
+}
 
-const (
-	OrderTypeOrder  OrderType = "order"
-	OrderTypeReturn OrderType = "return"
-)
-
-type OrderStatus string
-
-const (
-	OrderStatusInvalid     OrderStatus = "orderStatusInvalid"
-	OrderStatusCreated     OrderStatus = "orderStatusCreated"
-	OrderStatusPocessed    OrderStatus = "orderStatusProcessed"
-	OrderStatusShipped     OrderStatus = "orderStatusShipped"
-	OrderStatusReadyForATP OrderStatus = "orderStatusReadyForATP"
-)
-
-// OrderCustomProvider custom object provider
 type OrderCustomProvider interface {
 	NewOrderCustom() interface{}
 	NewPositionCustom() interface{}
@@ -95,19 +89,23 @@ type OrderCustomProvider interface {
 	Fields() *bson.M
 }
 
-// NewOrder
-func NewOrder() *Order {
-	return &Order{
-		Timestamp: time.Now(),
-		History:   event_log.EventHistory{},
-		Positions: []*Position{},
-		Customer:  &customer.Customer{},
-		//Addresses: []*customer.Address{},
-		Payment:   &payment.Payment{},
-		PriceInfo: &OrderPriceInfo{},
-		Shipping:  &shipping.ShippingProperties{},
-	}
+// Position in an order
+type Position struct {
+	//ID           string
+	ItemID       string
+	Name         string
+	Description  string
+	Quantity     float64
+	QuantityUnit string
+	Price        float64
+	IsATPApplied bool
+	Refund       bool
+	Custom       interface{}
 }
+
+/* ++++++++++++++++++++++++++++++++++++++++++++++++
+			PUBLIC METHODS ON ORDER
++++++++++++++++++++++++++++++++++++++++++++++++++ */
 
 func (o *Order) SaveOrderEvent(action ActionOrder, err error, positionItemNumber string) {
 	o.SaveOrderEventDetailed(action, err, "", "")
@@ -223,7 +221,6 @@ func (o *Order) SetPositionQuantity(itemID string, quantity float64) error {
 	}
 	return nil
 }
-
 func (o *Order) GetPositionByItemId(itemID string) *Position {
 	for _, pos := range o.Positions {
 		if pos.ItemID == itemID {
@@ -232,7 +229,6 @@ func (o *Order) GetPositionByItemId(itemID string) *Position {
 	}
 	return nil
 }
-
 func (o *Order) ReportErrors(printOnConsole bool) string {
 	errCount := 0
 	if len(o.History) > 0 {
@@ -250,4 +246,35 @@ func (o *Order) ReportErrors(printOnConsole bool) string {
 		return s
 	}
 	return "No errors logged for order with orderID " + o.OrderID
+}
+
+/* ++++++++++++++++++++++++++++++++++++++++++++++++
+			PUBLIC METHODS ON POSITION
++++++++++++++++++++++++++++++++++++++++++++++++++ */
+
+func (p *Position) IsRefund() bool {
+	return p.Refund
+}
+
+// GetAmount returns the Price Sum of the position
+func (p *Position) GetAmount() float64 {
+	return p.Price * p.Quantity
+}
+
+/* ++++++++++++++++++++++++++++++++++++++++++++++++
+			PUBLIC METHODS
++++++++++++++++++++++++++++++++++++++++++++++++++ */
+
+// NewOrder
+func NewOrder() *Order {
+	return &Order{
+		Timestamp: time.Now(),
+		History:   event_log.EventHistory{},
+		Positions: []*Position{},
+		Customer:  &customer.Customer{},
+		//Addresses: []*customer.Address{},
+		Payment:   &payment.Payment{},
+		PriceInfo: &OrderPriceInfo{},
+		Shipping:  &shipping.ShippingProperties{},
+	}
 }

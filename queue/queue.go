@@ -7,11 +7,19 @@ import (
 	"github.com/foomo/shop/order"
 )
 
+/* ++++++++++++++++++++++++++++++++++++++++++++++++
+			PUBLIC TYPES
++++++++++++++++++++++++++++++++++++++++++++++++++ */
+
 type Queue struct {
 	persistor      *order.Persistor
 	processors     []order.Processor
 	bulkProcessors []order.BulkProcessor
 }
+
+/* ++++++++++++++++++++++++++++++++++++++++++++++++
+			PUBLIC METHODS
++++++++++++++++++++++++++++++++++++++++++++++++++ */
 
 func NewQueue(mongoURL string) (q *Queue, err error) {
 	log.Println("NewQueue()...")

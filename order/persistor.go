@@ -18,6 +18,18 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
+/* ++++++++++++++++++++++++++++++++++++++++++++++++
+			CONSTANTS / VARS
++++++++++++++++++++++++++++++++++++++++++++++++++ */
+
+var GLOBAL_ORDER_PERSISTOR *Persistor
+var LAST_ASSIGNED_ID int = -1
+var OrderIDLock sync.Mutex
+
+/* ++++++++++++++++++++++++++++++++++++++++++++++++
+			PUBLIC TYPES
++++++++++++++++++++++++++++++++++++++++++++++++++ */
+
 // Persistor persist *Orders
 type Persistor struct {
 	session        *mgo.Session
@@ -26,39 +38,13 @@ type Persistor struct {
 	CollectionName string
 }
 
-var GLOBAL_ORDER_PERSISTOR *Persistor
-var LAST_ASSIGNED_ID int = -1
-var OrderIDLock sync.Mutex
-
 type OrderIDWrapper struct {
 	OrderID string
 }
 
-// NewPersistor constructor
-func NewPersistor(mongoURL string, collectionName string) (p *Persistor, err error) {
-	log.Println("creating new persistor with db:", mongoURL, "and collection:", collectionName)
-	parsedURL, err := url.Parse(mongoURL)
-	if err != nil {
-		return nil, err
-	}
-	if parsedURL.Scheme != "mongodb" {
-		return nil, fmt.Errorf("missing scheme mongo:// in %q", mongoURL)
-	}
-	if len(parsedURL.Path) < 2 {
-		return nil, errors.New("invalid mongoURL missing db should be mongodb://server:port/db")
-	}
-	session, err := mgo.Dial(mongoURL)
-	if err != nil {
-		return nil, err
-	}
-	p = &Persistor{
-		session:        session,
-		url:            mongoURL,
-		db:             parsedURL.Path[1:],
-		CollectionName: collectionName,
-	}
-	return p, nil
-}
+/* ++++++++++++++++++++++++++++++++++++++++++++++++
+			PUBLIC METHODS ON PERSISTOR
++++++++++++++++++++++++++++++++++++++++++++++++++ */
 
 func (p *Persistor) GetCollection() *mgo.Collection {
 	return p.session.DB(p.db).C(p.CollectionName)
@@ -176,6 +162,115 @@ func (p *Persistor) GetPositionOfOrder(query *bson.M, fields *bson.M, customProv
 
 }
 
+// Create unique OrderID and insert order in database
+func (p *Persistor) InsertOrder(o *Order) (err error) {
+	o.OrderID, err = createOrderID()
+	if err != nil {
+		return err
+	}
+	o.Status = OrderStatusCreated
+	//log.Println("Created orderID:", o.OrderID)
+	err = p.GetCollection().Insert(o)
+	event_log.SaveShopEvent(event_log.ActionInsertingOrder, o.OrderID, err)
+	return err
+}
+
+func (p *Persistor) UpsertOrder(o *Order) error {
+
+	_, err := p.GetCollection().UpsertId(o.ID, o)
+	if err != nil {
+		panic(err)
+	}
+	event_log.SaveShopEvent(event_log.ActionUpsertingOrder, o.OrderID, err)
+	return err
+}
+
+func (p *Persistor) InsertEvent(e *event_log.Event) error {
+	err := p.GetCollection().Insert(e)
+	return err
+}
+
+/* ++++++++++++++++++++++++++++++++++++++++++++++++
+			PUBLIC METHODS
++++++++++++++++++++++++++++++++++++++++++++++++++ */
+
+// NewPersistor constructor
+func NewPersistor(mongoURL string, collectionName string) (p *Persistor, err error) {
+	log.Println("creating new persistor with db:", mongoURL, "and collection:", collectionName)
+	parsedURL, err := url.Parse(mongoURL)
+	if err != nil {
+		return nil, err
+	}
+	if parsedURL.Scheme != "mongodb" {
+		return nil, fmt.Errorf("missing scheme mongo:// in %q", mongoURL)
+	}
+	if len(parsedURL.Path) < 2 {
+		return nil, errors.New("invalid mongoURL missing db should be mongodb://server:port/db")
+	}
+	session, err := mgo.Dial(mongoURL)
+	if err != nil {
+		return nil, err
+	}
+	p = &Persistor{
+		session:        session,
+		url:            mongoURL,
+		db:             parsedURL.Path[1:],
+		CollectionName: collectionName,
+	}
+	return p, nil
+}
+
+// Returns GLOBAL_PERSISTOR. If GLOBAL_PERSISTOR is nil, a new persistor is created, set as GLOBAL_PERSISTOR and returned
+func GetOrderPersistor() *Persistor {
+	url := configuration.MONGO_URL
+	collection := configuration.MONGO_COLLECTION_ORDERS
+	if GLOBAL_ORDER_PERSISTOR == nil {
+		p, err := NewPersistor(url, collection)
+		if err != nil || p == nil {
+			panic(errors.New("failed to create mongoDB order persistor: " + err.Error()))
+		}
+		GLOBAL_ORDER_PERSISTOR = p
+		return GLOBAL_ORDER_PERSISTOR
+	}
+
+	if url == GLOBAL_ORDER_PERSISTOR.url && collection == GLOBAL_ORDER_PERSISTOR.CollectionName {
+		return GLOBAL_ORDER_PERSISTOR
+	}
+
+	p, err := NewPersistor(url, collection)
+	if err != nil || p == nil {
+		panic(err)
+	}
+	GLOBAL_ORDER_PERSISTOR = p
+	return GLOBAL_ORDER_PERSISTOR
+}
+
+func GetShopOrder(orderID string, customOrderProvider OrderCustomProvider) *Order {
+	p := GetOrderPersistor()
+	iter, err := p.Find(&bson.M{"orderid": orderID}, customOrderProvider)
+	if err != nil {
+		log.Println(err.Error())
+		event_log.SaveShopEvent(event_log.ActionRetrieveOrder, orderID, err)
+		return nil
+	}
+	order, err := iter()
+	if err != nil {
+		log.Println(err.Error())
+		event_log.SaveShopEvent(event_log.ActionRetrieveOrder, orderID, err)
+		return nil
+	}
+	if order == nil {
+		log.Println(err.Error())
+		event_log.SaveShopEvent(event_log.ActionRetrieveOrder, orderID, errors.New("Order is nil"))
+		return nil
+	}
+	return order
+}
+
+/* ++++++++++++++++++++++++++++++++++++++++++++++++
+			PRIVATE METHODS
++++++++++++++++++++++++++++++++++++++++++++++++++ */
+
 /* this does not work yet */
 func mapCustom(m interface{}, raw interface{}) error {
 	if raw == nil {
@@ -238,79 +333,4 @@ func createOrderID() (id string, err error) {
 	OrderIDLock.Unlock()
 	return prefix + strconv.Itoa(LAST_ASSIGNED_ID), nil
 
-}
-
-// Create unique OrderID and insert order in database
-func (p *Persistor) InsertOrder(o *Order) (err error) {
-	o.OrderID, err = createOrderID()
-	if err != nil {
-		return err
-	}
-	o.Status = OrderStatusCreated
-	//log.Println("Created orderID:", o.OrderID)
-	err = p.GetCollection().Insert(o)
-	event_log.SaveShopEvent(event_log.ActionInsertingOrder, o.OrderID, err)
-	return err
-}
-
-func (p *Persistor) UpsertOrder(o *Order) error {
-
-	_, err := p.GetCollection().UpsertId(o.ID, o)
-	if err != nil {
-		panic(err)
-	}
-	event_log.SaveShopEvent(event_log.ActionUpsertingOrder, o.OrderID, err)
-	return err
-}
-
-func (p *Persistor) InsertEvent(e *event_log.Event) error {
-	err := p.GetCollection().Insert(e)
-	return err
-}
-
-// Returns GLOBAL_PERSISTOR. If GLOBAL_PERSISTOR is nil, a new persistor is created, set as GLOBAL_PERSISTOR and returned
-func GetOrderPersistor() *Persistor {
-	url := configuration.MONGO_URL
-	collection := configuration.MONGO_COLLECTION_ORDERS
-	if GLOBAL_ORDER_PERSISTOR == nil {
-		p, err := NewPersistor(url, collection)
-		if err != nil || p == nil {
-			panic(errors.New("failed to create mongoDB order persistor: " + err.Error()))
-		}
-		GLOBAL_ORDER_PERSISTOR = p
-		return GLOBAL_ORDER_PERSISTOR
-	}
-
-	if url == GLOBAL_ORDER_PERSISTOR.url && collection == GLOBAL_ORDER_PERSISTOR.CollectionName {
-		return GLOBAL_ORDER_PERSISTOR
-	}
-
-	p, err := NewPersistor(url, collection)
-	if err != nil || p == nil {
-		panic(err)
-	}
-	GLOBAL_ORDER_PERSISTOR = p
-	return GLOBAL_ORDER_PERSISTOR
-}
-
-func GetShopOrder(orderID string, customOrderProvider OrderCustomProvider) *Order {
-	p := GetOrderPersistor()
-	iter, err := p.Find(&bson.M{"orderid": orderID}, customOrderProvider)
-	if err != nil {
-		log.Println(err.Error())
-		event_log.SaveShopEvent(event_log.ActionRetrieveOrder, orderID, err)
-		return nil
-	}
-	order, err := iter()
-	if err != nil {
-		log.Println(err.Error())
-		event_log.SaveShopEvent(event_log.ActionRetrieveOrder, orderID, err)
-		return nil
-	}
-	if order == nil {
-		log.Println(err.Error())
-		event_log.SaveShopEvent(event_log.ActionRetrieveOrder, orderID, errors.New("Order is nil"))
-		return nil
-	}
-	return order
 }
