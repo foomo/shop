@@ -5,6 +5,8 @@ import (
 	"log"
 	"time"
 
+	"github.com/foomo/shop/utils"
+
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -15,14 +17,14 @@ type Event struct {
 	Action         string
 	OrderID        string
 	PositionItemID string // used only for Actions, where a specific position was involved
-	Comment        string
+	Description    string
 	Error          string // not type error, because jsonMarshal does not work on error
 	Timestamp      time.Time
 }
 
 func NewEvent() *Event {
 	return &Event{
-		Timestamp: time.Now(),
+		Timestamp: utils.TimeNow(),
 	}
 }
 
@@ -39,10 +41,14 @@ const (
 	ActionInsertingOrder      ActionShop = "actionInsertingOrder"
 	ActionUpsertingOrder      ActionShop = "actionUpsertingOrder"
 	ActionCreateOrder         ActionShop = "actionCreatingOrder"
+	ActionInsertingCustomer   ActionShop = "actionInsertingOrder"
+	ActionUpsertingCustomer   ActionShop = "actionUpsertingOrder"
+	ActionCreateCustomer      ActionShop = "actionCreatingOrder"
 	ActionDropEventCollection ActionShop = "actionDropEventCollection"
 	ActionDropAllCollections  ActionShop = "actionDropAllCollections"
 	ActionValidate            ActionShop = "actionValidate"
 	ActionRetrieveOrder       ActionShop = "actionRetrieveOrder"
+	ActionRetrieveCustomer    ActionShop = "actionRetrieveCustomer"
 	ActionStatusUpdate        ActionShop = "actionStatusUpdate"
 	ActionApplyATPResponse    ActionShop = "actionApplyATPResponse"
 	ActionSendATPRequest      ActionShop = "actionSendATPRequest"

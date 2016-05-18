@@ -38,14 +38,14 @@ type ResponseItem struct {
 func CreateATPRequestFromOrder(order *order.Order) *ATPRequest {
 
 	requestItems := []*RequestItem{}
-	for _, position := range order.Positions {
+	for _, position := range order.GetPositions() {
 
 		reqItem := &RequestItem{
 			AssociatedOrder:     order,
 			ItemNumber:          position.ItemID,
 			DesiredQuantity:     position.Quantity,
 			QuantityUnit:        position.QuantityUnit,
-			DesiredDeliveryDate: order.Timestamp.Add(time.Duration(1) * time.Hour * time.Duration(24)), // set day after orderdate as default for DesiredDeliveryDate
+			DesiredDeliveryDate: order.GetLastModifiedAt().Add(time.Duration(1) * time.Hour * time.Duration(24)), // set day after orderdate as default for DesiredDeliveryDate
 		}
 		requestItems = append(requestItems, reqItem)
 	}

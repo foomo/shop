@@ -3,83 +3,48 @@ package event_log
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log"
-	"net/url"
 
 	"github.com/foomo/shop/configuration"
+	"github.com/foomo/shop/persistence"
 
-	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
-
-// Persistor persist *Events
-type Persistor struct {
-	session        *mgo.Session
-	url            string
-	db             string
-	CollectionName string
-}
 
 const (
 	VERBOSE = false
 )
 
-var GLOBAL_EVENT_PERSISTOR *Persistor
+var globalEventPersistor *persistence.Persistor
 
 // NewPersistor constructor
-func NewPersistor(mongoURL string, collectionName string) (p *Persistor, err error) {
-	log.Println("creating new persistor with db:", mongoURL, "and collection:", collectionName)
-	parsedURL, err := url.Parse(mongoURL)
-	if err != nil {
-		return nil, err
-	}
-	if parsedURL.Scheme != "mongodb" {
-		return nil, fmt.Errorf("missing scheme mongo:// in %q", mongoURL)
-	}
-	if len(parsedURL.Path) < 2 {
-		return nil, errors.New("invalid mongoURL missing db should be mongodb://server:port/db")
-	}
-	session, err := mgo.Dial(mongoURL)
-	if err != nil {
-		return nil, err
-	}
-	p = &Persistor{
-		session:        session,
-		url:            mongoURL,
-		db:             parsedURL.Path[1:],
-		CollectionName: collectionName,
-	}
-	return p, nil
-}
-
-func (p *Persistor) GetCollection() *mgo.Collection {
-	return p.session.DB(p.db).C(p.CollectionName)
+func NewPersistor(mongoURL string, collectionName string) (p *persistence.Persistor, err error) {
+	return persistence.NewPersistor(mongoURL, collectionName)
 }
 
 // Returns GLOBAL_PERSISTOR. If GLOBAL_PERSISTOR is nil, a new persistor is created, set as GLOBAL_PERSISTOR and returned
-func GetEventPersistor() *Persistor {
+func GetEventPersistor() *persistence.Persistor {
 	url := configuration.MONGO_URL
 	collection := configuration.MONGO_COLLECTION_SHOP_EVENT_LOG
-	if GLOBAL_EVENT_PERSISTOR == nil {
+	if globalEventPersistor == nil {
 		p, err := NewPersistor(url, collection)
 		if err != nil || p == nil {
 			panic(errors.New("failed to create mongoDB global persistor: " + err.Error()))
 		}
-		GLOBAL_EVENT_PERSISTOR = p
-		return GLOBAL_EVENT_PERSISTOR
+		globalEventPersistor = p
+		return globalEventPersistor
 	}
 
-	if url == GLOBAL_EVENT_PERSISTOR.url && collection == GLOBAL_EVENT_PERSISTOR.CollectionName {
-		return GLOBAL_EVENT_PERSISTOR
+	if url == globalEventPersistor.GetURL() && collection == globalEventPersistor.GetCollectionName() {
+		return globalEventPersistor
 	}
 
 	p, err := NewPersistor(url, collection)
 	if err != nil || p == nil {
 		panic(err)
 	}
-	GLOBAL_EVENT_PERSISTOR = p
-	return GLOBAL_EVENT_PERSISTOR
+	globalEventPersistor = p
+	return globalEventPersistor
 }
 
 func ResetShopEventLog() bool {
@@ -123,11 +88,11 @@ func GetShopEventsFromDB(query *bson.M) string {
 	return result
 }
 
-func SaveShopEvent(action ActionShop, orderID string, err error) {
-	SaveShopEventWithComment(action, orderID, err, "")
-}
+// func SaveShopEvent(action ActionShop, orderID string, err error) {
+// 	SaveShopEventWithComment(action, orderID, err, "")
+// }
 
-func SaveShopEventWithComment(action ActionShop, orderID string, err error, comment string) {
+func SaveShopEvent(action ActionShop, orderID string, err error, description string) {
 	Debug("Action", string(action), "OrderID", orderID)
 	event := NewEvent()
 	if err != nil {
@@ -140,7 +105,7 @@ func SaveShopEventWithComment(action ActionShop, orderID string, err error, comm
 	if err != nil {
 		event.Error = err.Error()
 	}
-	event.Comment = comment
+	event.Description = description
 
 	if !saveShopEventDB(event) {
 		jsonBytes, err := json.MarshalIndent(event, "", "	")
@@ -154,7 +119,7 @@ func SaveShopEventWithComment(action ActionShop, orderID string, err error, comm
 }
 
 func saveShopEventDB(e *Event) bool {
-	err := GetEventPersistor().InsertEvent(e)
+	err := InsertEvent(e)
 	if err != nil {
 		log.Println(err)
 		return false
@@ -162,7 +127,7 @@ func saveShopEventDB(e *Event) bool {
 	return true
 }
 
-func (p *Persistor) InsertEvent(e *Event) error {
-	err := p.GetCollection().Insert(e)
+func InsertEvent(e *Event) error {
+	err := GetEventPersistor().GetCollection().Insert(e)
 	return err
 }

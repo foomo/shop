@@ -1,23 +1,35 @@
 package utils
 
 import (
-	"log"
-
-	"github.com/foomo/shop/event_log"
-	"github.com/foomo/shop/order"
+	"encoding/json"
+	"fmt"
+	"time"
 )
 
-// Drops order collection and event_log collection
-func DropAllCollections() {
-	err := event_log.GetEventPersistor().GetCollection().DropCollection()
+// Returns string in format YYYYMMDD
+func GetDateYYYYMMDD() string {
+	return time.Now().Format("20060102")
+}
+
+func GetFormattedTime(t time.Time) string {
+	return t.Format("Mon Jan 2 2006 15:04:05")
+}
+
+func TimeNow() time.Time {
+	// Trunacte makes sure that the exact same value that goes in the db,
+	// will come out of it again (otherwise mongo will cut precison and persistence tests will fail)
+	return time.Now().Truncate(time.Second)
+}
+
+func PrintJSON(v interface{}) {
+	fmt.Println(ToJSON(v))
+}
+
+// ToJSON creates a JSON from v and returns it as string
+func ToJSON(v interface{}) string {
+	json, err := json.MarshalIndent(v, "", " ")
 	if err != nil {
-		// Do not panic here. If db does not yet exist, it is ok for DropCollection to fail.
-		log.Println("Error: EventPersistor DropCollection() ", err)
+		return "Could not print JSON"
 	}
-	err = order.GetOrderPersistor().GetCollection().DropCollection()
-	if err != nil {
-		// Do not panic here. If db does not yet exist, it is ok for DropCollection to fail.
-		log.Println("Error: EventPersistor DropCollection() ", err)
-	}
-	order.LAST_ASSIGNED_ID = -1
+	return string(json)
 }

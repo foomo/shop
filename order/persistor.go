@@ -2,19 +2,13 @@ package order
 
 import (
 	"errors"
-	"fmt"
 	"log"
-	"net/url"
 
 	"github.com/foomo/shop/event_log"
+	"github.com/foomo/shop/persistence"
 	"github.com/mitchellh/mapstructure"
 
-	"strconv"
-
-	"sync"
-
 	"github.com/foomo/shop/configuration"
-	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -22,35 +16,18 @@ import (
 			CONSTANTS / VARS
 +++++++++++++++++++++++++++++++++++++++++++++++++ */
 
-var GLOBAL_ORDER_PERSISTOR *Persistor
-var LAST_ASSIGNED_ID int = -1
-var OrderIDLock sync.Mutex
+var globalOrderPersistor *persistence.Persistor
 
 /* ++++++++++++++++++++++++++++++++++++++++++++++++
 			PUBLIC TYPES
 +++++++++++++++++++++++++++++++++++++++++++++++++ */
 
-// Persistor persist *Orders
-type Persistor struct {
-	session        *mgo.Session
-	url            string
-	db             string
-	CollectionName string
-}
-
-type OrderIDWrapper struct {
-	OrderID string
-}
-
 /* ++++++++++++++++++++++++++++++++++++++++++++++++
 			PUBLIC METHODS ON PERSISTOR
 +++++++++++++++++++++++++++++++++++++++++++++++++ */
 
-func (p *Persistor) GetCollection() *mgo.Collection {
-	return p.session.DB(p.db).C(p.CollectionName)
-}
-
-func (p *Persistor) Find(query *bson.M, customProvider OrderCustomProvider) (iter func() (o *Order, err error), err error) {
+func Find(query *bson.M, customProvider OrderCustomProvider) (iter func() (o *Order, err error), err error) {
+	p := GetOrderPersistor()
 	_, err = p.GetCollection().Find(query).Count()
 	if err != nil {
 		log.Println(err)
@@ -80,18 +57,18 @@ func (p *Persistor) Find(query *bson.M, customProvider OrderCustomProvider) (ite
 				o.Custom = orderCustom
 			}
 
-			/* Map CustomerCustom */
-			customerCustom := customProvider.NewCustomerCustom()
-			if o.Customer == nil {
-				return nil, errors.New("Error in Persistor.Find(): Customer is nil. Order must have a Customer!")
-			}
-			if customerCustom != nil && o.Customer.Custom != nil {
-				err = mapstructure.Decode(o.Customer.Custom, customerCustom)
-				if err != nil {
-					return nil, err
-				}
-				o.Customer.Custom = customerCustom
-			}
+			// /* Map CustomerCustom */
+			// customerCustom := customProvider.NewCustomerCustom()
+			// if o.Customer == nil {
+			// 	return nil, errors.New("Error in Persistor.Find(): Customer is nil. Order must have a Customer!")
+			// }
+			// if customerCustom != nil && o.Customer.Custom != nil {
+			// 	err = mapstructure.Decode(o.Customer.Custom, customerCustom)
+			// 	if err != nil {
+			// 		return nil, err
+			// 	}
+			// 	o.Customer.Custom = customerCustom
+			// }
 
 			/* Map PostionCustom */
 			for _, position := range o.Positions {
@@ -103,19 +80,6 @@ func (p *Persistor) Find(query *bson.M, customProvider OrderCustomProvider) (ite
 						return nil, err
 					}
 					position.Custom = positionCustom
-				}
-			}
-
-			/* Map AddressCustom */
-			for _, address := range o.Customer.GetAddresses() {
-				addressCustom := customProvider.NewAddressCustom()
-				if addressCustom != nil && address.Custom != nil {
-
-					err = mapstructure.Decode(address.Custom, addressCustom)
-					if err != nil {
-						return nil, err
-					}
-					address.Custom = addressCustom
 				}
 			}
 
@@ -131,61 +95,66 @@ func (p *Persistor) Find(query *bson.M, customProvider OrderCustomProvider) (ite
 // This example query works in mongo shell:
 // query: {orderid:"0009200001"}, fields: {positions:{$elemMatch:{"custom.positionnumber":1}}}
 // db.order_story.find({orderid:"0009200001"}, {positions:{$elemMatch:{"custom.positionnumber":1}}}).pretty()
-func (p *Persistor) GetPositionOfOrder(query *bson.M, fields *bson.M, customProvider OrderCustomProvider) (*Position, error) {
-	n, err := p.GetCollection().Find(query).Count()
-	if err != nil {
-		return nil, err
-	}
-	if n != 1 {
-		return nil, errors.New("Error: Query was not unique!")
-	}
-	event_log.Debug("Persistor.Find(): ", n, "items found for query ", query)
-	q := p.GetCollection().Find(query)
-	q.Select(fields)
-	iter := q.Iter()
-	position := &Position{}
-	if iter.Next(position) {
-		// if unmarshalling into postion was successful, set PositionCustom
-		// TODO this is duplicate code, make separate function
-		positionCustom := customProvider.NewPositionCustom()
-		if positionCustom != nil && position.Custom != nil {
+// func GetPositionOfOrder(query *bson.M, fields *bson.M, customProvider OrderCustomProvider) (*Position, error) {
+// 	p := GetOrderPersistor()
+// 	n, err := p.GetCollection().Find(query).Count()
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	if n != 1 {
+// 		return nil, errors.New("Error: Query was not unique!")
+// 	}
+// 	event_log.Debug("Persistor.Find(): ", n, "items found for query ", query)
+// 	q := p.GetCollection().Find(query)
+// 	q.Select(fields)
+// 	iter := q.Iter()
+// 	position := &Position{}
+// 	if iter.Next(position) {
+// 		// if unmarshalling into postion was successful, set PositionCustom
+// 		// TODO this is duplicate code, make separate function
+// 		positionCustom := customProvider.NewPositionCustom()
+// 		if positionCustom != nil && position.Custom != nil {
 
-			err = mapstructure.Decode(position.Custom, positionCustom)
-			if err != nil {
-				return nil, err
-			}
-			position.Custom = positionCustom
-		}
-		return position, nil
-	}
-	return nil, errors.New("Could not retrieve position: ")
+// 			err = mapstructure.Decode(position.Custom, positionCustom)
+// 			if err != nil {
+// 				return nil, err
+// 			}
+// 			position.Custom = positionCustom
+// 		}
+// 		return position, nil
+// 	}
+// 	return nil, errors.New("Could not retrieve position: ")
 
-}
+// }
 
-// Create unique OrderID and insert order in database
-func (p *Persistor) InsertOrder(o *Order) (err error) {
-	o.OrderID, err = createOrderID()
+// Create (or override) unique OrderID and insert order in database
+func InsertOrder(o *Order) (err error) {
+	p := GetOrderPersistor()
+	newID, err := createOrderID() // TODO This is not Globus Specific and should not be in shop
 	if err != nil {
 		return err
 	}
-	o.Status = OrderStatusCreated
+	o.OverrideId(newID)
+	o.SetStatus(OrderStatusCreated)
 	//log.Println("Created orderID:", o.OrderID)
+
 	err = p.GetCollection().Insert(o)
-	event_log.SaveShopEvent(event_log.ActionInsertingOrder, o.OrderID, err)
+	event_log.SaveShopEvent(event_log.ActionInsertingOrder, o.GetID(), err, "")
 	return err
 }
 
-func (p *Persistor) UpsertOrder(o *Order) error {
-
-	_, err := p.GetCollection().UpsertId(o.ID, o)
+func UpsertOrder(o *Order) error {
+	p := GetOrderPersistor()
+	_, err := p.GetCollection().UpsertId(o.BsonID, o)
 	if err != nil {
 		panic(err)
 	}
-	event_log.SaveShopEvent(event_log.ActionUpsertingOrder, o.OrderID, err)
+	event_log.SaveShopEvent(event_log.ActionUpsertingOrder, o.GetID(), err, "")
 	return err
 }
 
-func (p *Persistor) InsertEvent(e *event_log.Event) error {
+func InsertEvent(e *event_log.Event) error {
+	p := GetOrderPersistor()
 	err := p.GetCollection().Insert(e)
 	return err
 }
@@ -195,73 +164,51 @@ func (p *Persistor) InsertEvent(e *event_log.Event) error {
 +++++++++++++++++++++++++++++++++++++++++++++++++ */
 
 // NewPersistor constructor
-func NewPersistor(mongoURL string, collectionName string) (p *Persistor, err error) {
-	log.Println("creating new persistor with db:", mongoURL, "and collection:", collectionName)
-	parsedURL, err := url.Parse(mongoURL)
-	if err != nil {
-		return nil, err
-	}
-	if parsedURL.Scheme != "mongodb" {
-		return nil, fmt.Errorf("missing scheme mongo:// in %q", mongoURL)
-	}
-	if len(parsedURL.Path) < 2 {
-		return nil, errors.New("invalid mongoURL missing db should be mongodb://server:port/db")
-	}
-	session, err := mgo.Dial(mongoURL)
-	if err != nil {
-		return nil, err
-	}
-	p = &Persistor{
-		session:        session,
-		url:            mongoURL,
-		db:             parsedURL.Path[1:],
-		CollectionName: collectionName,
-	}
-	return p, nil
+func NewPersistor(mongoURL string, collectionName string) (p *persistence.Persistor, err error) {
+	return persistence.NewPersistor(mongoURL, collectionName)
 }
 
 // Returns GLOBAL_PERSISTOR. If GLOBAL_PERSISTOR is nil, a new persistor is created, set as GLOBAL_PERSISTOR and returned
-func GetOrderPersistor() *Persistor {
+func GetOrderPersistor() *persistence.Persistor {
 	url := configuration.MONGO_URL
 	collection := configuration.MONGO_COLLECTION_ORDERS
-	if GLOBAL_ORDER_PERSISTOR == nil {
+	if globalOrderPersistor == nil {
 		p, err := NewPersistor(url, collection)
 		if err != nil || p == nil {
 			panic(errors.New("failed to create mongoDB order persistor: " + err.Error()))
 		}
-		GLOBAL_ORDER_PERSISTOR = p
-		return GLOBAL_ORDER_PERSISTOR
+		globalOrderPersistor = p
+		return globalOrderPersistor
 	}
 
-	if url == GLOBAL_ORDER_PERSISTOR.url && collection == GLOBAL_ORDER_PERSISTOR.CollectionName {
-		return GLOBAL_ORDER_PERSISTOR
+	if url == globalOrderPersistor.GetURL() && collection == globalOrderPersistor.GetCollectionName() {
+		return globalOrderPersistor
 	}
 
 	p, err := NewPersistor(url, collection)
 	if err != nil || p == nil {
 		panic(err)
 	}
-	GLOBAL_ORDER_PERSISTOR = p
-	return GLOBAL_ORDER_PERSISTOR
+	globalOrderPersistor = p
+	return globalOrderPersistor
 }
 
 func GetShopOrder(orderID string, customOrderProvider OrderCustomProvider) *Order {
-	p := GetOrderPersistor()
-	iter, err := p.Find(&bson.M{"orderid": orderID}, customOrderProvider)
+	iter, err := Find(&bson.M{"id": orderID}, customOrderProvider)
 	if err != nil {
 		log.Println(err.Error())
-		event_log.SaveShopEvent(event_log.ActionRetrieveOrder, orderID, err)
+		event_log.SaveShopEvent(event_log.ActionRetrieveOrder, orderID, err, "")
 		return nil
 	}
 	order, err := iter()
 	if err != nil {
 		log.Println(err.Error())
-		event_log.SaveShopEvent(event_log.ActionRetrieveOrder, orderID, err)
+		event_log.SaveShopEvent(event_log.ActionRetrieveOrder, orderID, err, "")
 		return nil
 	}
 	if order == nil {
 		log.Println(err.Error())
-		event_log.SaveShopEvent(event_log.ActionRetrieveOrder, orderID, errors.New("Order is nil"))
+		event_log.SaveShopEvent(event_log.ActionRetrieveOrder, orderID, errors.New("Order is nil"), "")
 		return nil
 	}
 	return order
@@ -272,65 +219,14 @@ func GetShopOrder(orderID string, customOrderProvider OrderCustomProvider) *Orde
 +++++++++++++++++++++++++++++++++++++++++++++++++ */
 
 /* this does not work yet */
-func mapCustom(m interface{}, raw interface{}) error {
-	if raw == nil {
-		return errors.New("raw must not be nil")
-	}
-	err := mapstructure.Decode(m, raw)
-	if err != nil {
-		return err
-	}
-	m = raw
-	return nil
-}
-
-/*
-Create new orderID within specified range in foomo/shop/configuration (ids cycle when range is exceeded).
-*/
-func createOrderID() (id string, err error) {
-	// Globus specifec prefix
-	prefix := "000"
-	p := GetOrderPersistor()
-	OrderIDLock.Lock()
-
-	// Application has been restarted. LAST_ASSIGNED_ID is not yet initialized
-	if LAST_ASSIGNED_ID == -1 {
-		// Retrieve orderID of the most recent order
-		q := p.GetCollection().Find(&bson.M{}).Sort("-_id").Limit(1).Select(&bson.M{"orderid": true})
-		iter := q.Iter()
-		c, err := q.Count()
-		if err != nil {
-			OrderIDLock.Unlock()
-			return id, err
-		}
-		// If no orders exist, start with first value of range
-		if c == 0 {
-			// Database is emtpy. Use first id from specified id range
-			fmt.Println("Database is emtpy. Use first id from specified id range")
-			LAST_ASSIGNED_ID = configuration.ORDER_ID_RANGE[0]
-			OrderIDLock.Unlock()
-			return prefix + strconv.Itoa(LAST_ASSIGNED_ID), nil // "000" prefix is custom for Globus
-		}
-		orderIDWrapper := &OrderIDWrapper{}
-		iter.Next(orderIDWrapper)
-		idInt, err := strconv.Atoi(orderIDWrapper.OrderID)
-		if err != nil {
-			panic(err)
-		}
-		LAST_ASSIGNED_ID = idInt + 1
-		OrderIDLock.Unlock()
-		return prefix + strconv.Itoa(LAST_ASSIGNED_ID), nil
-	}
-	// if range is exceeded, use first value of range again
-	if LAST_ASSIGNED_ID == configuration.ORDER_ID_RANGE[1] {
-		LAST_ASSIGNED_ID = configuration.ORDER_ID_RANGE[0]
-		OrderIDLock.Unlock()
-		return prefix + strconv.Itoa(LAST_ASSIGNED_ID), nil
-	}
-
-	// increment orderID
-	LAST_ASSIGNED_ID = LAST_ASSIGNED_ID + 1
-	OrderIDLock.Unlock()
-	return prefix + strconv.Itoa(LAST_ASSIGNED_ID), nil
-
-}
+// func mapCustom(m interface{}, raw interface{}) error {
+// 	if raw == nil {
+// 		return errors.New("raw must not be nil")
+// 	}
+// 	err := mapstructure.Decode(m, raw)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	m = raw
+// 	return nil
+// }

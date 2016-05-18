@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/foomo/shop/order"
+	"github.com/foomo/shop/persistence"
 )
 
 /* ++++++++++++++++++++++++++++++++++++++++++++++++
@@ -12,7 +13,7 @@ import (
 +++++++++++++++++++++++++++++++++++++++++++++++++ */
 
 type Queue struct {
-	persistor      *order.Persistor
+	persistor      *persistence.Persistor
 	processors     []order.Processor
 	bulkProcessors []order.BulkProcessor
 }
@@ -82,7 +83,7 @@ func (q *Queue) RunProcessor(processor order.Processor) error {
 		chanDone <- 1
 	}()
 
-	iter, err := q.persistor.Find(processor.GetQuery(), processor.OrderCustomProvider())
+	iter, err := order.Find(processor.GetQuery(), processor.OrderCustomProvider())
 	if err != nil {
 		return err
 	}

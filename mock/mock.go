@@ -27,10 +27,10 @@ func GetMockQueue() *queue.Queue {
 }
 
 func MakeMockOrder(smurf string) *order.Order {
-	o := order.NewOrder()
-	o.Custom = &examples.SmurfOrderCustom{
+	custom := &examples.SmurfOrderCustom{
 		ResponsibleSmurf: smurf,
 	}
+	o := order.NewOrder(custom)
 	for i := 0; i < 5; i++ {
 		// add a product
 		o.AddPosition(&order.Position{

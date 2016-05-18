@@ -10,11 +10,14 @@ import (
 	"log"
 	"time"
 
+	"gopkg.in/mgo.v2/bson"
+
 	"github.com/foomo/shop/customer"
 	"github.com/foomo/shop/event_log"
 	"github.com/foomo/shop/payment"
 	"github.com/foomo/shop/shipping"
-	"gopkg.in/mgo.v2/bson"
+	"github.com/foomo/shop/unique"
+	"github.com/foomo/shop/utils"
 )
 
 /* ++++++++++++++++++++++++++++++++++++++++++++++++
@@ -52,8 +55,8 @@ type OrderStatus string
 // Order of item
 // create revisions
 type Order struct {
-	ID                bson.ObjectId `bson:"_id,omitempty"`
-	OrderID           string
+	BsonID            bson.ObjectId `bson:"_id,omitempty"`
+	Id                string        // automatically generated unique id
 	CustomerId        string
 	AddressBillingId  string
 	AddressShippingId string
@@ -67,12 +70,12 @@ type Order struct {
 	Payment           *payment.Payment
 	PriceInfo         *OrderPriceInfo
 	Shipping          *shipping.ShippingProperties
-	Custom            interface{} `bson:",omitempty"`
-	Queue             *struct {
+	queue             *struct {
 		Name           string
 		RetryAfter     time.Duration
 		LastProcessing time.Time
 	}
+	Custom interface{} `bson:",omitempty"`
 }
 
 type OrderPriceInfo struct {
@@ -88,8 +91,6 @@ type OrderPriceInfo struct {
 type OrderCustomProvider interface {
 	NewOrderCustom() interface{}
 	NewPositionCustom() interface{}
-	NewAddressCustom() interface{}
-	NewCustomerCustom() interface{}
 	Fields() *bson.M
 }
 
@@ -111,12 +112,18 @@ type Position struct {
 			PUBLIC METHODS ON ORDER
 +++++++++++++++++++++++++++++++++++++++++++++++++ */
 
-// func (o *Order) SaveOrderEvent(action ActionOrder, err error, positionItemNumber string) {
-// 	o.SaveOrderEventDetailed(action, err, "", "")
-// }
+func (order *Order) GetID() string {
+	return order.Id
+}
+func (order *Order) SetStatus(status OrderStatus) {
+	order.Status = status
+}
+func (order *Order) GetStatus() OrderStatus {
+	return order.Status
+}
 
-func (o *Order) SaveOrderEvent(action ActionOrder, err error, description string) {
-	event_log.Debug("Action", string(action), "OrderID", o.OrderID)
+func (order *Order) SaveOrderEvent(action ActionOrder, err error, description string) {
+	event_log.Debug("Action", string(action), "OrderID", order.Id)
 	event := event_log.NewEvent()
 	if err != nil {
 		event.Type = event_log.EventTypeError
@@ -124,49 +131,61 @@ func (o *Order) SaveOrderEvent(action ActionOrder, err error, description string
 		event.Type = event_log.EventTypeSuccess
 	}
 	event.Action = string(action)
-	event.OrderID = o.OrderID
+	event.OrderID = order.Id
 	event.Description = description
 	if err != nil {
 		event.Error = err.Error()
 	}
-	o.History = append(o.History, event)
-	GetOrderPersistor().UpsertOrder(o) // Error is ignored because it gets already logged in UpsertOrder()
+	order.History = append(order.History, event)
+	order.Upsert() // Error is ignored because it gets already logged in UpsertOrder()
 
 	jsonBytes, _ := json.MarshalIndent(event, "", "	")
 	event_log.Debug("Saved Order Event! ", string(jsonBytes))
 }
 
 // Event will only be saved if is an error
-func (o *Order) SaveOrderEventOnError(action ActionOrder, err error, description string) {
+func (order *Order) SaveOrderEventOnError(action ActionOrder, err error, description string) {
 	if err == nil {
 		return
 	}
-	o.SaveOrderEvent(action, err, description)
+	order.SaveOrderEvent(action, err, description)
 }
 
-func (o *Order) SaveOrderEventCustomEvent(e event_log.Event) {
-	o.History = append(o.History, &e)
-	GetOrderPersistor().UpsertOrder(o) // Error is ignored because it gets already logged in UpsertOrder()
-
+func (order *Order) SaveOrderEventCustomEvent(e event_log.Event) {
+	order.History = append(order.History, &e)
+	order.Upsert() // Error is ignored because it gets already logged in UpsertOrder()
 	jsonBytes, _ := json.MarshalIndent(&e, "", "	")
 	event_log.Debug("Saved Order Event! ", string(jsonBytes))
 }
 
+// GetCustomerId
+func (order *Order) GetCustomerId() string {
+	return order.CustomerId
+}
+func (order *Order) SetCustomerId(id string) {
+	order.CustomerId = id
+}
+func (order *Order) GetOrderType() OrderType {
+	return order.OrderType
+}
+func (order *Order) SetOrderType(t OrderType) {
+	order.OrderType = t
+}
+
 // GetCustomer
-func (o *Order) GetCustomer(customCustomer interface{}) (c *customer.Customer, err error) {
-	c = &customer.Customer{
-		Custom: customCustomer,
-	}
-	// do mongo magic to load customCustomer
-	return
+func (order *Order) GetCustomer(customCustomerProvider customer.CustomerCustomProvider) (c *customer.Customer, err error) {
+	return customer.GetCustomer(order.CustomerId, customCustomerProvider)
 }
 
-func (o *Order) Insert() error {
-	return GetOrderPersistor().InsertOrder(o)
+func (order *Order) Insert() error {
+	return InsertOrder(order) // calls the method defined in persistor.go
 }
 
-func (o *Order) Upsert() error {
-	return GetOrderPersistor().UpsertOrder(o)
+func (order *Order) Upsert() error {
+	return UpsertOrder(order) // calls the method defined in persistor.go
+}
+func (order *Order) Delete() error {
+	return nil // TODO delete order in db
 }
 
 // Convenience method for the default case of adding a position with following upsert in db
@@ -175,20 +194,20 @@ func (order *Order) AddPosition(pos *Position) error {
 }
 
 /* Add Position to Order. Use upsert=false when adding multiple positions. Upsert only once when adding last position for better performacne  */
-func (o *Order) AddPositionAndUpsert(pos *Position, upsert bool) error {
-	existingPos := o.GetPositionByItemId(pos.ItemID)
+func (order *Order) AddPositionAndUpsert(pos *Position, upsert bool) error {
+	existingPos := order.GetPositionByItemId(pos.ItemID)
 	if existingPos != nil {
 		err := errors.New("position already exists use SetPositionQuantity or GetPositionById to manipulate it")
-		o.SaveOrderEvent(ActionAddPosition, err, "Position: "+pos.ItemID)
+		order.SaveOrderEvent(ActionAddPosition, err, "Position: "+pos.ItemID)
 		return err
 	}
-	o.Positions = append(o.Positions, pos)
+	order.Positions = append(order.Positions, pos)
 
 	//comment := ""
 	if upsert {
-		if err := GetOrderPersistor().UpsertOrder(o); err != nil {
+		if err := order.Upsert(); err != nil {
 			description := "Could not add position " + pos.ItemID + ".  Upsert failed"
-			o.SaveOrderEvent(ActionAddPosition, err, description)
+			order.SaveOrderEvent(ActionAddPosition, err, description)
 			return err
 		}
 	} else {
@@ -196,48 +215,54 @@ func (o *Order) AddPositionAndUpsert(pos *Position, upsert bool) error {
 		//comment = "Did not perform upsert"
 		//log.Println(comment)
 	}
-	//o.SaveOrderEventDetailed(ActionAddPosition, nil, pos.ItemID, comment)
+	//order.SaveOrderEventDetailed(ActionAddPosition, nil, pos.ItemID, comment)
 
 	return nil
 }
 
-func (o *Order) SetPositionQuantity(itemID string, quantity float64) error {
-	pos := o.GetPositionByItemId(itemID)
+func (order *Order) SetPositionQuantity(itemID string, quantity float64) error {
+	pos := order.GetPositionByItemId(itemID)
 	if pos == nil {
 		err := fmt.Errorf("position with %q not found in order", itemID)
-		o.SaveOrderEvent(ActionChangeQuantityPosition, err, "Could not set quantity of position "+pos.ItemID+" to "+fmt.Sprint(quantity))
+		order.SaveOrderEvent(ActionChangeQuantityPosition, err, "Could not set quantity of position "+pos.ItemID+" to "+fmt.Sprint(quantity))
 		return err
 	}
 	pos.Quantity = quantity
-	o.SaveOrderEvent(ActionChangeQuantityPosition, nil, "Set quantity of position "+pos.ItemID+" to "+fmt.Sprint(quantity))
+	order.SaveOrderEvent(ActionChangeQuantityPosition, nil, "Set quantity of position "+pos.ItemID+" to "+fmt.Sprint(quantity))
 	// remove position if quantity is zero
 	if pos.Quantity == 0.0 {
-		for index := range o.Positions {
+		for index := range order.Positions {
 			if pos.ItemID == itemID {
-				o.Positions = append(o.Positions[:index], o.Positions[index+1:]...)
+				order.Positions = append(order.Positions[:index], order.Positions[index+1:]...)
 				return nil
 			}
 		}
 	}
-	if err := GetOrderPersistor().UpsertOrder(o); err != nil {
-		o.SaveOrderEvent(ActionChangeQuantityPosition, err, "Could not update quantity for position "+pos.ItemID+". Upsert failed.")
+	if err := order.Upsert(); err != nil {
+		order.SaveOrderEvent(ActionChangeQuantityPosition, err, "Could not update quantity for position "+pos.ItemID+". Upsert failed.")
 		return err
 	}
 	return nil
 }
-func (o *Order) GetPositionByItemId(itemID string) *Position {
-	for _, pos := range o.Positions {
+func (order *Order) GetPositionByItemId(itemID string) *Position {
+	for _, pos := range order.Positions {
 		if pos.ItemID == itemID {
 			return pos
 		}
 	}
 	return nil
 }
-func (o *Order) ReportErrors(printOnConsole bool) string {
+func (order *Order) GetPositions() []*Position {
+	return order.Positions
+}
+func (order *Order) SetPositions(positions []*Position) {
+	order.Positions = positions
+}
+func (order *Order) ReportErrors(printOnConsole bool) string {
 	errCount := 0
-	if len(o.History) > 0 {
+	if len(order.History) > 0 {
 		errCount++
-		jsonBytes, err := json.MarshalIndent(o.History, "", "	")
+		jsonBytes, err := json.MarshalIndent(order.History, "", "	")
 		if err != nil {
 			panic(err)
 		}
@@ -249,15 +274,62 @@ func (o *Order) ReportErrors(printOnConsole bool) string {
 
 		return s
 	}
-	return "No errors logged for order with orderID " + o.OrderID
+	return "No errors logged for order with orderID " + order.Id
 }
 
-func (o *Order) SetBillingAddress(id string) error {
-	address, err := o.Customer.GetAddress(id)
-	if err != nil {
-		return err
-	}
-	o.AddressBilling = address
+// TODO this does not check if id exists
+func (order *Order) SetAddressBillingId(id string) error {
+	order.AddressBillingId = id
+	return nil
+}
+
+func (order *Order) GetAddressBillingId() string {
+	return order.AddressBillingId
+}
+
+// TODO this does not check if id exists
+func (order *Order) SetAddressShippingId(id string) error {
+	order.AddressShippingId = id
+	return nil
+}
+
+func (order *Order) GetAddressShippingId() string {
+	return order.AddressShippingId
+}
+
+func (order *Order) GetHistory() event_log.EventHistory {
+	return order.History
+}
+func (order *Order) GetPayment() *payment.Payment {
+	return order.Payment
+}
+func (order *Order) GetShipping() *shipping.ShippingProperties {
+	return order.Shipping
+}
+func (order *Order) GetQueue() *shipping.ShippingProperties {
+	return order.Shipping
+}
+
+// OverrideID may be used to use a different than the automatially genrated if
+func (order *Order) OverrideId(id string) {
+	order.Id = id
+}
+
+func (order *Order) GetCreatedAt() time.Time {
+	return order.CreatedAt
+}
+func (order *Order) GetLastModifiedAt() time.Time {
+	return order.LastModifiedAt
+}
+func (order *Order) GetCreatedAtFormatted() string {
+	return utils.GetFormattedTime(order.CreatedAt)
+}
+func (order *Order) GetLastModifiedAtFormatted() string {
+	return utils.GetFormattedTime(order.LastModifiedAt)
+}
+
+func (order *Order) SetModified() {
+	order.LastModifiedAt = utils.TimeNow()
 }
 
 /* ++++++++++++++++++++++++++++++++++++++++++++++++
@@ -278,16 +350,19 @@ func (p *Position) GetAmount() float64 {
 +++++++++++++++++++++++++++++++++++++++++++++++++ */
 
 // NewOrder
-func NewOrder() *Order {
-	return &Order{
-		CreatedAt:      time.Now(),
-		LastModifiedAt: time.Now(),
+func NewOrder(custom interface{}) *Order {
+	order := &Order{
+		Id:             unique.GetNewID(),
+		CreatedAt:      utils.TimeNow(),
+		LastModifiedAt: utils.TimeNow(),
 		Status:         OrderStatusCreated,
+		OrderType:      OrderTypeOrder,
 		History:        event_log.EventHistory{},
 		Positions:      []*Position{},
-		Customer:       &customer.Customer{},
 		Payment:        &payment.Payment{},
 		PriceInfo:      &OrderPriceInfo{},
 		Shipping:       &shipping.ShippingProperties{},
+		Custom:         custom,
 	}
+	return order
 }
