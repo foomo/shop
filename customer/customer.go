@@ -6,6 +6,8 @@ import (
 
 	"gopkg.in/mgo.v2/bson"
 
+	"github.com/foomo/shop/crypto"
+	"github.com/foomo/shop/event_log"
 	"github.com/foomo/shop/unique"
 	"github.com/foomo/shop/utils"
 )
@@ -49,11 +51,12 @@ type Customer struct {
 	CreatedAt      time.Time
 	LastModifiedAt time.Time
 	Email          string // Login Credential
-	Password       string // Login Credential
+	Crypto         *crypto.Crypto
 	Person         *Person
 	Company        *Company `bson:",omitempty"`
 	Addresses      []*Address
 	Localization   *Localization
+	History        event_log.EventHistory
 	Custom         interface{} `bson:",omitempty"`
 }
 
