@@ -21,7 +21,7 @@ func GetNewID() string {
 
 	id, err := generator.Generate()
 	if err != nil {
-		// The Shop can no longer work without this, therfore panic.
+		// The Shop can no longer work without this, therefore panic.
 		panic(err)
 	}
 	return id
