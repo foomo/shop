@@ -7,7 +7,7 @@ import (
 
 func TestCryptoCreateSalt(t *testing.T) {
 	for i := 0; i < 10; i++ {
-		salt, err := NewSalt()
+		salt, err := newSalt()
 		if err != nil {
 			t.Fatal(err)
 		}
