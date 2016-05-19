@@ -49,6 +49,7 @@ func GetCustomerPersistor() *persistence.Persistor {
 	return globalCustomerPersistor
 }
 
+// GetCustomer retrieves a single customer from the database
 func GetCustomer(customerId string, customCustomerProvider CustomerCustomProvider) (*Customer, error) {
 	iter, err := Find(&bson.M{"id": customerId}, customCustomerProvider)
 	if err != nil {
@@ -64,7 +65,7 @@ func GetCustomer(customerId string, customCustomerProvider CustomerCustomProvide
 	}
 	if customer == nil {
 		log.Println(err.Error())
-		event_log.SaveShopEvent(event_log.ActionRetrieveCustomer, customerId, errors.New("Customer is nil"), "")
+		event_log.SaveShopEvent(event_log.ActionRetrieveCustomer, customerId, errors.New("No customer with id "+customerId), "")
 		return nil, err
 	}
 	return customer, nil
@@ -80,6 +81,7 @@ func AlreadyExistsInDB(customerID string) (bool, error) {
 	return count > 0, nil
 }
 
+// Find returns an iterator for all entries found in database.
 func Find(query *bson.M, customProvider CustomerCustomProvider) (iter func() (cust *Customer, err error), err error) {
 	p := GetCustomerPersistor()
 	_, err = p.GetCollection().Find(query).Count()
@@ -149,6 +151,10 @@ func InsertCustomer(c *Customer) error {
 }
 
 func UpsertCustomer(c *Customer) error {
+	// customer is unlinked or not yet inserted in db
+	if c.unlinkDB || c.BsonID == "" {
+		return nil
+	}
 	p := GetCustomerPersistor()
 	_, err := p.GetCollection().UpsertId(c.BsonID, c)
 	if err != nil {

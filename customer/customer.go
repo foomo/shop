@@ -1,7 +1,6 @@
 package customer
 
 import (
-	"errors"
 	"time"
 
 	"gopkg.in/mgo.v2/bson"
@@ -46,6 +45,7 @@ type CountryCode string
 // TOP LEVEL OBJECT
 // private, so that changes are limited by API
 type Customer struct {
+	unlinkDB       bool          // if true, changes to Customer are not stored in database
 	BsonID         bson.ObjectId `bson:"_id,omitempty"`
 	Id             string
 	CreatedAt      time.Time
@@ -117,7 +117,7 @@ type CustomerCustomProvider interface {
 			PUBLIC METHODS
 +++++++++++++++++++++++++++++++++++++++++++++++++ */
 
-func NewCustomer(custom interface{}) *Customer {
+func NewCustomer(customProvider CustomerCustomProvider) *Customer {
 	customer := &Customer{
 		Id:             unique.GetNewID(),
 		CreatedAt:      utils.TimeNow(),
@@ -125,15 +125,24 @@ func NewCustomer(custom interface{}) *Customer {
 		Person: &Person{
 			Contacts: &Contacts{},
 		},
+		Crypto:       &crypto.Crypto{},
 		Localization: &Localization{},
-		Custom:       custom,
+		Custom:       customProvider.NewCustomerCustom(),
 	}
-
+	// Store order in database
+	customer.Insert()
+	// Retrieve customer again from. (Otherwise upserts on customer would fail because of missing mongo ObjectID)
+	customer, _ = GetCustomer(customer.Id, customProvider) // TODO do not ignore this error
 	return customer
 }
 
-func (address *Address) GetID() string {
-	return address.Id
+// Unlinks order from database
+// After unlink, persistent changes on order are no longer possible until it is retrieved again from db.
+func (customer *Customer) UnlinkFromDB() {
+	customer.unlinkDB = true
+}
+func (customer *Customer) LinkDB() {
+	customer.unlinkDB = false
 }
 
 func (customer *Customer) Insert() error {
@@ -151,109 +160,9 @@ func (customer *Customer) Delete() error {
 // 	address.id = id
 // }
 
-func (customer *Customer) GetID() string {
-	return customer.Id
-}
-
 func (customer *Customer) OverrideId(id string) {
 	customer.Id = id
-}
-
-func (customer *Customer) GetEmail() string {
-	return customer.Email
-}
-
-func (customer *Customer) SetEmail(email string) {
-	customer.Email = email
-}
-func (customer *Customer) GetPassword() string {
-	return customer.Email
-}
-
-func (customer *Customer) SetPassword(password string) {
-	customer.Password = password
-}
-func (customer *Customer) GetPerson() *Person {
-	return customer.Person
-}
-
-func (customer *Customer) SetPerson(person *Person) {
-	customer.Person = person
-}
-func (customer *Customer) GetCompany() *Company {
-	return customer.Company
-}
-
-func (customer *Customer) SetCompany(company *Company) {
-	customer.Company = company
-}
-func (customer *Customer) GetLocalization() *Localization {
-	return customer.Localization
-}
-
-func (customer *Customer) SetLocalization(localization *Localization) {
-	customer.Localization = localization
-}
-
-func (c *Contacts) GetPrimaryContact() string {
-	switch c.Primary {
-	case ContactTypePhoneLandline:
-		return string(ContactTypePhoneLandline) + ": " + c.PhoneLandLine
-	case ContactTypePhoneMobile:
-		return string(ContactTypePhoneMobile) + ": " + c.PhoneMobile
-	case ContactTypeEmail:
-		return string(ContactTypeEmail) + ": " + c.Email
-	case ContactTypeSkype:
-		return string(ContactTypeSkype) + ": " + c.Skype
-	case ContactTypeFax:
-		return string(ContactTypeFax) + ": " + c.Fax
-	}
-	return "No primary contact available!"
-}
-
-func (customer *Customer) SetDefaultShippingAddress(id string) {
-	for _, address := range customer.Addresses {
-		if address.Id == id {
-			address.IsDefaultShippingAddress = true
-		} else {
-			address.IsDefaultShippingAddress = false
-		}
-	}
-}
-func (customer *Customer) SetDefaultBillingAddress(id string) {
-	for _, address := range customer.Addresses {
-		if address.Id == id {
-			address.IsDefaultBillingAddress = true
-		} else {
-			address.IsDefaultBillingAddress = false
-		}
-	}
-}
-
-// GetDefaultShippingAddress returns the default shipping address if available, else returns first address
-func (customer *Customer) GetDefaultShippingAddress() *Address {
-	if len(customer.Addresses) == 0 {
-		return nil
-	}
-	for _, address := range customer.Addresses {
-		if address.IsDefaultShippingAddress {
-			return address
-		}
-	}
-	return customer.Addresses[0]
-}
-
-// GetDefaultBillingAddress returns the default billing address if available, else returns first address
-func (customer *Customer) GetDefaultBillingAddress() *Address {
-	if len(customer.Addresses) == 0 {
-		return nil
-	}
-	for _, address := range customer.Addresses {
-		if address.IsDefaultBillingAddress {
-			return address
-		}
-	}
-	return customer.Addresses[0]
+	customer.Upsert()
 }
 
 func (customer *Customer) AddAddress(address *Address) {
@@ -273,33 +182,4 @@ func (customer *Customer) RemoveAddress(id string) {
 			customer.Addresses = append(customer.Addresses[:index], customer.Addresses[index+1:]...)
 		}
 	}
-}
-func (customer *Customer) GetAddress(id string) (*Address, error) {
-	for _, address := range customer.Addresses {
-		if address.Id == id {
-			return address, nil
-		}
-	}
-	return nil, errors.New("Could not find Address for id: " + id)
-}
-
-func (customer *Customer) GetAddresses() []*Address {
-	return customer.Addresses
-}
-
-func (customer *Customer) GetCreatedAt() time.Time {
-	return customer.CreatedAt
-}
-func (customer *Customer) GetLastModifiedAt() time.Time {
-	return customer.LastModifiedAt
-}
-func (customer *Customer) GetCreatedAtFormatted() string {
-	return utils.GetFormattedTime(customer.CreatedAt)
-}
-func (customer *Customer) GetLastModifiedAtFormatted() string {
-	return utils.GetFormattedTime(customer.LastModifiedAt)
-}
-
-func (customer *Customer) SetModified() {
-	customer.LastModifiedAt = utils.TimeNow()
 }

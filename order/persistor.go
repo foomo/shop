@@ -144,6 +144,10 @@ func InsertOrder(o *Order) (err error) {
 }
 
 func UpsertOrder(o *Order) error {
+	// order is unlinked or not yet inserted in db
+	if o.unlinkDB || o.BsonID == "" {
+		return nil
+	}
 	p := GetOrderPersistor()
 	_, err := p.GetCollection().UpsertId(o.BsonID, o)
 	if err != nil {
@@ -193,6 +197,7 @@ func GetOrderPersistor() *persistence.Persistor {
 	return globalOrderPersistor
 }
 
+// GetShopOrder retrieves a single order from the database
 func GetShopOrder(orderID string, customOrderProvider OrderCustomProvider) *Order {
 	iter, err := Find(&bson.M{"id": orderID}, customOrderProvider)
 	if err != nil {

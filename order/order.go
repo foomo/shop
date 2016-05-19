@@ -4,7 +4,6 @@
 package order
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -12,7 +11,6 @@ import (
 
 	"gopkg.in/mgo.v2/bson"
 
-	"github.com/foomo/shop/customer"
 	"github.com/foomo/shop/event_log"
 	"github.com/foomo/shop/payment"
 	"github.com/foomo/shop/shipping"
@@ -55,6 +53,7 @@ type OrderStatus string
 // Order of item
 // create revisions
 type Order struct {
+	unlinkDB          bool          // if true, changes to Customer are not stored in database
 	BsonID            bson.ObjectId `bson:"_id,omitempty"`
 	Id                string        // automatically generated unique id
 	CustomerId        string
@@ -65,7 +64,6 @@ type Order struct {
 	LastModifiedAt    time.Time
 	CompletedAt       time.Time
 	Status            OrderStatus
-	History           event_log.EventHistory
 	Positions         []*Position
 	Payment           *payment.Payment
 	PriceInfo         *OrderPriceInfo
@@ -75,7 +73,8 @@ type Order struct {
 		RetryAfter     time.Duration
 		LastProcessing time.Time
 	}
-	Custom interface{} `bson:",omitempty"`
+	History event_log.EventHistory
+	Custom  interface{} `bson:",omitempty"`
 }
 
 type OrderPriceInfo struct {
@@ -112,69 +111,13 @@ type Position struct {
 			PUBLIC METHODS ON ORDER
 +++++++++++++++++++++++++++++++++++++++++++++++++ */
 
-func (order *Order) GetID() string {
-	return order.Id
+// Unlinks order from database
+// After unlink, persistent changes on order are no longer possible until it is retrieved again from db.
+func (order *Order) UnlinkFromDB() {
+	order.unlinkDB = true
 }
-func (order *Order) SetStatus(status OrderStatus) {
-	order.Status = status
-}
-func (order *Order) GetStatus() OrderStatus {
-	return order.Status
-}
-
-func (order *Order) SaveOrderEvent(action ActionOrder, err error, description string) {
-	event_log.Debug("Action", string(action), "OrderID", order.Id)
-	event := event_log.NewEvent()
-	if err != nil {
-		event.Type = event_log.EventTypeError
-	} else {
-		event.Type = event_log.EventTypeSuccess
-	}
-	event.Action = string(action)
-	event.OrderID = order.Id
-	event.Description = description
-	if err != nil {
-		event.Error = err.Error()
-	}
-	order.History = append(order.History, event)
-	order.Upsert() // Error is ignored because it gets already logged in UpsertOrder()
-
-	jsonBytes, _ := json.MarshalIndent(event, "", "	")
-	event_log.Debug("Saved Order Event! ", string(jsonBytes))
-}
-
-// Event will only be saved if is an error
-func (order *Order) SaveOrderEventOnError(action ActionOrder, err error, description string) {
-	if err == nil {
-		return
-	}
-	order.SaveOrderEvent(action, err, description)
-}
-
-func (order *Order) SaveOrderEventCustomEvent(e event_log.Event) {
-	order.History = append(order.History, &e)
-	order.Upsert() // Error is ignored because it gets already logged in UpsertOrder()
-	jsonBytes, _ := json.MarshalIndent(&e, "", "	")
-	event_log.Debug("Saved Order Event! ", string(jsonBytes))
-}
-
-// GetCustomerId
-func (order *Order) GetCustomerId() string {
-	return order.CustomerId
-}
-func (order *Order) SetCustomerId(id string) {
-	order.CustomerId = id
-}
-func (order *Order) GetOrderType() OrderType {
-	return order.OrderType
-}
-func (order *Order) SetOrderType(t OrderType) {
-	order.OrderType = t
-}
-
-// GetCustomer
-func (order *Order) GetCustomer(customCustomerProvider customer.CustomerCustomProvider) (c *customer.Customer, err error) {
-	return customer.GetCustomer(order.CustomerId, customCustomerProvider)
+func (order *Order) LinkDB() {
+	order.unlinkDB = false
 }
 
 func (order *Order) Insert() error {
@@ -252,84 +195,10 @@ func (order *Order) GetPositionByItemId(itemID string) *Position {
 	}
 	return nil
 }
-func (order *Order) GetPositions() []*Position {
-	return order.Positions
-}
-func (order *Order) SetPositions(positions []*Position) {
-	order.Positions = positions
-}
-func (order *Order) ReportErrors(printOnConsole bool) string {
-	errCount := 0
-	if len(order.History) > 0 {
-		errCount++
-		jsonBytes, err := json.MarshalIndent(order.History, "", "	")
-		if err != nil {
-			panic(err)
-		}
-		s := string(jsonBytes)
-		if printOnConsole {
-			log.Println("Errors logged for order with orderID:")
-			log.Println(s)
-		}
-
-		return s
-	}
-	return "No errors logged for order with orderID " + order.Id
-}
-
-// TODO this does not check if id exists
-func (order *Order) SetAddressBillingId(id string) error {
-	order.AddressBillingId = id
-	return nil
-}
-
-func (order *Order) GetAddressBillingId() string {
-	return order.AddressBillingId
-}
-
-// TODO this does not check if id exists
-func (order *Order) SetAddressShippingId(id string) error {
-	order.AddressShippingId = id
-	return nil
-}
-
-func (order *Order) GetAddressShippingId() string {
-	return order.AddressShippingId
-}
-
-func (order *Order) GetHistory() event_log.EventHistory {
-	return order.History
-}
-func (order *Order) GetPayment() *payment.Payment {
-	return order.Payment
-}
-func (order *Order) GetShipping() *shipping.ShippingProperties {
-	return order.Shipping
-}
-func (order *Order) GetQueue() *shipping.ShippingProperties {
-	return order.Shipping
-}
 
 // OverrideID may be used to use a different than the automatially genrated if
 func (order *Order) OverrideId(id string) {
 	order.Id = id
-}
-
-func (order *Order) GetCreatedAt() time.Time {
-	return order.CreatedAt
-}
-func (order *Order) GetLastModifiedAt() time.Time {
-	return order.LastModifiedAt
-}
-func (order *Order) GetCreatedAtFormatted() string {
-	return utils.GetFormattedTime(order.CreatedAt)
-}
-func (order *Order) GetLastModifiedAtFormatted() string {
-	return utils.GetFormattedTime(order.LastModifiedAt)
-}
-
-func (order *Order) SetModified() {
-	order.LastModifiedAt = utils.TimeNow()
 }
 
 /* ++++++++++++++++++++++++++++++++++++++++++++++++
@@ -350,7 +219,7 @@ func (p *Position) GetAmount() float64 {
 +++++++++++++++++++++++++++++++++++++++++++++++++ */
 
 // NewOrder
-func NewOrder(custom interface{}) *Order {
+func NewOrder(customProvider OrderCustomProvider) *Order {
 	order := &Order{
 		Id:             unique.GetNewID(),
 		CreatedAt:      utils.TimeNow(),
@@ -362,7 +231,13 @@ func NewOrder(custom interface{}) *Order {
 		Payment:        &payment.Payment{},
 		PriceInfo:      &OrderPriceInfo{},
 		Shipping:       &shipping.ShippingProperties{},
-		Custom:         custom,
+		Custom:         customProvider.NewOrderCustom(),
 	}
+	// Store order in database
+	order.Insert()
+	// Retrieve order again from. (Otherwise upserts on order would fail because of missing mongo ObjectID)
+	order = GetShopOrder(order.Id, customProvider)
+	log.Println("OBJ ID:", order.BsonID)
 	return order
+
 }

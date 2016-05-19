@@ -30,7 +30,8 @@ func MakeMockOrder(smurf string) *order.Order {
 	custom := &examples.SmurfOrderCustom{
 		ResponsibleSmurf: smurf,
 	}
-	o := order.NewOrder(custom)
+	o := order.NewOrder(&examples.SmurfOrderCustomProvider{})
+	o.Custom = custom
 	for i := 0; i < 5; i++ {
 		// add a product
 		o.AddPosition(&order.Position{
