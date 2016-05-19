@@ -19,6 +19,7 @@ type Crypto struct {
 // ~ PRIVATE METHODS
 //------------------------------------------------------------------
 
+// newSalt creates a randomly generated salt
 func newSalt() ([]byte, error) {
 	n := 10
 	salt := make([]byte, n)
@@ -34,7 +35,7 @@ func newSalt() ([]byte, error) {
 // ~ PUBLIC METHODS
 //------------------------------------------------------------------
 
-// HashPassword returns the hash for the password and the associated salt
+// HashPassword returns a Crypto struct containing the hashed password and salt
 func HashPassword(password string) (*Crypto, error) {
 	salt, err := newSalt()
 	if err != nil {
@@ -55,6 +56,7 @@ func HashPassword(password string) (*Crypto, error) {
 	return crypto, nil
 }
 
+// VerifyPassword returns true if the salted password matches against the hash.
 func VerifyPassword(crypto *Crypto, password string) bool {
 	passwordBytes := []byte(password)
 	// Add salt to password
