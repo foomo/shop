@@ -6,7 +6,6 @@ package order
 import (
 	"errors"
 	"fmt"
-	"log"
 	"time"
 
 	"gopkg.in/mgo.v2/bson"
@@ -53,6 +52,7 @@ type OrderStatus string
 // Order of item
 // create revisions
 type Order struct {
+	CustomProvider    OrderCustomProvider
 	unlinkDB          bool          // if true, changes to Customer are not stored in database
 	BsonID            bson.ObjectId `bson:"_id,omitempty"`
 	Id                string        // automatically generated unique id
@@ -120,6 +120,12 @@ func (order *Order) LinkDB() {
 	order.unlinkDB = false
 }
 
+// Returns true, if order is associated to a Customer id.
+// Otherwise the order is a cart of on anonymous user
+func (order *Order) HasCustomer() bool {
+	return order.CustomerId != ""
+}
+
 func (order *Order) Insert() error {
 	return InsertOrder(order) // calls the method defined in persistor.go
 }
@@ -128,7 +134,7 @@ func (order *Order) Upsert() error {
 	return UpsertOrder(order) // calls the method defined in persistor.go
 }
 func (order *Order) Delete() error {
-	return nil // TODO delete order in db
+	return DeleteOrder(order)
 }
 
 // Convenience method for the default case of adding a position with following upsert in db
@@ -219,7 +225,8 @@ func (p *Position) GetAmount() float64 {
 +++++++++++++++++++++++++++++++++++++++++++++++++ */
 
 // NewOrder
-func NewOrder(customProvider OrderCustomProvider) *Order {
+func NewOrder(customProvider OrderCustomProvider) (*Order, error) {
+
 	order := &Order{
 		Id:             unique.GetNewID(),
 		CreatedAt:      utils.TimeNow(),
@@ -234,10 +241,9 @@ func NewOrder(customProvider OrderCustomProvider) *Order {
 		Custom:         customProvider.NewOrderCustom(),
 	}
 	// Store order in database
-	order.Insert()
+	err := order.Insert()
 	// Retrieve order again from. (Otherwise upserts on order would fail because of missing mongo ObjectID)
-	order = GetShopOrder(order.Id, customProvider)
-	log.Println("OBJ ID:", order.BsonID)
-	return order
+	order, err = GetOrderById(order.Id, customProvider)
+	return order, err
 
 }

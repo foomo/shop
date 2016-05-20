@@ -49,28 +49,7 @@ func GetCustomerPersistor() *persistence.Persistor {
 	return globalCustomerPersistor
 }
 
-// GetCustomer retrieves a single customer from the database
-func GetCustomer(customerId string, customCustomerProvider CustomerCustomProvider) (*Customer, error) {
-	iter, err := Find(&bson.M{"id": customerId}, customCustomerProvider)
-	if err != nil {
-		log.Println(err.Error())
-		event_log.SaveShopEvent(event_log.ActionRetrieveCustomer, customerId, err, "")
-		return nil, err
-	}
-	customer, err := iter()
-	if err != nil {
-		log.Println(err.Error())
-		event_log.SaveShopEvent(event_log.ActionRetrieveCustomer, customerId, err, "")
-		return nil, err
-	}
-	if customer == nil {
-		log.Println(err.Error())
-		event_log.SaveShopEvent(event_log.ActionRetrieveCustomer, customerId, errors.New("No customer with id "+customerId), "")
-		return nil, err
-	}
-	return customer, nil
-}
-
+// AlreadyExistsInDB checks if a customer with given customerID already exists in the database
 func AlreadyExistsInDB(customerID string) (bool, error) {
 	p := GetCustomerPersistor()
 	q := p.GetCollection().Find(&bson.M{"id": customerID})
@@ -81,14 +60,26 @@ func AlreadyExistsInDB(customerID string) (bool, error) {
 	return count > 0, nil
 }
 
-// Find returns an iterator for all entries found in database.
+// FindOne returns one single customer
+func GetCustomerById(id string, customProvider CustomerCustomProvider) (*Customer, error) {
+	p := GetCustomerPersistor()
+	customer := &Customer{}
+	err := p.GetCollection().Find(&bson.M{"id": id}).One(customer)
+	if err != nil {
+		return nil, err
+	}
+	customer, err = mapDecode(customer, customProvider)
+	event_log.SaveShopEvent(event_log.ActionRetrieveCustomer, id, err, "")
+	return customer, err
+}
+
+// Find returns an iterator for all entries found matching on query.
 func Find(query *bson.M, customProvider CustomerCustomProvider) (iter func() (cust *Customer, err error), err error) {
 	p := GetCustomerPersistor()
 	_, err = p.GetCollection().Find(query).Count()
 	if err != nil {
 		log.Println(err)
 	}
-	//log.Println("Persistor.Find(): ", n, "items found for query ", query)
 	q := p.GetCollection().Find(query)
 	fields := customProvider.Fields()
 	if fields != nil {
@@ -101,38 +92,38 @@ func Find(query *bson.M, customProvider CustomerCustomProvider) (iter func() (cu
 	mgoiter := q.Iter()
 	iter = func() (cust *Customer, err error) {
 		cust = &Customer{}
-
 		if mgoiter.Next(cust) {
-
-			/* Map CustomerCustom */
-			customerCustom := customProvider.NewCustomerCustom()
-			if customerCustom != nil && cust.Custom != nil {
-				err = mapstructure.Decode(cust.Custom, customerCustom)
-				if err != nil {
-					return nil, err
-				}
-				cust.Custom = customerCustom
-			}
-
-			/* Map AddressCustom */
-			for _, address := range cust.Addresses {
-				addressCustom := customProvider.NewAddressCustom()
-				if addressCustom != nil && address.Custom != nil {
-
-					err = mapstructure.Decode(address.Custom, addressCustom)
-					if err != nil {
-						return nil, err
-					}
-					address.Custom = addressCustom
-				}
-			}
-
-			return cust, nil
+			return mapDecode(cust, customProvider)
 		}
 		return nil, nil
 	}
-
 	return
+}
+
+func mapDecode(cust *Customer, customProvider CustomerCustomProvider) (customer *Customer, err error) {
+	/* Map CustomerCustom */
+	customerCustom := customProvider.NewCustomerCustom()
+	if customerCustom != nil && cust.Custom != nil {
+		err = mapstructure.Decode(cust.Custom, customerCustom)
+		if err != nil {
+			return nil, err
+		}
+		cust.Custom = customerCustom
+	}
+
+	/* Map AddressCustom */
+	for _, address := range cust.Addresses {
+		addressCustom := customProvider.NewAddressCustom()
+		if addressCustom != nil && address.Custom != nil {
+
+			err = mapstructure.Decode(address.Custom, addressCustom)
+			if err != nil {
+				return nil, err
+			}
+			address.Custom = addressCustom
+		}
+	}
+	return cust, nil
 }
 
 func InsertCustomer(c *Customer) error {
@@ -146,7 +137,7 @@ func InsertCustomer(c *Customer) error {
 		return nil
 	}
 	err = p.GetCollection().Insert(c)
-	event_log.SaveShopEvent(event_log.ActionInsertingCustomer, c.GetID(), err, "")
+	event_log.SaveShopEvent(event_log.ActionCreateCustomer, c.GetID(), err, "")
 	return err
 }
 
@@ -161,5 +152,16 @@ func UpsertCustomer(c *Customer) error {
 		panic(err)
 	}
 	event_log.SaveShopEvent(event_log.ActionUpsertingCustomer, c.GetID(), err, "")
+	return err
+}
+
+func DeleteCustomer(c *Customer) error {
+	err := GetCustomerPersistor().GetCollection().Remove(bson.M{"_id": c.BsonID})
+	event_log.SaveShopEvent(event_log.ActionDeleteCustomer, c.GetID(), err, "")
+	return err
+}
+func DeleteOrderById(id string) error {
+	err := GetCustomerPersistor().GetCollection().Remove(bson.M{"id": id})
+	event_log.SaveShopEvent(event_log.ActionDeleteCustomer, id, err, "")
 	return err
 }

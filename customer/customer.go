@@ -47,7 +47,7 @@ type CountryCode string
 type Customer struct {
 	unlinkDB       bool          // if true, changes to Customer are not stored in database
 	BsonID         bson.ObjectId `bson:"_id,omitempty"`
-	Id             string
+	Id             string        // Email is used as LoginID. This is never changes!
 	CreatedAt      time.Time
 	LastModifiedAt time.Time
 	Email          string // Login Credential
@@ -117,7 +117,7 @@ type CustomerCustomProvider interface {
 			PUBLIC METHODS
 +++++++++++++++++++++++++++++++++++++++++++++++++ */
 
-func NewCustomer(customProvider CustomerCustomProvider) *Customer {
+func NewCustomer(customProvider CustomerCustomProvider) (*Customer, error) {
 	customer := &Customer{
 		Id:             unique.GetNewID(),
 		CreatedAt:      utils.TimeNow(),
@@ -130,10 +130,10 @@ func NewCustomer(customProvider CustomerCustomProvider) *Customer {
 		Custom:       customProvider.NewCustomerCustom(),
 	}
 	// Store order in database
-	customer.Insert()
+	err := customer.Insert()
 	// Retrieve customer again from. (Otherwise upserts on customer would fail because of missing mongo ObjectID)
-	customer, _ = GetCustomer(customer.Id, customProvider) // TODO do not ignore this error
-	return customer
+	customer, err = GetCustomerById(customer.Id, customProvider) // TODO do not ignore this error
+	return customer, err
 }
 
 // Unlinks order from database
@@ -153,7 +153,7 @@ func (customer *Customer) Upsert() error {
 	return UpsertCustomer(customer) // calls the method defined in persistor.go
 }
 func (customer *Customer) Delete() error {
-	return nil // TODO delete order in db
+	return DeleteCustomer(customer)
 }
 
 // func (address *Address) OverrideId(id string) {
@@ -182,4 +182,8 @@ func (customer *Customer) RemoveAddress(id string) {
 			customer.Addresses = append(customer.Addresses[:index], customer.Addresses[index+1:]...)
 		}
 	}
+}
+
+func CheckAccountAvailability(email string) bool {
+	return false
 }

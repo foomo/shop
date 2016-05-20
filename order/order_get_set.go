@@ -29,7 +29,7 @@ func (order *Order) GetOrderType() OrderType {
 
 // GetCustomer
 func (order *Order) GetCustomer(customCustomerProvider customer.CustomerCustomProvider) (c *customer.Customer, err error) {
-	return customer.GetCustomer(order.CustomerId, customCustomerProvider)
+	return customer.GetCustomerById(order.CustomerId, customCustomerProvider)
 }
 
 func (order *Order) GetPositions() []*Position {
