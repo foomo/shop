@@ -8,12 +8,12 @@ import (
 
 	"github.com/foomo/shop/examples"
 	"github.com/foomo/shop/mock"
-	"github.com/foomo/shop/order"
-	"github.com/foomo/shop/utils"
+	"github.com/foomo/shop/test_utils"
 )
 
 func TestSmurfProcessor(t *testing.T) {
 	//log.Println("runtime.GOMAXPROCS(16)", runtime.GOMAXPROCS(16))
+	test_utils.DropAllCollections()
 	q := mock.GetMockQueue()
 
 	const (
@@ -28,15 +28,10 @@ func TestSmurfProcessor(t *testing.T) {
 		joe:  2000,
 	}
 
-	p := order.GetOrderPersistor()
-	utils.DropAllCollections()
-
 	numberOfOrders := 0
 	for smurf, smurfOrderCount := range smurfOrders {
 		for i := 0; i < smurfOrderCount; i++ {
-			o := mock.MakeMockOrder(smurf)
-
-			p.InsertOrder(o)
+			mock.MakeMockOrder(smurf)
 
 			numberOfOrders++
 			if numberOfOrders%100 == 0 {

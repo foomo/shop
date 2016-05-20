@@ -9,7 +9,7 @@ import (
 
 func ExampleOrderCustom_createCart() {
 	// a cart is an incomplete order
-	o := order.NewOrder()
+	o, _ := order.NewOrder(&examples.SmurfOrderCustomProvider{})
 	o.Custom = &examples.SmurfOrderCustom{
 		ResponsibleSmurf: "Pete",
 	}
