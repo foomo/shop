@@ -3,6 +3,7 @@ package customer
 import (
 	"errors"
 	"log"
+	"strconv"
 
 	"github.com/foomo/shop/configuration"
 	"github.com/foomo/shop/event_log"
@@ -18,6 +19,7 @@ const (
 )
 
 var globalCustomerPersistor *persistence.Persistor
+var globalCustomerHistoryPersistor *persistence.Persistor
 
 // NewPersistor constructor
 func NewPersistor(mongoURL string, collectionName string) (p *persistence.Persistor, err error) {
@@ -47,6 +49,31 @@ func GetCustomerPersistor() *persistence.Persistor {
 	}
 	globalCustomerPersistor = p
 	return globalCustomerPersistor
+}
+
+// Returns GLOBAL_PERSISTOR. If GLOBAL_PERSISTOR is nil, a new persistor is created, set as GLOBAL_PERSISTOR and returned
+func GetCustomerHistoryPersistor() *persistence.Persistor {
+	url := configuration.MONGO_URL
+	collection := configuration.MONGO_COLLECTION_CUSTOMERS_HISTORY
+	if globalCustomerHistoryPersistor == nil {
+		p, err := NewPersistor(url, collection)
+		if err != nil || p == nil {
+			panic(errors.New("failed to create mongoDB order persistor: " + err.Error()))
+		}
+		globalCustomerHistoryPersistor = p
+		return globalCustomerHistoryPersistor
+	}
+
+	if url == globalCustomerHistoryPersistor.GetURL() && collection == globalCustomerHistoryPersistor.GetCollectionName() {
+		return globalCustomerHistoryPersistor
+	}
+
+	p, err := NewPersistor(url, collection)
+	if err != nil || p == nil {
+		panic(err)
+	}
+	globalCustomerHistoryPersistor = p
+	return globalCustomerHistoryPersistor
 }
 
 // AlreadyExistsInDB checks if a customer with given customerID already exists in the database
@@ -137,20 +164,52 @@ func InsertCustomer(c *Customer) error {
 		return nil
 	}
 	err = p.GetCollection().Insert(c)
+	if err != nil {
+		return err
+	}
+	pHistory := GetCustomerHistoryPersistor()
+	err = pHistory.GetCollection().Insert(c)
 	event_log.SaveShopEvent(event_log.ActionCreateCustomer, c.GetID(), err, "")
 	return err
 }
 
 func UpsertCustomer(c *Customer) error {
-	// customer is unlinked or not yet inserted in db
+	//log.Println("UPSERT CUSTOMER with id", c.GetID())
+	// order is unlinked or not yet inserted in db
 	if c.unlinkDB || c.BsonID == "" {
 		return nil
 	}
 	p := GetCustomerPersistor()
-	_, err := p.GetCollection().UpsertId(c.BsonID, c)
+
+	// Get current version from db and check against verssion of c
+	// If they are not identical, there must have been a concurrent Upsert
+	customerLatestFromDb := &Customer{}
+	err := p.GetCollection().Find(&bson.M{"id": c.GetID()}).Select(&bson.M{"version": 1}).One(customerLatestFromDb)
+
+	if err != nil {
+		log.Println("ERROR", err)
+		return err
+	}
+
+	latestVersionInDb := customerLatestFromDb.Version.GetVersion()
+	if latestVersionInDb != c.Version.GetVersion() {
+		log.Println("WARNING: Upserting version ", strconv.Itoa(latestVersionInDb), "with version", strconv.Itoa(c.Version.GetVersion()))
+	}
+	c.Version.Number = latestVersionInDb
+	c.Version.Increment()
+
+	_, err = p.GetCollection().UpsertId(c.BsonID, c)
 	if err != nil {
 		panic(err)
 	}
+
+	// Store this version in history
+	bsonId := c.BsonID
+	c.BsonID = "" // reset Mongo ObjectId, so that we can perfrom an Insert.
+	pHistory := GetCustomerHistoryPersistor()
+	pHistory.GetCollection().Insert(c)
+	// restore bsonId
+	c.BsonID = bsonId
 	event_log.SaveShopEvent(event_log.ActionUpsertingCustomer, c.GetID(), err, "")
 	return err
 }
@@ -160,7 +219,7 @@ func DeleteCustomer(c *Customer) error {
 	event_log.SaveShopEvent(event_log.ActionDeleteCustomer, c.GetID(), err, "")
 	return err
 }
-func DeleteOrderById(id string) error {
+func DeleteCustomerById(id string) error {
 	err := GetCustomerPersistor().GetCollection().Remove(bson.M{"id": id})
 	event_log.SaveShopEvent(event_log.ActionDeleteCustomer, id, err, "")
 	return err

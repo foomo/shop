@@ -7,6 +7,7 @@ import (
 
 	"github.com/foomo/shop/crypto"
 	"github.com/foomo/shop/event_log"
+	"github.com/foomo/shop/history"
 	"github.com/foomo/shop/unique"
 	"github.com/foomo/shop/utils"
 )
@@ -45,6 +46,7 @@ type CountryCode string
 // TOP LEVEL OBJECT
 // private, so that changes are limited by API
 type Customer struct {
+	Version        *history.Version
 	unlinkDB       bool          // if true, changes to Customer are not stored in database
 	BsonID         bson.ObjectId `bson:"_id,omitempty"`
 	Id             string        // Email is used as LoginID. This is never changes!
@@ -119,7 +121,12 @@ type CustomerCustomProvider interface {
 
 func NewCustomer(customProvider CustomerCustomProvider) (*Customer, error) {
 	customer := &Customer{
-		Id:             unique.GetNewID(),
+		Version: &history.Version{
+			Number:    0,
+			TimeStamp: time.Now(),
+		},
+		Id: unique.GetNewID(),
+		//Id:             "mockIdCust",
 		CreatedAt:      utils.TimeNow(),
 		LastModifiedAt: utils.TimeNow(),
 		Person: &Person{
@@ -131,6 +138,7 @@ func NewCustomer(customProvider CustomerCustomProvider) (*Customer, error) {
 	}
 	// Store order in database
 	err := customer.Insert()
+
 	// Retrieve customer again from. (Otherwise upserts on customer would fail because of missing mongo ObjectID)
 	customer, err = GetCustomerById(customer.Id, customProvider) // TODO do not ignore this error
 	return customer, err

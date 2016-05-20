@@ -3,6 +3,7 @@ package order
 import (
 	"errors"
 	"log"
+	"strconv"
 
 	"github.com/foomo/shop/event_log"
 	"github.com/foomo/shop/persistence"
@@ -17,6 +18,7 @@ import (
 +++++++++++++++++++++++++++++++++++++++++++++++++ */
 
 var globalOrderPersistor *persistence.Persistor
+var globalOrderHistoryPersistor *persistence.Persistor
 
 /* ++++++++++++++++++++++++++++++++++++++++++++++++
 			PUBLIC TYPES
@@ -111,15 +113,39 @@ func InsertOrder(o *Order) (err error) {
 }
 
 func UpsertOrder(o *Order) error {
+	//log.Println("UPSERT ORDER")
 	// order is unlinked or not yet inserted in db
 	if o.unlinkDB || o.BsonID == "" {
 		return nil
 	}
 	p := GetOrderPersistor()
-	_, err := p.GetCollection().UpsertId(o.BsonID, o)
+
+	// Get current version from db and check against verssion of c
+	// If they are not identical, there must have been a concurrent Upsert
+	orderLatestFromDb := &Order{}
+	err := p.GetCollection().Find(&bson.M{"id": o.GetID()}).Select(&bson.M{"version": 1}).One(orderLatestFromDb)
+
+	if err != nil {
+		log.Println("ERROR", err)
+		return err
+	}
+
+	latestVersionInDb := orderLatestFromDb.Version.GetVersion()
+	if latestVersionInDb != o.Version.GetVersion() {
+		log.Println("WARNING: Upserting version ", strconv.Itoa(latestVersionInDb), "with version", strconv.Itoa(o.Version.GetVersion()))
+	}
+	o.Version.Number = latestVersionInDb
+	o.Version.Increment()
+
+	_, err = p.GetCollection().UpsertId(o.BsonID, o)
 	if err != nil {
 		panic(err)
 	}
+
+	// Store this version in history
+	o.BsonID = "" // reset Mongo ObjectId
+	pHistory := GetOrderHistoryPersistor()
+	pHistory.GetCollection().Insert(o)
 	event_log.SaveShopEvent(event_log.ActionUpsertingOrder, o.GetID(), err, "")
 	return err
 }
@@ -173,4 +199,29 @@ func GetOrderPersistor() *persistence.Persistor {
 	}
 	globalOrderPersistor = p
 	return globalOrderPersistor
+}
+
+// Returns GLOBAL_PERSISTOR. If GLOBAL_PERSISTOR is nil, a new persistor is created, set as GLOBAL_PERSISTOR and returned
+func GetOrderHistoryPersistor() *persistence.Persistor {
+	url := configuration.MONGO_URL
+	collection := configuration.MONGO_COLLECTION_ORDERS_HISTORY
+	if globalOrderHistoryPersistor == nil {
+		p, err := NewPersistor(url, collection)
+		if err != nil || p == nil {
+			panic(errors.New("failed to create mongoDB order persistor: " + err.Error()))
+		}
+		globalOrderHistoryPersistor = p
+		return globalOrderHistoryPersistor
+	}
+
+	if url == globalOrderHistoryPersistor.GetURL() && collection == globalOrderHistoryPersistor.GetCollectionName() {
+		return globalOrderHistoryPersistor
+	}
+
+	p, err := NewPersistor(url, collection)
+	if err != nil || p == nil {
+		panic(err)
+	}
+	globalOrderHistoryPersistor = p
+	return globalOrderHistoryPersistor
 }

@@ -11,6 +11,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 
 	"github.com/foomo/shop/event_log"
+	"github.com/foomo/shop/history"
 	"github.com/foomo/shop/payment"
 	"github.com/foomo/shop/shipping"
 	"github.com/foomo/shop/unique"
@@ -52,6 +53,7 @@ type OrderStatus string
 // Order of item
 // create revisions
 type Order struct {
+	Version           *history.Version
 	CustomProvider    OrderCustomProvider
 	unlinkDB          bool          // if true, changes to Customer are not stored in database
 	BsonID            bson.ObjectId `bson:"_id,omitempty"`
@@ -228,6 +230,10 @@ func (p *Position) GetAmount() float64 {
 func NewOrder(customProvider OrderCustomProvider) (*Order, error) {
 
 	order := &Order{
+		Version: &history.Version{
+			Number:    0,
+			TimeStamp: time.Now(),
+		},
 		Id:             unique.GetNewID(),
 		CreatedAt:      utils.TimeNow(),
 		LastModifiedAt: utils.TimeNow(),
