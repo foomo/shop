@@ -3,6 +3,8 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
+	"runtime"
 	"time"
 )
 
@@ -32,4 +34,8 @@ func ToJSON(v interface{}) string {
 		return "Could not print JSON"
 	}
 	return string(json)
+}
+
+func GetFunctionName(f interface{}) string {
+	return runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name()
 }
