@@ -156,20 +156,13 @@ func (order *Order) AddPositionAndUpsert(pos *Position, upsert bool) error {
 	}
 	order.Positions = append(order.Positions, pos)
 
-	//comment := ""
 	if upsert {
 		if err := order.Upsert(); err != nil {
 			description := "Could not add position " + pos.ItemID + ".  Upsert failed"
 			order.SaveOrderEvent(ActionAddPosition, err, description)
 			return err
 		}
-	} else {
-		// TODO log if upsert was skipped
-		//comment = "Did not perform upsert"
-		//log.Println(comment)
 	}
-	//order.SaveOrderEventDetailed(ActionAddPosition, nil, pos.ItemID, comment)
-
 	return nil
 }
 
@@ -230,12 +223,28 @@ func (p *Position) GetAmount() float64 {
 
 // NewOrder creates a new Order in the database and returns it.
 func NewOrder(customProvider OrderCustomProvider) (*Order, error) {
+	return NewOrderWithCustomId(customProvider, nil)
+}
+
+// NewOrderWithCustomId creates a new Order in the database and returns it.
+// With orderIdFunc, an optional method can be specified to generate the orderId. If nil, a default algorithm is used.
+func NewOrderWithCustomId(customProvider OrderCustomProvider, orderIdFunc func() (string, error)) (*Order, error) {
+	var orderId string
+	if orderIdFunc != nil {
+		var err error
+		orderId, err = orderIdFunc()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		orderId = unique.GetNewID()
+	}
 	order := &Order{
+		Id: orderId,
 		Version: &history.Version{
 			Number:    0,
 			TimeStamp: time.Now(),
 		},
-		Id:             unique.GetNewID(),
 		CreatedAt:      utils.TimeNow(),
 		LastModifiedAt: utils.TimeNow(),
 		Status:         OrderStatusCreated,
@@ -247,6 +256,7 @@ func NewOrder(customProvider OrderCustomProvider) (*Order, error) {
 		Shipping:       &shipping.ShippingProperties{},
 		Custom:         customProvider.NewOrderCustom(),
 	}
+
 	// Store order in database
 	err := order.insert()
 	// Retrieve order again from. (Otherwise upserts on order would fail because of missing mongo ObjectID)

@@ -143,7 +143,7 @@ func UpsertCustomer(c *Customer) error {
 	err := p.GetCollection().Find(&bson.M{"id": c.GetID()}).Select(&bson.M{"version": 1}).One(customerLatestFromDb)
 
 	if err != nil {
-		log.Println("ERROR", err)
+		log.Println("Error Upsert Customer", err)
 		return err
 	}
 
