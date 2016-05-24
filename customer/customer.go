@@ -90,23 +90,6 @@ type Company struct {
 	Type string
 }
 
-type Address struct {
-	Id                       string // is automatically set on AddAddress()
-	Person                   *Person
-	IsDefaultBillingAddress  bool
-	IsDefaultShippingAddress bool
-	Street                   string
-	StreetNumber             string
-	ZIP                      string
-	City                     string
-	Country                  string
-	Company                  string      `bson:",omitempty"`
-	Department               string      `bson:",omitempty"`
-	Building                 string      `bson:",omitempty"`
-	PostOfficeBox            string      `bson:",omitempty"`
-	Custom                   interface{} `bson:",omitempty"`
-}
-
 type Localization struct {
 	LanguageCode LanguageCode
 	CountryCode  CountryCode
@@ -122,14 +105,14 @@ type CustomerCustomProvider interface {
 			PUBLIC METHODS
 +++++++++++++++++++++++++++++++++++++++++++++++++ */
 
+// NewCustomer creates a new Customer in the database and returns it.
 func NewCustomer(customProvider CustomerCustomProvider) (*Customer, error) {
 	customer := &Customer{
 		Version: &history.Version{
 			Number:    0,
 			TimeStamp: time.Now(),
 		},
-		Id: unique.GetNewID(),
-		//Id:             "mockIdCust",
+		Id:             unique.GetNewID(),
 		CreatedAt:      utils.TimeNow(),
 		LastModifiedAt: utils.TimeNow(),
 		Person: &Person{
@@ -140,10 +123,13 @@ func NewCustomer(customProvider CustomerCustomProvider) (*Customer, error) {
 		Custom:       customProvider.NewCustomerCustom(),
 	}
 	// Store order in database
-	err := customer.Insert()
+	err := customer.insert()
 
 	// Retrieve customer again from. (Otherwise upserts on customer would fail because of missing mongo ObjectID)
-	customer, err = GetCustomerById(customer.Id, customProvider) // TODO do not ignore this error
+	customer, err = GetCustomerById(customer.Id, customProvider)
+	if err != nil {
+		return nil, err
+	}
 	return customer, err
 }
 
@@ -156,20 +142,17 @@ func (customer *Customer) LinkDB() {
 	customer.unlinkDB = false
 }
 
-func (customer *Customer) Insert() error {
-	return InsertCustomer(customer) // calls the method defined in persistor.go
+func (customer *Customer) insert() error {
+	return insertCustomer(customer) // calls the method defined in persistor.go
 }
 
 func (customer *Customer) Upsert() error {
+
 	return UpsertCustomer(customer) // calls the method defined in persistor.go
 }
 func (customer *Customer) Delete() error {
 	return DeleteCustomer(customer)
 }
-
-// func (address *Address) OverrideId(id string) {
-// 	address.id = id
-// }
 
 func (customer *Customer) OverrideId(id string) {
 	customer.Id = id
@@ -177,6 +160,7 @@ func (customer *Customer) OverrideId(id string) {
 }
 
 func (customer *Customer) AddAddress(address *Address) {
+
 	address.Id = unique.GetNewID()
 	customer.Addresses = append(customer.Addresses, address)
 	// Adjust default addresses
@@ -195,35 +179,44 @@ func (customer *Customer) RemoveAddress(id string) {
 	}
 }
 
-// TODO implement me
-func CheckAccountAvailability(email string) bool {
-	return false
+// CheckLoginAvailable returns true if the email address is available as login credential
+func CheckLoginAvailable(email string) (bool, error) {
+	p := GetCustomerPersistor()
+	query := p.GetCollection().Find(&bson.M{"email": email})
+	count, err := query.Count()
+	if err != nil {
+		return false, err
+	}
+
+	return count == 0, nil
 }
 
-func DiffTwoLatestCustomerVersions(customProvider CustomerCustomProvider, openInBrowser bool) (string, error) {
-	version, err := GetCurrentVersionFromHistory()
+// DiffTwoLatestCustomerVersions compares the two latest Versions of Customer found in history.
+// If openInBrowser, the result is automatically displayed in the default browser.
+func DiffTwoLatestCustomerVersions(customerId string, customProvider CustomerCustomProvider, openInBrowser bool) (string, error) {
+	version, err := GetCurrentVersionOfCustomerFromHistory(customerId)
 	if err != nil {
 		return "", err
 	}
 
-	return DiffCustomerVersions(version.Number-1, version.Number, customProvider, openInBrowser)
+	return DiffCustomerVersions(customerId, version.Number-1, version.Number, customProvider, openInBrowser)
 }
 
-func DiffCustomerVersions(versionA int, versionB int, customProvider CustomerCustomProvider, openInBrowser bool) (string, error) {
+func DiffCustomerVersions(customerId string, versionA int, versionB int, customProvider CustomerCustomProvider, openInBrowser bool) (string, error) {
 	if versionA <= 0 || versionB <= 0 {
 		return "", errors.New("Error: Version must be greater than 0")
 	}
 	name := "customer_v" + strconv.Itoa(versionA) + "_vs_v" + strconv.Itoa(versionB)
-	customerA, err := GetCustomerByVersion(versionA, customProvider)
+	customerVersionA, err := GetCustomerByVersion(customerId, versionA, customProvider)
 	if err != nil {
 		return "", err
 	}
-	customerB, err := GetCustomerByVersion(versionB, customProvider)
+	customerVersionB, err := GetCustomerByVersion(customerId, versionB, customProvider)
 	if err != nil {
 		return "", err
 	}
 
-	html, err := history.DiffVersions(customerA, customerB)
+	html, err := history.DiffVersions(customerVersionA, customerVersionB)
 	if err != nil {
 		return "", err
 	}
