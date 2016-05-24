@@ -67,7 +67,6 @@ func stateFactory(key string) *State {
 		Type:           blueprint.Type,
 		Key:            blueprint.Key,
 		Description:    blueprint.Description,
-		Initial:        blueprint.Initial,
 	}
 }
 
