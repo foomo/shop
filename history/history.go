@@ -25,6 +25,8 @@ func (v *Version) GetFormattedTime() string {
 	return utils.GetFormattedTime(v.TimeStamp)
 }
 
+// DiffVersions compares to structs and returns the result as html.
+// The html can be displayed with utils.OpenInBrowser()
 func DiffVersions(versionA interface{}, versionB interface{}) (string, error) {
 	jsonA, err := json.MarshalIndent(versionA, "", "	")
 	if err != nil {
