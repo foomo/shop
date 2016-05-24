@@ -39,7 +39,7 @@ const (
 	OrderTypeReturn              OrderType   = "return"
 	OrderStatusInvalid           OrderStatus = "orderStatusInvalid"
 	OrderStatusCreated           OrderStatus = "orderStatusCreated"
-	OrderStatusPocessed          OrderStatus = "orderStatusProcessed"
+	OrderStatusProcessed         OrderStatus = "orderStatusProcessed"
 	OrderStatusShipped           OrderStatus = "orderStatusShipped"
 	OrderStatusReadyForATP       OrderStatus = "orderStatusReadyForATP"
 )
