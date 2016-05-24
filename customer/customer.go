@@ -1,6 +1,9 @@
 package customer
 
 import (
+	"errors"
+	"log"
+	"strconv"
 	"time"
 
 	"gopkg.in/mgo.v2/bson"
@@ -192,6 +195,43 @@ func (customer *Customer) RemoveAddress(id string) {
 	}
 }
 
+// TODO implement me
 func CheckAccountAvailability(email string) bool {
 	return false
+}
+
+func DiffTwoLatestCustomerVersions(customProvider CustomerCustomProvider, openInBrowser bool) (string, error) {
+	version, err := GetCurrentVersionFromHistory()
+	if err != nil {
+		return "", err
+	}
+
+	return DiffCustomerVersions(version.Number-1, version.Number, customProvider, openInBrowser)
+}
+
+func DiffCustomerVersions(versionA int, versionB int, customProvider CustomerCustomProvider, openInBrowser bool) (string, error) {
+	if versionA <= 0 || versionB <= 0 {
+		return "", errors.New("Error: Version must be greater than 0")
+	}
+	name := "customer_v" + strconv.Itoa(versionA) + "_vs_v" + strconv.Itoa(versionB)
+	customerA, err := GetCustomerByVersion(versionA, customProvider)
+	if err != nil {
+		return "", err
+	}
+	customerB, err := GetCustomerByVersion(versionB, customProvider)
+	if err != nil {
+		return "", err
+	}
+
+	html, err := history.DiffVersions(customerA, customerB)
+	if err != nil {
+		return "", err
+	}
+	if openInBrowser {
+		err := utils.OpenInBrowser(name, html)
+		if err != nil {
+			log.Println(err)
+		}
+	}
+	return html, err
 }
