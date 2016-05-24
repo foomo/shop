@@ -15,6 +15,9 @@ import (
 )
 
 // !! NOTE: customer must not import order !!
+//------------------------------------------------------------------
+// ~ CONSTANTS / VARS
+//------------------------------------------------------------------
 
 const (
 	VERBOSE = false
@@ -23,10 +26,18 @@ const (
 var globalCustomerPersistor *persistence.Persistor
 var globalCustomerHistoryPersistor *persistence.Persistor
 
+//------------------------------------------------------------------
+// ~ CONSTRUCTOR
+//------------------------------------------------------------------
+
 // NewPersistor constructor
 func NewPersistor(mongoURL string, collectionName string) (p *persistence.Persistor, err error) {
 	return persistence.NewPersistor(mongoURL, collectionName)
 }
+
+//------------------------------------------------------------------
+// ~ PUBLIC METHODS
+//------------------------------------------------------------------
 
 // Returns GLOBAL_PERSISTOR. If GLOBAL_PERSISTOR is nil, a new persistor is created, set as GLOBAL_PERSISTOR and returned
 func GetCustomerPersistor() *persistence.Persistor {
@@ -89,19 +100,6 @@ func AlreadyExistsInDB(customerID string) (bool, error) {
 	return count > 0, nil
 }
 
-// FindOne returns one single customer
-func GetCustomerById(id string, customProvider CustomerCustomProvider) (*Customer, error) {
-	p := GetCustomerPersistor()
-	customer := &Customer{}
-	err := p.GetCollection().Find(&bson.M{"id": id}).One(customer)
-	if err != nil {
-		return nil, err
-	}
-	customer, err = mapDecode(customer, customProvider)
-	event_log.SaveShopEvent(event_log.ActionRetrieveCustomer, id, err, "")
-	return customer, err
-}
-
 // Find returns an iterator for all entries found matching on query.
 func Find(query *bson.M, customProvider CustomerCustomProvider) (iter func() (cust *Customer, err error), err error) {
 	p := GetCustomerPersistor()
@@ -129,53 +127,8 @@ func Find(query *bson.M, customProvider CustomerCustomProvider) (iter func() (cu
 	return
 }
 
-func mapDecode(cust *Customer, customProvider CustomerCustomProvider) (customer *Customer, err error) {
-	/* Map CustomerCustom */
-	customerCustom := customProvider.NewCustomerCustom()
-	if customerCustom != nil && cust.Custom != nil {
-		err = mapstructure.Decode(cust.Custom, customerCustom)
-		if err != nil {
-			return nil, err
-		}
-		cust.Custom = customerCustom
-	}
-
-	/* Map AddressCustom */
-	for _, address := range cust.Addresses {
-		addressCustom := customProvider.NewAddressCustom()
-		if addressCustom != nil && address.Custom != nil {
-
-			err = mapstructure.Decode(address.Custom, addressCustom)
-			if err != nil {
-				return nil, err
-			}
-			address.Custom = addressCustom
-		}
-	}
-	return cust, nil
-}
-
-func InsertCustomer(c *Customer) error {
-	p := GetCustomerPersistor()
-	alreadyExists, err := AlreadyExistsInDB(c.GetID())
-	if err != nil {
-		return err
-	}
-	if alreadyExists {
-		log.Println("User with id", c.GetID(), "already exists in the database!")
-		return nil
-	}
-	err = p.GetCollection().Insert(c)
-	if err != nil {
-		return err
-	}
-	pHistory := GetCustomerHistoryPersistor()
-	err = pHistory.GetCollection().Insert(c)
-	event_log.SaveShopEvent(event_log.ActionCreateCustomer, c.GetID(), err, "")
-	return err
-}
-
 func UpsertCustomer(c *Customer) error {
+	//log.Println("WhoCalledMe: ", utils.WhoCalledMe())
 	//log.Println("UPSERT CUSTOMER with id", c.GetID())
 	// order is unlinked or not yet inserted in db
 	if c.unlinkDB || c.BsonID == "" {
@@ -236,31 +189,115 @@ func DeleteCustomerById(id string) error {
 	event_log.SaveShopEvent(event_log.ActionDeleteCustomer, id, err, "")
 	return err
 }
-func GetCurrentCustomerFromHistory(customProvider CustomerCustomProvider) (*Customer, error) {
-	customer := &Customer{}
-	p := GetCustomerHistoryPersistor()
-	err := p.GetCollection().Find(&bson.M{}).Sort("-version.number").One(customer)
-	if err != nil {
-		return nil, err
-	}
-	return mapDecode(customer, customProvider)
+
+// GetCustomerById returns the customer with id
+func GetCustomerById(id string, customProvider CustomerCustomProvider) (*Customer, error) {
+	return findOneCustomer(&bson.M{"id": id}, nil, "", customProvider, false)
 }
-func GetCurrentVersionFromHistory() (*history.Version, error) {
-	customer := &Customer{}
-	p := GetCustomerHistoryPersistor()
-	err := p.GetCollection().Find(&bson.M{}).Select(&bson.M{"version": 1}).Sort("-version.number").One(customer)
+
+// GetCustomerByEmail
+func GetCustomerByEmail(email string, customProvider CustomerCustomProvider) (*Customer, error) {
+	return findOneCustomer(&bson.M{"email": email}, nil, "", customProvider, false)
+}
+func GetCurrentCustomerByIdFromHistory(customerId string, customProvider CustomerCustomProvider) (*Customer, error) {
+	return findOneCustomer(&bson.M{"id": customerId}, nil, "-version.number", customProvider, true)
+}
+func GetCurrentVersionOfCustomerFromHistory(customerId string) (*history.Version, error) {
+	customer, err := findOneCustomer(&bson.M{"id": customerId}, &bson.M{"version": 1}, "-version.number", nil, true)
 	if err != nil {
 		return nil, err
 	}
-	log.Println("Number", customer.Version.Number, "Time", customer.Version.TimeStamp)
 	return customer.GetVersion(), nil
 }
-func GetCustomerByVersion(version int, customProvider CustomerCustomProvider) (*Customer, error) {
-	customer := &Customer{}
-	p := GetCustomerHistoryPersistor()
-	err := p.GetCollection().Find(&bson.M{"version.number": version}).One(customer)
-	if err != nil {
-		return nil, err
+func GetCustomerByVersion(customerId string, version int, customProvider CustomerCustomProvider) (*Customer, error) {
+	return findOneCustomer(&bson.M{"id": customerId, "version.number": version}, nil, "", customProvider, true)
+}
+
+//------------------------------------------------------------------
+// ~ PRIVATE METHODS
+//------------------------------------------------------------------
+
+// findOneCustomer returns one Customer from the customer database or from the customer history database
+func findOneCustomer(find *bson.M, selection *bson.M, sort string, customProvider CustomerCustomProvider, fromHistory bool) (*Customer, error) {
+	var p *persistence.Persistor
+	if fromHistory {
+		p = GetCustomerHistoryPersistor()
+	} else {
+		p = GetCustomerPersistor()
 	}
-	return mapDecode(customer, customProvider)
+	customer := &Customer{}
+	if find == nil {
+		find = &bson.M{}
+	}
+	if selection == nil {
+		selection = &bson.M{}
+	}
+	if sort != "" {
+		err := p.GetCollection().Find(find).Select(selection).Sort(sort).One(customer)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		err := p.GetCollection().Find(find).Select(selection).One(customer)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if customProvider != nil {
+		var err error
+		customer, err = mapDecode(customer, customProvider)
+		if err != nil {
+			return nil, err
+		}
+	}
+	event_log.SaveShopEvent(event_log.ActionRetrieveCustomer, customer.GetID(), nil, customer.GetEmail())
+	return customer, nil
+}
+
+// insertCustomer inserts a customer into the database
+func insertCustomer(c *Customer) error {
+	p := GetCustomerPersistor()
+	alreadyExists, err := AlreadyExistsInDB(c.GetID())
+	if err != nil {
+		return err
+	}
+	if alreadyExists {
+		log.Println("User with id", c.GetID(), "already exists in the database!")
+		return nil
+	}
+	err = p.GetCollection().Insert(c)
+	if err != nil {
+		return err
+	}
+	pHistory := GetCustomerHistoryPersistor()
+	err = pHistory.GetCollection().Insert(c)
+	event_log.SaveShopEvent(event_log.ActionCreateCustomer, c.GetID(), err, "")
+	return err
+}
+
+// mapDecode maps interfaces to specific types provided by customProvider
+func mapDecode(cust *Customer, customProvider CustomerCustomProvider) (customer *Customer, err error) {
+	/* Map CustomerCustom */
+	customerCustom := customProvider.NewCustomerCustom()
+	if customerCustom != nil && cust.Custom != nil {
+		err = mapstructure.Decode(cust.Custom, customerCustom)
+		if err != nil {
+			return nil, err
+		}
+		cust.Custom = customerCustom
+	}
+
+	/* Map AddressCustom */
+	for _, address := range cust.Addresses {
+		addressCustom := customProvider.NewAddressCustom()
+		if addressCustom != nil && address.Custom != nil {
+
+			err = mapstructure.Decode(address.Custom, addressCustom)
+			if err != nil {
+				return nil, err
+			}
+			address.Custom = addressCustom
+		}
+	}
+	return cust, nil
 }
