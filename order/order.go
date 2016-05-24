@@ -130,8 +130,8 @@ func (order *Order) HasCustomer() bool {
 	return order.CustomerId != ""
 }
 
-func (order *Order) Insert() error {
-	return InsertOrder(order) // calls the method defined in persistor.go
+func (order *Order) insert() error {
+	return insertOrder(order) // calls the method defined in persistor.go
 }
 
 func (order *Order) Upsert() error {
@@ -228,9 +228,8 @@ func (p *Position) GetAmount() float64 {
 			PUBLIC METHODS
 +++++++++++++++++++++++++++++++++++++++++++++++++ */
 
-// NewOrder
+// NewOrder creates a new Order in the database and returns it.
 func NewOrder(customProvider OrderCustomProvider) (*Order, error) {
-
 	order := &Order{
 		Version: &history.Version{
 			Number:    0,
@@ -249,7 +248,7 @@ func NewOrder(customProvider OrderCustomProvider) (*Order, error) {
 		Custom:         customProvider.NewOrderCustom(),
 	}
 	// Store order in database
-	err := order.Insert()
+	err := order.insert()
 	// Retrieve order again from. (Otherwise upserts on order would fail because of missing mongo ObjectID)
 	order, err = GetOrderById(order.Id, customProvider)
 	return order, err

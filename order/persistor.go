@@ -2,10 +2,12 @@ package order
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"strconv"
 
 	"github.com/foomo/shop/event_log"
+	"github.com/foomo/shop/history"
 	"github.com/foomo/shop/persistence"
 	"github.com/mitchellh/mapstructure"
 
@@ -13,32 +15,34 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
-/* ++++++++++++++++++++++++++++++++++++++++++++++++
-			CONSTANTS / VARS
-+++++++++++++++++++++++++++++++++++++++++++++++++ */
+//------------------------------------------------------------------
+// ~ CONSTANTS / VARS
+//------------------------------------------------------------------
 
 var globalOrderPersistor *persistence.Persistor
 var globalOrderHistoryPersistor *persistence.Persistor
 
-/* ++++++++++++++++++++++++++++++++++++++++++++++++
-			PUBLIC TYPES
-+++++++++++++++++++++++++++++++++++++++++++++++++ */
+//------------------------------------------------------------------
+// ~ CONTRUCTOR
+//------------------------------------------------------------------
+// NewPersistor constructor
+func NewPersistor(mongoURL string, collectionName string) (p *persistence.Persistor, err error) {
+	return persistence.NewPersistor(mongoURL, collectionName)
+}
 
-/* ++++++++++++++++++++++++++++++++++++++++++++++++
-			PUBLIC METHODS ON PERSISTOR
-+++++++++++++++++++++++++++++++++++++++++++++++++ */
+//------------------------------------------------------------------
+// ~ PUBLIC METHODS
+//------------------------------------------------------------------
 
-// FindOne returns one single order
-func GetOrderById(id string, customProvider OrderCustomProvider) (*Order, error) {
+// AlreadyExistsInDB checks if a order with given orderID already exists in the database
+func AlreadyExistsInDB(orderID string) (bool, error) {
 	p := GetOrderPersistor()
-	order := &Order{}
-	err := p.GetCollection().Find(&bson.M{"id": id}).One(order)
+	q := p.GetCollection().Find(&bson.M{"id": orderID})
+	count, err := q.Count()
 	if err != nil {
-		return nil, err
+		return false, err
 	}
-	order, err = mapDecode(order, customProvider)
-	event_log.SaveShopEvent(event_log.ActionRetrieveOrder, id, err, "")
-	return order, err
+	return count > 0, nil
 }
 
 // Find returns an iterator for the entries matching on query
@@ -70,50 +74,9 @@ func Find(query *bson.M, customProvider OrderCustomProvider) (iter func() (o *Or
 	return
 }
 
-func mapDecode(o *Order, customProvider OrderCustomProvider) (order *Order, err error) {
-	/* Map OrderCustom */
-	orderCustom := customProvider.NewOrderCustom()
-	if orderCustom != nil && o.Custom != nil {
-		err = mapstructure.Decode(o.Custom, orderCustom)
-		if err != nil {
-			return nil, err
-		}
-		o.Custom = orderCustom
-	}
-
-	/* Map PostionCustom */
-	for _, position := range o.Positions {
-		positionCustom := customProvider.NewPositionCustom()
-		if positionCustom != nil && position.Custom != nil {
-
-			err = mapstructure.Decode(position.Custom, positionCustom)
-			if err != nil {
-				return nil, err
-			}
-			position.Custom = positionCustom
-		}
-	}
-	return o, nil
-}
-
-// Create (or override) unique OrderID and insert order in database
-func InsertOrder(o *Order) (err error) {
-	p := GetOrderPersistor()
-	newID, err := createOrderID() // TODO This is not Globus Specific and should not be in shop
-	if err != nil {
-		return err
-	}
-	o.OverrideId(newID)
-	o.SetStatus(OrderStatusCreated)
-	//log.Println("Created orderID:", o.OrderID)
-
-	err = p.GetCollection().Insert(o)
-	event_log.SaveShopEvent(event_log.ActionCreateOrder, o.GetID(), err, "")
-	return err
-}
-
 func UpsertOrder(o *Order) error {
-	//log.Println("UPSERT ORDER")
+	//log.Println("WhoCalledMe: ", utils.WhoCalledMe())
+	//log.Println("UPSERT CUSTOMER with id", o.GetID())
 	// order is unlinked or not yet inserted in db
 	if o.unlinkDB || o.BsonID == "" {
 		return nil
@@ -121,7 +84,8 @@ func UpsertOrder(o *Order) error {
 	p := GetOrderPersistor()
 
 	// Get current version from db and check against verssion of c
-	// If they are not identical, there must have been a concurrent Upsert
+	// If they are not identical, there must have been another upsert which would be overwritten by this one.
+	// In this case upsert is skipped and an error is returned,
 	orderLatestFromDb := &Order{}
 	err := p.GetCollection().Find(&bson.M{"id": o.GetID()}).Select(&bson.M{"version": 1}).One(orderLatestFromDb)
 
@@ -132,22 +96,34 @@ func UpsertOrder(o *Order) error {
 
 	latestVersionInDb := orderLatestFromDb.Version.GetVersion()
 	if latestVersionInDb != o.Version.GetVersion() {
-		log.Println("WARNING: Upserting version ", strconv.Itoa(latestVersionInDb), "with version", strconv.Itoa(o.Version.GetVersion()))
+		errMsg := fmt.Sprintln("WARNING: Cannot upsert latest version ", strconv.Itoa(latestVersionInDb), "in db with version", strconv.Itoa(o.Version.GetVersion()), "!")
+		log.Println(errMsg)
+		return errors.New(errMsg)
 	}
 	o.Version.Number = latestVersionInDb
 	o.Version.Increment()
 
 	_, err = p.GetCollection().UpsertId(o.BsonID, o)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
-	// Store this version in history
-	o.BsonID = "" // reset Mongo ObjectId
+	// Store version in history
+	bsonId := o.BsonID
+	o.BsonID = "" // Temporarily reset Mongo ObjectId, so that we can perfrom an Insert.
 	pHistory := GetOrderHistoryPersistor()
 	pHistory.GetCollection().Insert(o)
+	o.BsonID = bsonId // restore bsonId
 	event_log.SaveShopEvent(event_log.ActionUpsertingOrder, o.GetID(), err, "")
 	return err
+}
+
+func UpsertAndGetOrder(o *Order, customProvider OrderCustomProvider) (*Order, error) {
+	err := UpsertOrder(o)
+	if err != nil {
+		return nil, err
+	}
+	return GetOrderById(o.GetID(), customProvider)
 }
 
 func DeleteOrder(o *Order) error {
@@ -159,21 +135,6 @@ func DeleteOrderById(id string) error {
 	err := GetOrderPersistor().GetCollection().Remove(bson.M{"id": id})
 	event_log.SaveShopEvent(event_log.ActionDeleteOrder, id, err, "")
 	return err
-}
-
-// func InsertEvent(e *event_log.Event) error {
-// 	p := GetOrderPersistor()
-// 	err := p.GetCollection().Insert(e)
-// 	return err
-// }
-
-/* ++++++++++++++++++++++++++++++++++++++++++++++++
-			PUBLIC METHODS
-+++++++++++++++++++++++++++++++++++++++++++++++++ */
-
-// NewPersistor constructor
-func NewPersistor(mongoURL string, collectionName string) (p *persistence.Persistor, err error) {
-	return persistence.NewPersistor(mongoURL, collectionName)
 }
 
 // Returns GLOBAL_PERSISTOR. If GLOBAL_PERSISTOR is nil, a new persistor is created, set as GLOBAL_PERSISTOR and returned
@@ -224,4 +185,106 @@ func GetOrderHistoryPersistor() *persistence.Persistor {
 	}
 	globalOrderHistoryPersistor = p
 	return globalOrderHistoryPersistor
+}
+
+// GetOrderById returns the order with id
+func GetOrderById(id string, customProvider OrderCustomProvider) (*Order, error) {
+	return findOneOrder(&bson.M{"id": id}, nil, "", customProvider, false)
+}
+
+func GetCurrentOrderByIdFromHistory(orderId string, customProvider OrderCustomProvider) (*Order, error) {
+	return findOneOrder(&bson.M{"id": orderId}, nil, "-version.number", customProvider, true)
+}
+func GetCurrentVersionOfOrderFromHistory(orderId string) (*history.Version, error) {
+	order, err := findOneOrder(&bson.M{"id": orderId}, &bson.M{"version": 1}, "-version.number", nil, true)
+	if err != nil {
+		return nil, err
+	}
+	return order.GetVersion(), nil
+}
+func GetOrderByVersion(orderId string, version int, customProvider OrderCustomProvider) (*Order, error) {
+	return findOneOrder(&bson.M{"id": orderId, "version.number": version}, nil, "", customProvider, true)
+}
+
+//------------------------------------------------------------------
+// ~ PRIVATE METHODS
+//------------------------------------------------------------------
+
+// findOneOrder returns one Order from the order database or from the order history database
+func findOneOrder(find *bson.M, selection *bson.M, sort string, customProvider OrderCustomProvider, fromHistory bool) (*Order, error) {
+	var p *persistence.Persistor
+	if fromHistory {
+		p = GetOrderHistoryPersistor()
+	} else {
+		p = GetOrderPersistor()
+	}
+	order := &Order{}
+	if find == nil {
+		find = &bson.M{}
+	}
+	if selection == nil {
+		selection = &bson.M{}
+	}
+	if sort != "" {
+		err := p.GetCollection().Find(find).Select(selection).Sort(sort).One(order)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		err := p.GetCollection().Find(find).Select(selection).One(order)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if customProvider != nil {
+		var err error
+		order, err = mapDecode(order, customProvider)
+		if err != nil {
+			return nil, err
+		}
+	}
+	event_log.SaveShopEvent(event_log.ActionRetrieveOrder, order.GetID(), nil, "")
+	return order, nil
+}
+
+// Create (or override) unique OrderID and insert order in database
+func insertOrder(o *Order) (err error) {
+	p := GetOrderPersistor()
+	newID, err := createOrderID() // TODO This is not Globus Specific and should not be in shop
+	if err != nil {
+		return err
+	}
+	o.OverrideId(newID)
+	o.SetStatus(OrderStatusCreated)
+	//log.Println("Created orderID:", o.OrderID)
+
+	err = p.GetCollection().Insert(o)
+	event_log.SaveShopEvent(event_log.ActionCreateOrder, o.GetID(), err, "")
+	return err
+}
+
+func mapDecode(o *Order, customProvider OrderCustomProvider) (order *Order, err error) {
+	/* Map OrderCustom */
+	orderCustom := customProvider.NewOrderCustom()
+	if orderCustom != nil && o.Custom != nil {
+		err = mapstructure.Decode(o.Custom, orderCustom)
+		if err != nil {
+			return nil, err
+		}
+		o.Custom = orderCustom
+	}
+
+	/* Map PostionCustom */
+	for _, position := range o.Positions {
+		positionCustom := customProvider.NewPositionCustom()
+		if positionCustom != nil && position.Custom != nil {
+
+			err = mapstructure.Decode(position.Custom, positionCustom)
+			if err != nil {
+				return nil, err
+			}
+			position.Custom = positionCustom
+		}
+	}
+	return o, nil
 }
