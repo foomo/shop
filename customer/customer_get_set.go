@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/foomo/shop/crypto"
+	"github.com/foomo/shop/history"
 	"github.com/foomo/shop/utils"
 )
 
@@ -14,6 +15,10 @@ import (
 
 func (customer *Customer) GetID() string {
 	return customer.Id
+}
+
+func (customer *Customer) GetVersion() *history.Version {
+	return customer.Version
 }
 
 func (address *Address) GetID() string {
