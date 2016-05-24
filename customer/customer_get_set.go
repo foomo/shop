@@ -21,10 +21,6 @@ func (customer *Customer) GetVersion() *history.Version {
 	return customer.Version
 }
 
-func (address *Address) GetID() string {
-	return address.Id
-}
-
 func (customer *Customer) GetEmail() string {
 	return customer.Email
 }
@@ -97,6 +93,7 @@ func (customer *Customer) GetDefaultBillingAddress() *Address {
 	return customer.Addresses[0]
 }
 
+// GetPrimaryContact returns primary contact as string
 func (c *Contacts) GetPrimaryContact() string {
 	switch c.Primary {
 	case ContactTypePhoneLandline:
