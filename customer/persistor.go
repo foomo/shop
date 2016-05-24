@@ -2,11 +2,13 @@ package customer
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"strconv"
 
 	"github.com/foomo/shop/configuration"
 	"github.com/foomo/shop/event_log"
+	"github.com/foomo/shop/history"
 	"github.com/foomo/shop/persistence"
 	"github.com/mitchellh/mapstructure"
 	"gopkg.in/mgo.v2/bson"
@@ -182,7 +184,8 @@ func UpsertCustomer(c *Customer) error {
 	p := GetCustomerPersistor()
 
 	// Get current version from db and check against verssion of c
-	// If they are not identical, there must have been a concurrent Upsert
+	// If they are not identical, there must have been another upsert which would be overwritten by this one.
+	// In this case upsert is skipped and an error is returned,
 	customerLatestFromDb := &Customer{}
 	err := p.GetCollection().Find(&bson.M{"id": c.GetID()}).Select(&bson.M{"version": 1}).One(customerLatestFromDb)
 
@@ -193,25 +196,34 @@ func UpsertCustomer(c *Customer) error {
 
 	latestVersionInDb := customerLatestFromDb.Version.GetVersion()
 	if latestVersionInDb != c.Version.GetVersion() {
-		log.Println("WARNING: Upserting version ", strconv.Itoa(latestVersionInDb), "with version", strconv.Itoa(c.Version.GetVersion()))
+		errMsg := fmt.Sprintln("WARNING: Cannot upsert latest version ", strconv.Itoa(latestVersionInDb), "in db with version", strconv.Itoa(c.Version.GetVersion()), "!")
+		log.Println(errMsg)
+		return errors.New(errMsg)
 	}
 	c.Version.Number = latestVersionInDb
 	c.Version.Increment()
 
 	_, err = p.GetCollection().UpsertId(c.BsonID, c)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
-	// Store this version in history
+	// Store version in history
 	bsonId := c.BsonID
-	c.BsonID = "" // reset Mongo ObjectId, so that we can perfrom an Insert.
+	c.BsonID = "" // Temporarily reset Mongo ObjectId, so that we can perfrom an Insert.
 	pHistory := GetCustomerHistoryPersistor()
 	pHistory.GetCollection().Insert(c)
-	// restore bsonId
-	c.BsonID = bsonId
+	c.BsonID = bsonId // restore bsonId
 	event_log.SaveShopEvent(event_log.ActionUpsertingCustomer, c.GetID(), err, "")
 	return err
+}
+
+func UpsertAndGetCustomer(c *Customer, customProvider CustomerCustomProvider) (*Customer, error) {
+	err := UpsertCustomer(c)
+	if err != nil {
+		return nil, err
+	}
+	return GetCustomerById(c.GetID(), customProvider)
 }
 
 func DeleteCustomer(c *Customer) error {
@@ -223,4 +235,32 @@ func DeleteCustomerById(id string) error {
 	err := GetCustomerPersistor().GetCollection().Remove(bson.M{"id": id})
 	event_log.SaveShopEvent(event_log.ActionDeleteCustomer, id, err, "")
 	return err
+}
+func GetCurrentCustomerFromHistory(customProvider CustomerCustomProvider) (*Customer, error) {
+	customer := &Customer{}
+	p := GetCustomerHistoryPersistor()
+	err := p.GetCollection().Find(&bson.M{}).Sort("-version.number").One(customer)
+	if err != nil {
+		return nil, err
+	}
+	return mapDecode(customer, customProvider)
+}
+func GetCurrentVersionFromHistory() (*history.Version, error) {
+	customer := &Customer{}
+	p := GetCustomerHistoryPersistor()
+	err := p.GetCollection().Find(&bson.M{}).Select(&bson.M{"version": 1}).Sort("-version.number").One(customer)
+	if err != nil {
+		return nil, err
+	}
+	log.Println("Number", customer.Version.Number, "Time", customer.Version.TimeStamp)
+	return customer.GetVersion(), nil
+}
+func GetCustomerByVersion(version int, customProvider CustomerCustomProvider) (*Customer, error) {
+	customer := &Customer{}
+	p := GetCustomerHistoryPersistor()
+	err := p.GetCollection().Find(&bson.M{"version.number": version}).One(customer)
+	if err != nil {
+		return nil, err
+	}
+	return mapDecode(customer, customProvider)
 }
