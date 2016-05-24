@@ -6,6 +6,8 @@ package order
 import (
 	"errors"
 	"fmt"
+	"log"
+	"strconv"
 	"time"
 
 	"gopkg.in/mgo.v2/bson"
@@ -252,4 +254,42 @@ func NewOrder(customProvider OrderCustomProvider) (*Order, error) {
 	order, err = GetOrderById(order.Id, customProvider)
 	return order, err
 
+}
+
+// DiffTwoLatestOrderVersions compares the two latest Versions of Order found in history.
+// If openInBrowser, the result is automatically displayed in the default browser.
+func DiffTwoLatestOrderVersions(orderId string, customProvider OrderCustomProvider, openInBrowser bool) (string, error) {
+	version, err := GetCurrentVersionOfOrderFromHistory(orderId)
+	if err != nil {
+		return "", err
+	}
+
+	return DiffOrderVersions(orderId, version.Number-1, version.Number, customProvider, openInBrowser)
+}
+
+func DiffOrderVersions(orderId string, versionA int, versionB int, customProvider OrderCustomProvider, openInBrowser bool) (string, error) {
+	if versionA <= 0 || versionB <= 0 {
+		return "", errors.New("Error: Version must be greater than 0")
+	}
+	name := "order_v" + strconv.Itoa(versionA) + "_vs_v" + strconv.Itoa(versionB)
+	orderVersionA, err := GetOrderByVersion(orderId, versionA, customProvider)
+	if err != nil {
+		return "", err
+	}
+	orderVersionB, err := GetOrderByVersion(orderId, versionB, customProvider)
+	if err != nil {
+		return "", err
+	}
+
+	html, err := history.DiffVersions(orderVersionA, orderVersionB)
+	if err != nil {
+		return "", err
+	}
+	if openInBrowser {
+		err := utils.OpenInBrowser(name, html)
+		if err != nil {
+			log.Println(err)
+		}
+	}
+	return html, err
 }
