@@ -58,11 +58,11 @@ type Customer struct {
 	Email          string // Login Credential
 	Crypto         *crypto.Crypto
 	Person         *Person
-	Company        *Company `bson:",omitempty"`
+	Company        *Company
 	Addresses      []*Address
 	Localization   *Localization
 	History        event_log.EventHistory
-	Custom         interface{} `bson:",omitempty"`
+	Custom         interface{}
 }
 
 type Contacts struct {
@@ -78,9 +78,9 @@ type Contacts struct {
 // Only Customer->Person has Contacts
 type Person struct {
 	FirstName  string
-	MiddleName string `bson:",omitempty"`
+	MiddleName string
 	LastName   string
-	Title      TitleType `bson:",omitempty"`
+	Title      TitleType
 	Salutation SalutationType
 	Contacts   *Contacts
 }
@@ -189,6 +189,15 @@ func CheckLoginAvailable(email string) (bool, error) {
 	}
 
 	return count == 0, nil
+}
+
+// CheckLoginCredentials returns true if  customer with email exists and password matches with the hash stores in customers Crypto
+func CheckLoginCredentials(email, password string) (bool, error) {
+	customer, err := GetCustomerByEmail(email, nil)
+	if err != nil {
+		return false, err
+	}
+	return crypto.VerifyPassword(customer.GetCrypto(), password), nil
 }
 
 // DiffTwoLatestCustomerVersions compares the two latest Versions of Customer found in history.
