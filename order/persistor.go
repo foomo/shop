@@ -90,7 +90,7 @@ func UpsertOrder(o *Order) error {
 	err := p.GetCollection().Find(&bson.M{"id": o.GetID()}).Select(&bson.M{"version": 1}).One(orderLatestFromDb)
 
 	if err != nil {
-		log.Println("ERROR", err)
+		log.Println("Error Upsert Order", err)
 		return err
 	}
 
@@ -250,11 +250,11 @@ func findOneOrder(find *bson.M, selection *bson.M, sort string, customProvider O
 // Create (or override) unique OrderID and insert order in database
 func insertOrder(o *Order) (err error) {
 	p := GetOrderPersistor()
-	newID, err := createOrderID() // TODO This is not Globus Specific and should not be in shop
+	//newID, err := createOrderID() // TODO This is not Globus Specific and should not be in shop
 	if err != nil {
 		return err
 	}
-	o.OverrideId(newID)
+	//o.OverrideId(newID)
 	o.SetStatus(OrderStatusCreated)
 	//log.Println("Created orderID:", o.OrderID)
 
