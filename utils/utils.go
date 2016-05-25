@@ -75,12 +75,10 @@ func OpenInBrowser(name string, html string) error {
 
 // WhoCalledMe returns a string identifying the caller of the function calling WhoCalledMe
 func WhoCalledMe() string {
-
 	return whoCalledMeSkip(5) + " => " + whoCalledMeSkip(4) + " => " + whoCalledMeSkip(3)
 }
 
 func whoCalledMeSkip(skip int) string {
-
 	// we get the callers as uintptrs - but we just need 1
 	fpcs := make([]uintptr, 1)
 
