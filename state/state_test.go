@@ -7,6 +7,7 @@ import (
 	"github.com/foomo/shop/utils"
 )
 
+// Define
 const (
 	StateType = "ExampleStates"
 	State1    = "state1"
@@ -14,13 +15,6 @@ const (
 	State3    = "state3"
 	State4    = "state4"
 )
-
-var stateDescriptions = map[string]string{
-	State1: "I am state one",
-	State2: "I am state two",
-	State3: "I am state three",
-	State4: "I am state four",
-}
 
 var transitions = map[string][]string{
 	State1: []string{State2},
@@ -34,25 +28,25 @@ var blueprints = map[string]BluePrint{
 	State1: BluePrint{
 		Type:        StateType,
 		Key:         State1,
-		Description: stateDescriptions[State1],
+		Description: "I am state one",
 		Initial:     true,
 	},
 	State2: BluePrint{
 		Type:        StateType,
 		Key:         State2,
-		Description: stateDescriptions[State2],
+		Description: "I am state two",
 		Initial:     false,
 	},
 	State3: BluePrint{
 		Type:        StateType,
 		Key:         State3,
-		Description: stateDescriptions[State3],
+		Description: "I am state three",
 		Initial:     false,
 	},
 	State4: BluePrint{
 		Type:        StateType,
 		Key:         State4,
-		Description: stateDescriptions[State4],
+		Description: "I am state four",
 		Initial:     false,
 	},
 }
