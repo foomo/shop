@@ -1,13 +1,18 @@
 package examples_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
+	"reflect"
 	"testing"
 	"time"
 
+	"gopkg.in/mgo.v2/bson"
+
 	"github.com/foomo/shop/examples"
 	"github.com/foomo/shop/mock"
+	"github.com/foomo/shop/order"
 	"github.com/foomo/shop/test_utils"
 )
 
@@ -71,4 +76,71 @@ func TestSmurfProcessor(t *testing.T) {
 		t.Fatal("number of orders:", numberOfOrders, ", processed by joe:", joeProcessor.CountProcessed, ", processed by pete:", peteProcessor.CountProcessed)
 	}
 
+}
+
+// amount of orders to be generated
+const NumOrders = 500
+
+func TestPersistor(t *testing.T) {
+
+	ptp := "Pete the persistor"
+
+	customProvider := examples.SmurfOrderCustomProvider{}
+	for i := 0; i < NumOrders; i++ {
+		newOrder, err := order.NewOrder(customProvider)
+		newOrder.Custom = &examples.SmurfOrderCustom{
+			ResponsibleSmurf: ptp,
+		}
+		err = newOrder.Upsert()
+		if err != nil {
+			panic(err)
+		}
+
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	orderIter, err := order.Find(&bson.M{"custom.responsiblesmurf": ptp}, customProvider)
+	if err != nil {
+		panic(err)
+	}
+	loadedOrders := []*order.Order{}
+	for {
+		loadedOrder, err := orderIter()
+		if loadedOrder != nil {
+			loadedOrders = append(loadedOrders, loadedOrder)
+		} else {
+			break
+		}
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	t.Log("loaded orders")
+	for i, loadedOrder := range loadedOrders {
+		t.Log(i, loadedOrder.Custom.(*examples.SmurfOrderCustom).ResponsibleSmurf)
+	}
+
+	if len(loadedOrders) != NumOrders {
+		t.Fatal("wrong number of orders returned", len(loadedOrders))
+	}
+
+	for i, newOrder := range loadedOrders {
+		loadedOrder := loadedOrders[i].Custom.(*examples.SmurfOrderCustom)
+		if !reflect.DeepEqual(loadedOrder, newOrder.Custom) {
+			dump("newOrder", newOrder)
+			dump("loadedOrder", loadedOrder)
+
+			t.Fatal("should have been equal", loadedOrder, newOrder)
+		}
+	}
+	//LoadOrder(query *bson.M{}, customOrder interface{})
+}
+
+func dump(label string, v interface{}) {
+	log.Println(label, "::")
+	b, _ := json.MarshalIndent(v, "", "   ")
+	fmt.Println(reflect.ValueOf(v).Type(), string(b))
 }
