@@ -6,7 +6,7 @@ import (
 )
 
 // Test transitions between states
-func TestAppLogicOrderStatusTransition(t *testing.T) {
+func TestOrderStatusTransition(t *testing.T) {
 	DropAllOrders()
 	order, err := NewOrder(nil)
 	if err != nil {

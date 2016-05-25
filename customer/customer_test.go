@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestAppLogicGetLatestCustomerFromDb(t *testing.T) {
+func TestCustomerGetLatestCustomerFromDb(t *testing.T) {
 	DropAllCustomers()
 	customer, err := NewCustomer(nil)
 	if err != nil {
@@ -29,7 +29,7 @@ func TestAppLogicGetLatestCustomerFromDb(t *testing.T) {
 		t.Fail()
 	}
 }
-func TestAppLogicDiff2LatestCustomerVersions(t *testing.T) {
+func TestCustomerDiff2LatestCustomerVersions(t *testing.T) {
 	customer1, _ := create2CustomersAndPerformSomeUpserts(t)
 
 	_, err := DiffTwoLatestCustomerVersions(customer1.GetID(), nil, true)
@@ -37,7 +37,7 @@ func TestAppLogicDiff2LatestCustomerVersions(t *testing.T) {
 		t.Fatal(err)
 	}
 }
-func TestAppLogicRollbackAndDiff(t *testing.T) {
+func TestCustomerRollbackAndDiff(t *testing.T) {
 	customer1, _ := create2CustomersAndPerformSomeUpserts(t)
 
 	errRoll := customer1.Rollback(customer1.GetVersion().Number - 1)
@@ -51,7 +51,7 @@ func TestAppLogicRollbackAndDiff(t *testing.T) {
 		t.Fatal(err)
 	}
 }
-func TestAppLogicRollback(t *testing.T) {
+func TestCustomerRollback(t *testing.T) {
 	customer1, _ := create2CustomersAndPerformSomeUpserts(t)
 	log.Println("Version", customer1.GetVersion(), "FirstName", customer1.Person.FirstName)
 	err := customer1.Rollback(customer1.GetVersion().Number - 1)
