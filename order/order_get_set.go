@@ -8,6 +8,7 @@ import (
 	"github.com/foomo/shop/history"
 	"github.com/foomo/shop/payment"
 	"github.com/foomo/shop/shipping"
+	"github.com/foomo/shop/state"
 	"github.com/foomo/shop/utils"
 )
 
@@ -78,16 +79,37 @@ func (order *Order) GetCompletedAtFormatted() string {
 	return utils.GetFormattedTime(order.CompletedAt)
 }
 
-func (order *Order) GetStatus() OrderStatus {
-	return order.Status
+// func (order *Order) GetStatus() OrderStatus {
+// 	return order.Status
+// }
+func (order *Order) GetState() *state.State {
+	return order.State
 }
 
 //------------------------------------------------------------------
 // ~ SIMPLE SETTERS ON ORDER
 //------------------------------------------------------------------
 
-func (order *Order) SetStatus(status OrderStatus) error {
-	order.Status = status
+func (order *Order) SetState(targetState string) error {
+	return order.setState(targetState, false)
+}
+func (order *Order) ForceState(targetState string) error {
+	return order.setState(targetState, true)
+}
+func (order *Order) setState(targetState string, force bool) error {
+	var state *state.State
+	var err error
+
+	if force {
+		state, err = stateMachine.ForceTransitionToState(order.State, targetState)
+	} else {
+		state, err = stateMachine.TransitionToState(order.State, targetState)
+	}
+
+	if err != nil {
+		return err
+	}
+	order.State = state
 	return order.Upsert()
 }
 func (order *Order) SetCompleted() error {
