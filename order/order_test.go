@@ -1,15 +1,54 @@
 package order
 
 import (
-	"encoding/json"
-	"fmt"
 	"log"
-	"reflect"
 	"testing"
-
-	"github.com/foomo/shop/configuration"
-	"github.com/foomo/shop/examples"
-	"gopkg.in/mgo.v2/bson"
 )
 
-/
+// Test transitions between states
+func TestAppLogicOrderStatusTransition(t *testing.T) {
+	DropAllOrders()
+	order, err := NewOrder(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	log.Println("Current State:", order.State.Key)
+
+	// This state transistion should work
+	err = order.SetState(OrderStatusConfirmed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	log.Println("Current State:", order.State.Key)
+
+	// This one should not work
+	err = order.SetState(OrderStatusCreated)
+	if err != nil {
+		log.Println(err)
+	} else {
+		t.Fatal(err)
+	}
+	log.Println("Current State:", order.State.Key)
+
+	// This one should work
+	err = order.ForceState(OrderStatusComplete)
+	if err != nil {
+		t.Fatal(err)
+	}
+	log.Println("Current State:", order.State.Key)
+
+	// This one should work
+	err = order.ForceState(OrderStatusInvalid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	log.Println("Current State:", order.State.Key)
+
+	// This one should work
+	err = order.ForceState(OrderStatusComplete)
+	if err != nil {
+		t.Fatal(err)
+	}
+	log.Println("Current State:", order.State.Key)
+}
