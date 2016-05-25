@@ -27,15 +27,6 @@ var globalCustomerPersistor *persistence.Persistor
 var globalCustomerHistoryPersistor *persistence.Persistor
 
 //------------------------------------------------------------------
-// ~ CONSTRUCTOR
-//------------------------------------------------------------------
-
-// NewPersistor constructor
-func NewPersistor(mongoURL string, collectionName string) (p *persistence.Persistor, err error) {
-	return persistence.NewPersistor(mongoURL, collectionName)
-}
-
-//------------------------------------------------------------------
 // ~ PUBLIC METHODS
 //------------------------------------------------------------------
 
@@ -44,7 +35,7 @@ func GetCustomerPersistor() *persistence.Persistor {
 	url := configuration.MONGO_URL
 	collection := configuration.MONGO_COLLECTION_CUSTOMERS
 	if globalCustomerPersistor == nil {
-		p, err := NewPersistor(url, collection)
+		p, err := persistence.NewPersistor(url, collection)
 		if err != nil || p == nil {
 			panic(errors.New("failed to create mongoDB global persistor: " + err.Error()))
 		}
@@ -56,7 +47,7 @@ func GetCustomerPersistor() *persistence.Persistor {
 		return globalCustomerPersistor
 	}
 
-	p, err := NewPersistor(url, collection)
+	p, err := persistence.NewPersistor(url, collection)
 	if err != nil || p == nil {
 		panic(err)
 	}
@@ -69,7 +60,7 @@ func GetCustomerHistoryPersistor() *persistence.Persistor {
 	url := configuration.MONGO_URL
 	collection := configuration.MONGO_COLLECTION_CUSTOMERS_HISTORY
 	if globalCustomerHistoryPersistor == nil {
-		p, err := NewPersistor(url, collection)
+		p, err := persistence.NewPersistor(url, collection)
 		if err != nil || p == nil {
 			panic(errors.New("failed to create mongoDB order persistor: " + err.Error()))
 		}
@@ -81,7 +72,7 @@ func GetCustomerHistoryPersistor() *persistence.Persistor {
 		return globalCustomerHistoryPersistor
 	}
 
-	p, err := NewPersistor(url, collection)
+	p, err := persistence.NewPersistor(url, collection)
 	if err != nil || p == nil {
 		panic(err)
 	}
