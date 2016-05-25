@@ -240,6 +240,11 @@ func Rollback(customerId string, version int) error {
 
 }
 
+func DropAllCustomers() error {
+	return GetCustomerPersistor().GetCollection().DropCollection()
+
+}
+
 //------------------------------------------------------------------
 // ~ PRIVATE METHODS
 //------------------------------------------------------------------

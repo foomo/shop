@@ -233,6 +233,11 @@ func Rollback(orderId string, version int) error {
 
 }
 
+func DropAllOrders() error {
+	return GetOrderPersistor().GetCollection().DropCollection()
+
+}
+
 //------------------------------------------------------------------
 // ~ PRIVATE METHODS
 //------------------------------------------------------------------
