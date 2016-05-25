@@ -9,11 +9,13 @@ import (
 )
 
 type Version struct {
-	Number    int
-	TimeStamp time.Time
+	Number         int
+	NumberPrevious int // Previous version number (relevant, for example, atfer rollbacks)
+	TimeStamp      time.Time
 }
 
 func (v *Version) Increment() {
+	v.NumberPrevious = v.Number
 	v.Number = v.Number + 1
 	v.TimeStamp = time.Now()
 }
