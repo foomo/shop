@@ -50,6 +50,10 @@ type StateMachine struct {
 // ~ PUBLIC METHODS
 //------------------------------------------------------------------
 
+func (st *State) SetModified() {
+	st.LastModifiedAt = utils.TimeNow()
+}
+
 // GetInitialState returns the initial state
 func (sm *StateMachine) GetInitialState() *State {
 	initialState, _ := sm.stateFactory(sm.InitialState)
