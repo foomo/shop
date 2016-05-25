@@ -114,6 +114,11 @@ func UpsertOrder(o *Order) error {
 		o.Version.Increment()
 	}
 
+	_, err = p.GetCollection().UpsertId(o.BsonID, o)
+	if err != nil {
+		return err
+	}
+
 	// Store version in history
 	bsonId := o.BsonID
 	o.BsonID = "" // Temporarily reset Mongo ObjectId, so that we can perfrom an Insert.
@@ -269,18 +274,23 @@ func findOneOrder(find *bson.M, selection *bson.M, sort string, customProvider O
 	return order, nil
 }
 
-// Create (or override) unique OrderID and insert order in database
-func insertOrder(o *Order) (err error) {
+// insertOrder inserts a order into the database
+func insertOrder(o *Order) error {
 	p := GetOrderPersistor()
-	//newID, err := createOrderID() // TODO This is not Globus Specific and should not be in shop
+	alreadyExists, err := AlreadyExistsInDB(o.GetID())
 	if err != nil {
 		return err
 	}
-	//o.OverrideId(newID)
-	o.SetStatus(OrderStatusCreated)
-	//log.Println("Created orderID:", o.OrderID)
-
+	if alreadyExists {
+		log.Println("User with id", o.GetID(), "already exists in the database!")
+		return nil
+	}
 	err = p.GetCollection().Insert(o)
+	if err != nil {
+		return err
+	}
+	pHistory := GetOrderHistoryPersistor()
+	err = pHistory.GetCollection().Insert(o)
 	event_log.SaveShopEvent(event_log.ActionCreateOrder, o.GetID(), err, "")
 	return err
 }
