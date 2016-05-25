@@ -16,6 +16,7 @@ import (
 	"github.com/foomo/shop/history"
 	"github.com/foomo/shop/payment"
 	"github.com/foomo/shop/shipping"
+	"github.com/foomo/shop/state"
 	"github.com/foomo/shop/unique"
 	"github.com/foomo/shop/utils"
 )
@@ -37,11 +38,6 @@ const (
 	ActionValidation             ActionOrder = "actionValidation"
 	OrderTypeOrder               OrderType   = "order"
 	OrderTypeReturn              OrderType   = "return"
-	OrderStatusInvalid           OrderStatus = "orderStatusInvalid"
-	OrderStatusCreated           OrderStatus = "orderStatusCreated"
-	OrderStatusProcessed         OrderStatus = "orderStatusProcessed"
-	OrderStatusShipped           OrderStatus = "orderStatusShipped"
-	OrderStatusReadyForATP       OrderStatus = "orderStatusReadyForATP"
 )
 
 /* ++++++++++++++++++++++++++++++++++++++++++++++++
@@ -55,6 +51,7 @@ type OrderStatus string
 // Order of item
 // create revisions
 type Order struct {
+	State             *state.State
 	Flags             *Flags
 	Version           *history.Version
 	CustomProvider    OrderCustomProvider
@@ -68,12 +65,12 @@ type Order struct {
 	CreatedAt         time.Time
 	LastModifiedAt    time.Time
 	CompletedAt       time.Time
-	Status            OrderStatus
-	Positions         []*Position
-	Payment           *payment.Payment
-	PriceInfo         *OrderPriceInfo
-	Shipping          *shipping.ShippingProperties
-	queue             *struct {
+	//Status            OrderStatus
+	Positions []*Position
+	Payment   *payment.Payment
+	PriceInfo *OrderPriceInfo
+	Shipping  *shipping.ShippingProperties
+	queue     *struct {
 		Name           string
 		RetryAfter     time.Duration
 		LastProcessing time.Time
@@ -114,6 +111,58 @@ type Position struct {
 	IsATPApplied bool
 	Refund       bool
 	Custom       interface{}
+}
+
+/* ++++++++++++++++++++++++++++++++++++++++++++++++
+			CONSTRUCTOR
++++++++++++++++++++++++++++++++++++++++++++++++++ */
+
+// NewOrder creates a new Order in the database and returns it.
+func NewOrder(customProvider OrderCustomProvider) (*Order, error) {
+	return NewOrderWithCustomId(customProvider, nil)
+}
+
+// NewOrderWithCustomId creates a new Order in the database and returns it.
+// With orderIdFunc, an optional method can be specified to generate the orderId. If nil, a default algorithm is used.
+func NewOrderWithCustomId(customProvider OrderCustomProvider, orderIdFunc func() (string, error)) (*Order, error) {
+	var orderId string
+	if orderIdFunc != nil {
+		var err error
+		orderId, err = orderIdFunc()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		orderId = unique.GetNewID()
+	}
+	order := &Order{
+		State: stateMachine.GetInitialState(),
+		Flags: &Flags{},
+		Id:    orderId,
+		Version: &history.Version{
+			Number:    0,
+			TimeStamp: time.Now(),
+		},
+		CreatedAt:      utils.TimeNow(),
+		LastModifiedAt: utils.TimeNow(),
+		OrderType:      OrderTypeOrder,
+		History:        event_log.EventHistory{},
+		Positions:      []*Position{},
+		Payment:        &payment.Payment{},
+		PriceInfo:      &OrderPriceInfo{},
+		Shipping:       &shipping.ShippingProperties{},
+	}
+
+	if customProvider != nil {
+		order.Custom = customProvider.NewOrderCustom()
+	}
+
+	// Store order in database
+	err := order.insert()
+	// Retrieve order again from. (Otherwise upserts on order would fail because of missing mongo ObjectID)
+	order, err = GetOrderById(order.Id, customProvider)
+	return order, err
+
 }
 
 /* ++++++++++++++++++++++++++++++++++++++++++++++++
@@ -222,54 +271,6 @@ func (p *Position) IsRefund() bool {
 // GetAmount returns the Price Sum of the position
 func (p *Position) GetAmount() float64 {
 	return p.Price * p.Quantity
-}
-
-/* ++++++++++++++++++++++++++++++++++++++++++++++++
-			PUBLIC METHODS
-+++++++++++++++++++++++++++++++++++++++++++++++++ */
-
-// NewOrder creates a new Order in the database and returns it.
-func NewOrder(customProvider OrderCustomProvider) (*Order, error) {
-	return NewOrderWithCustomId(customProvider, nil)
-}
-
-// NewOrderWithCustomId creates a new Order in the database and returns it.
-// With orderIdFunc, an optional method can be specified to generate the orderId. If nil, a default algorithm is used.
-func NewOrderWithCustomId(customProvider OrderCustomProvider, orderIdFunc func() (string, error)) (*Order, error) {
-	var orderId string
-	if orderIdFunc != nil {
-		var err error
-		orderId, err = orderIdFunc()
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		orderId = unique.GetNewID()
-	}
-	order := &Order{
-		Id: orderId,
-		Version: &history.Version{
-			Number:    0,
-			TimeStamp: time.Now(),
-		},
-		CreatedAt:      utils.TimeNow(),
-		LastModifiedAt: utils.TimeNow(),
-		Status:         OrderStatusCreated,
-		OrderType:      OrderTypeOrder,
-		History:        event_log.EventHistory{},
-		Positions:      []*Position{},
-		Payment:        &payment.Payment{},
-		PriceInfo:      &OrderPriceInfo{},
-		Shipping:       &shipping.ShippingProperties{},
-		Custom:         customProvider.NewOrderCustom(),
-	}
-
-	// Store order in database
-	err := order.insert()
-	// Retrieve order again from. (Otherwise upserts on order would fail because of missing mongo ObjectID)
-	order, err = GetOrderById(order.Id, customProvider)
-	return order, err
-
 }
 
 // DiffTwoLatestOrderVersions compares the two latest Versions of Order found in history.

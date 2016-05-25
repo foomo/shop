@@ -112,6 +112,7 @@ type CustomerCustomProvider interface {
 
 // NewCustomer creates a new Customer in the database and returns it.
 func NewCustomer(customProvider CustomerCustomProvider) (*Customer, error) {
+
 	customer := &Customer{
 		Flags: &Flags{},
 		Version: &history.Version{
@@ -126,7 +127,10 @@ func NewCustomer(customProvider CustomerCustomProvider) (*Customer, error) {
 		},
 		Crypto:       &crypto.Crypto{},
 		Localization: &Localization{},
-		Custom:       customProvider.NewCustomerCustom(),
+	}
+
+	if customProvider != nil {
+		customer.Custom = customProvider.NewCustomerCustom()
 	}
 	// Store order in database
 	err := customer.insert()
