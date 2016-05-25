@@ -229,6 +229,9 @@ func Rollback(customerId string, version int) error {
 	if err != nil {
 		return err
 	}
+	if version >= currentCustomer.GetVersion().Number || version < 0 {
+		return errors.New("Cannot perform rollback to " + strconv.Itoa(version) + " from version " + strconv.Itoa(currentCustomer.GetVersion().Number))
+	}
 	customerFromHistory, err := GetCustomerByVersion(customerId, version, nil)
 	if err != nil {
 		return err

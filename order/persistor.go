@@ -222,6 +222,9 @@ func Rollback(orderId string, version int) error {
 	if err != nil {
 		return err
 	}
+	if version >= currentOrder.GetVersion().Number || version < 0 {
+		return errors.New("Cannot perform rollback to " + strconv.Itoa(version) + " from version " + strconv.Itoa(currentOrder.GetVersion().Number))
+	}
 	orderFromHistory, err := GetOrderByVersion(orderId, version, nil)
 	if err != nil {
 		return err
