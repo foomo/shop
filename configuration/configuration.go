@@ -2,6 +2,7 @@ package configuration
 
 const (
 	MONGO_URL                                              string = "mongodb://127.0.0.1/project-globus-services-stories"
+	MONGO_COLLECTION_PASSWORDS                             string = "passwords"
 	MONGO_COLLECTION_SHOP_EVENT_LOG                        string = "shop_event_log"
 	MONGO_COLLECTION_ORDERS                                string = "orders"
 	MONGO_COLLECTION_ORDERS_HISTORY                        string = "orders_history"
