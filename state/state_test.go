@@ -7,7 +7,6 @@ import (
 	"github.com/foomo/shop/utils"
 )
 
-// Define
 const (
 	StateType = "ExampleStates"
 	State1    = "state1"
@@ -18,7 +17,7 @@ const (
 
 var transitions = map[string][]string{
 	State1: []string{State2},
-	State2: []string{State3},
+	State2: []string{WILDCARD},
 	State3: []string{State4},
 	State4: []string{},
 }
@@ -97,6 +96,13 @@ func TestStates(t *testing.T) {
 
 	// Force transition to previous state
 	state, err = stateMachine.ForceTransitionToState(state, State2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	log.Println("Current State: ", state.Key)
+
+	// Go from state 2 to state 4. This should be possible because of WILDCARD
+	state, err = stateMachine.TransitionToState(state, State4)
 	if err != nil {
 		t.Fatal(err)
 	}

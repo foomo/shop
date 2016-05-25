@@ -7,6 +7,12 @@ import (
 )
 
 //------------------------------------------------------------------
+// ~ CONSTANTS
+//------------------------------------------------------------------
+
+const WILDCARD = "*" // a state with this target can transition to any other state
+
+//------------------------------------------------------------------
 // ~ PUBLIC TYPES
 //------------------------------------------------------------------
 
@@ -69,7 +75,7 @@ func (sm *StateMachine) transitionToState(currentState *State, targetState strin
 	}
 	// Check if targetState is a possible target state
 	for _, transition := range transitions {
-		if targetState == transition {
+		if targetState == transition || transition == WILDCARD {
 			return sm.StateFactory(targetState), nil
 		}
 	}
