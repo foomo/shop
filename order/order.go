@@ -55,6 +55,7 @@ type OrderStatus string
 // Order of item
 // create revisions
 type Order struct {
+	Flags             *Flags
 	Version           *history.Version
 	CustomProvider    OrderCustomProvider
 	unlinkDB          bool          // if true, changes to Customer are not stored in database
@@ -79,6 +80,10 @@ type Order struct {
 	}
 	History event_log.EventHistory
 	Custom  interface{} `bson:",omitempty"`
+}
+
+type Flags struct {
+	forceUpsert bool
 }
 
 type OrderPriceInfo struct {
@@ -131,11 +136,13 @@ func (order *Order) HasCustomer() bool {
 }
 
 func (order *Order) insert() error {
-	return insertOrder(order) // calls the method defined in persistor.go
+	return insertOrder(order)
 }
-
 func (order *Order) Upsert() error {
-	return UpsertOrder(order) // calls the method defined in persistor.go
+	return UpsertOrder(order)
+}
+func (order *Order) UpsertAndGetOrder(customProvider OrderCustomProvider) (*Order, error) {
+	return UpsertAndGetOrder(order, customProvider)
 }
 func (order *Order) Delete() error {
 	return DeleteOrder(order)

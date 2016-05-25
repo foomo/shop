@@ -95,17 +95,23 @@ func UpsertOrder(o *Order) error {
 	}
 
 	latestVersionInDb := orderLatestFromDb.Version.GetVersion()
-	if latestVersionInDb != o.Version.GetVersion() {
+	if latestVersionInDb != o.Version.GetVersion() && !o.Flags.forceUpsert {
 		errMsg := fmt.Sprintln("WARNING: Cannot upsert latest version ", strconv.Itoa(latestVersionInDb), "in db with version", strconv.Itoa(o.Version.GetVersion()), "!")
 		log.Println(errMsg)
 		return errors.New(errMsg)
 	}
-	o.Version.Number = latestVersionInDb
-	o.Version.Increment()
 
-	_, err = p.GetCollection().UpsertId(o.BsonID, o)
-	if err != nil {
-		return err
+	if o.Flags.forceUpsert {
+		// Remember this number, so that we later know from which version we came from
+		v := o.Version.Number
+		// Set the current version number to keep history consistent
+		o.Version.Number = latestVersionInDb
+		o.Version.Increment()
+		o.Flags.forceUpsert = false
+		// Overwrite NumberPrevious, to remember where we came from
+		o.Version.NumberPrevious = v
+	} else {
+		o.Version.Increment()
 	}
 
 	// Store version in history
@@ -204,6 +210,22 @@ func GetCurrentVersionOfOrderFromHistory(orderId string) (*history.Version, erro
 }
 func GetOrderByVersion(orderId string, version int, customProvider OrderCustomProvider) (*Order, error) {
 	return findOneOrder(&bson.M{"id": orderId, "version.number": version}, nil, "", customProvider, true)
+}
+
+func Rollback(orderId string, version int) error {
+	currentOrder, err := GetOrderById(orderId, nil)
+	if err != nil {
+		return err
+	}
+	orderFromHistory, err := GetOrderByVersion(orderId, version, nil)
+	if err != nil {
+		return err
+	}
+	// Set bsonId from current order to order from history to overwrite current order on next upsert.
+	orderFromHistory.BsonID = currentOrder.BsonID
+	orderFromHistory.Flags.forceUpsert = true
+	return orderFromHistory.Upsert()
+
 }
 
 //------------------------------------------------------------------

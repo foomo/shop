@@ -148,13 +148,24 @@ func UpsertCustomer(c *Customer) error {
 	}
 
 	latestVersionInDb := customerLatestFromDb.Version.GetVersion()
-	if latestVersionInDb != c.Version.GetVersion() {
+	if latestVersionInDb != c.Version.GetVersion() && !c.Flags.forceUpsert {
 		errMsg := fmt.Sprintln("WARNING: Cannot upsert latest version ", strconv.Itoa(latestVersionInDb), "in db with version", strconv.Itoa(c.Version.GetVersion()), "!")
 		log.Println(errMsg)
 		return errors.New(errMsg)
 	}
-	c.Version.Number = latestVersionInDb
-	c.Version.Increment()
+
+	if c.Flags.forceUpsert {
+		// Remember this number, so that we later know from which version we came from
+		v := c.Version.Number
+		// Set the current version number to keep history consistent
+		c.Version.Number = latestVersionInDb
+		c.Version.Increment()
+		c.Flags.forceUpsert = false
+		// Overwrite NumberPrevious, to remember where we came from
+		c.Version.NumberPrevious = v
+	} else {
+		c.Version.Increment()
+	}
 
 	_, err = p.GetCollection().UpsertId(c.BsonID, c)
 	if err != nil {
@@ -211,6 +222,22 @@ func GetCurrentVersionOfCustomerFromHistory(customerId string) (*history.Version
 }
 func GetCustomerByVersion(customerId string, version int, customProvider CustomerCustomProvider) (*Customer, error) {
 	return findOneCustomer(&bson.M{"id": customerId, "version.number": version}, nil, "", customProvider, true)
+}
+
+func Rollback(customerId string, version int) error {
+	currentCustomer, err := GetCustomerById(customerId, nil)
+	if err != nil {
+		return err
+	}
+	customerFromHistory, err := GetCustomerByVersion(customerId, version, nil)
+	if err != nil {
+		return err
+	}
+	// Set bsonId from current customer to customer from history to overwrite current customer on next upsert.
+	customerFromHistory.BsonID = currentCustomer.BsonID
+	customerFromHistory.Flags.forceUpsert = true
+	return customerFromHistory.Upsert()
+
 }
 
 //------------------------------------------------------------------

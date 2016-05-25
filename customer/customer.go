@@ -49,6 +49,7 @@ type CountryCode string
 // TOP LEVEL OBJECT
 // private, so that changes are limited by API
 type Customer struct {
+	Flags          *Flags
 	Version        *history.Version
 	unlinkDB       bool          // if true, changes to Customer are not stored in database
 	BsonID         bson.ObjectId `bson:"_id,omitempty"`
@@ -63,6 +64,10 @@ type Customer struct {
 	Localization   *Localization
 	History        event_log.EventHistory
 	Custom         interface{}
+}
+
+type Flags struct {
+	forceUpsert bool // if true, Upsert is performed even if there is a version conflict. This is important for rollbacks.
 }
 
 type Contacts struct {
@@ -108,6 +113,7 @@ type CustomerCustomProvider interface {
 // NewCustomer creates a new Customer in the database and returns it.
 func NewCustomer(customProvider CustomerCustomProvider) (*Customer, error) {
 	customer := &Customer{
+		Flags: &Flags{},
 		Version: &history.Version{
 			Number:    0,
 			TimeStamp: time.Now(),
@@ -143,15 +149,21 @@ func (customer *Customer) LinkDB() {
 }
 
 func (customer *Customer) insert() error {
-	return insertCustomer(customer) // calls the method defined in persistor.go
+	return insertCustomer(customer)
 }
 
 func (customer *Customer) Upsert() error {
-
-	return UpsertCustomer(customer) // calls the method defined in persistor.go
+	return UpsertCustomer(customer)
+}
+func (customer *Customer) UpsertAndGetCustomer(customProvider CustomerCustomProvider) (*Customer, error) {
+	return UpsertAndGetCustomer(customer, customProvider)
 }
 func (customer *Customer) Delete() error {
 	return DeleteCustomer(customer)
+}
+
+func (customer *Customer) Rollback(version int) error {
+	return Rollback(customer.GetID(), version)
 }
 
 func (customer *Customer) OverrideId(id string) {
