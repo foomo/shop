@@ -3,8 +3,6 @@ package state
 import (
 	"log"
 	"testing"
-
-	"github.com/foomo/shop/utils"
 )
 
 const (
@@ -50,23 +48,10 @@ var blueprints = map[string]BluePrint{
 	},
 }
 
-func stateFactory(key string) *State {
-
-	blueprint := blueprints[key]
-
-	return &State{
-		CreatedAt:      utils.TimeNow(),
-		LastModifiedAt: utils.TimeNow(),
-		Type:           blueprint.Type,
-		Key:            blueprint.Key,
-		Description:    blueprint.Description,
-	}
-}
-
 var stateMachine = StateMachine{
 	InitialState: State1,
 	Transitions:  transitions,
-	StateFactory: stateFactory,
+	BluePrints:   blueprints,
 }
 
 func TestStates(t *testing.T) {

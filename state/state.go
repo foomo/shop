@@ -2,8 +2,9 @@ package state
 
 import (
 	"errors"
-	"log"
 	"time"
+
+	"github.com/foomo/shop/utils"
 )
 
 //------------------------------------------------------------------
@@ -22,6 +23,7 @@ type BluePrint struct {
 	Description string
 	Initial     bool
 }
+
 type State struct {
 	Type           string
 	Key            string
@@ -30,12 +32,10 @@ type State struct {
 	LastModifiedAt time.Time
 }
 
-type StateFactoryFunc func(key string) *State
-
 type StateMachine struct {
 	InitialState string // key of initial state
 	Transitions  map[string][]string
-	StateFactory StateFactoryFunc
+	BluePrints   map[string]BluePrint
 }
 
 //------------------------------------------------------------------
@@ -44,7 +44,8 @@ type StateMachine struct {
 
 // GetInitialState returns the initial state
 func (sm *StateMachine) GetInitialState() *State {
-	return sm.StateFactory(sm.InitialState)
+	initialState, _ := sm.stateFactory(sm.InitialState)
+	return initialState
 }
 
 // TransitionToState returns target state if possible, else current state
@@ -65,20 +66,35 @@ func (sm *StateMachine) ForceTransitionToState(currentState *State, targetState 
 // If force, target state is returned whether the transition is possible or not
 func (sm *StateMachine) transitionToState(currentState *State, targetState string, force bool) (*State, error) {
 	if force {
-		return sm.StateFactory(targetState), nil
+		return sm.stateFactory(targetState)
 	}
 	// Get the possible transitions for currentState
 	transitions, ok := sm.Transitions[currentState.Key]
-	log.Println(transitions)
 	if !ok {
-		return currentState, errors.New(targetState + " is not a valid state!")
+		return currentState, errors.New("No transitions defined for " + targetState)
 	}
 	// Check if targetState is a possible target state
 	for _, transition := range transitions {
 		if targetState == transition || transition == WILDCARD {
-			return sm.StateFactory(targetState), nil
+			return sm.stateFactory(targetState)
 		}
 	}
 	return currentState, errors.New("Transition from " + currentState.Key + " to " + targetState + " not possible.")
 
+}
+
+// return target State
+func (sm *StateMachine) stateFactory(key string) (*State, error) {
+	blueprint, ok := sm.BluePrints[key]
+	if !ok {
+		return nil, errors.New(key + " is not a valid state.")
+	}
+
+	return &State{
+		CreatedAt:      utils.TimeNow(),
+		LastModifiedAt: utils.TimeNow(),
+		Type:           blueprint.Type,
+		Key:            blueprint.Key,
+		Description:    blueprint.Description,
+	}, nil
 }
