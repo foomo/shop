@@ -70,7 +70,7 @@ func UpsertOrder(o *Order) error {
 	//log.Println("WhoCalledMe: ", utils.WhoCalledMe())
 	//log.Println("UPSERT CUSTOMER with id", o.GetID())
 	// order is unlinked or not yet inserted in db
-	if o.unlinkDB || o.BsonID == "" {
+	if o.unlinkDB || o.BsonId == "" {
 		return nil
 	}
 	p := GetOrderPersistor()
@@ -95,29 +95,29 @@ func UpsertOrder(o *Order) error {
 
 	if o.Flags.forceUpsert {
 		// Remember this number, so that we later know from which version we came from
-		v := o.Version.Number
+		v := o.Version.Current
 		// Set the current version number to keep history consistent
-		o.Version.Number = latestVersionInDb
+		o.Version.Current = latestVersionInDb
 		o.Version.Increment()
 		o.Flags.forceUpsert = false
 		// Overwrite NumberPrevious, to remember where we came from
-		o.Version.NumberPrevious = v
+		o.Version.Previous = v
 	} else {
 		o.Version.Increment()
 	}
 
 	o.State.SetModified()
-	_, err = p.GetCollection().UpsertId(o.BsonID, o)
+	_, err = p.GetCollection().UpsertId(o.BsonId, o)
 	if err != nil {
 		return err
 	}
 
 	// Store version in history
-	bsonId := o.BsonID
-	o.BsonID = "" // Temporarily reset Mongo ObjectId, so that we can perfrom an Insert.
+	bsonId := o.BsonId
+	o.BsonId = "" // Temporarily reset Mongo ObjectId, so that we can perfrom an Insert.
 	pHistory := GetOrderHistoryPersistor()
 	pHistory.GetCollection().Insert(o)
-	o.BsonID = bsonId // restore bsonId
+	o.BsonId = bsonId // restore bsonId
 	event_log.SaveShopEvent(event_log.ActionUpsertingOrder, o.GetID(), err, "")
 	return err
 }
@@ -131,7 +131,7 @@ func UpsertAndGetOrder(o *Order, customProvider OrderCustomProvider) (*Order, er
 }
 
 func DeleteOrder(o *Order) error {
-	err := GetOrderPersistor().GetCollection().Remove(bson.M{"_id": o.BsonID})
+	err := GetOrderPersistor().GetCollection().Remove(bson.M{"_id": o.BsonId})
 	event_log.SaveShopEvent(event_log.ActionDeleteOrder, o.GetID(), err, "")
 	return err
 }
@@ -197,17 +197,17 @@ func GetOrderById(id string, customProvider OrderCustomProvider) (*Order, error)
 }
 
 func GetCurrentOrderByIdFromHistory(orderId string, customProvider OrderCustomProvider) (*Order, error) {
-	return findOneOrder(&bson.M{"id": orderId}, nil, "-version.number", customProvider, true)
+	return findOneOrder(&bson.M{"id": orderId}, nil, "-version.current", customProvider, true)
 }
 func GetCurrentVersionOfOrderFromHistory(orderId string) (*history.Version, error) {
-	order, err := findOneOrder(&bson.M{"id": orderId}, &bson.M{"version": 1}, "-version.number", nil, true)
+	order, err := findOneOrder(&bson.M{"id": orderId}, &bson.M{"version": 1}, "-version.current", nil, true)
 	if err != nil {
 		return nil, err
 	}
 	return order.GetVersion(), nil
 }
 func GetOrderByVersion(orderId string, version int, customProvider OrderCustomProvider) (*Order, error) {
-	return findOneOrder(&bson.M{"id": orderId, "version.number": version}, nil, "", customProvider, true)
+	return findOneOrder(&bson.M{"id": orderId, "version.current": version}, nil, "", customProvider, true)
 }
 
 func Rollback(orderId string, version int) error {
@@ -223,7 +223,7 @@ func Rollback(orderId string, version int) error {
 		return err
 	}
 	// Set bsonId from current order to order from history to overwrite current order on next upsert.
-	orderFromHistory.BsonID = currentOrder.BsonID
+	orderFromHistory.BsonId = currentOrder.BsonId
 	orderFromHistory.Flags.forceUpsert = true
 	return orderFromHistory.Upsert()
 

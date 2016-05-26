@@ -24,8 +24,8 @@ func TestCustomerGetLatestCustomerFromDb(t *testing.T) {
 
 	//Check if version number is 3
 	customer, err = GetCurrentCustomerByIdFromHistory(customer.GetID(), nil)
-	if customer.GetVersion().Number != 3 {
-		log.Println("Version is ", customer.GetVersion().Number, "- should have been 3.")
+	if customer.GetVersion().Current != 3 {
+		log.Println("Version is ", customer.GetVersion().Current, "- should have been 3.")
 		t.Fail()
 	}
 }
@@ -40,7 +40,7 @@ func TestCustomerDiff2LatestCustomerVersions(t *testing.T) {
 func TestCustomerRollbackAndDiff(t *testing.T) {
 	customer1, _ := create2CustomersAndPerformSomeUpserts(t)
 
-	errRoll := customer1.Rollback(customer1.GetVersion().Number - 1)
+	errRoll := customer1.Rollback(customer1.GetVersion().Current - 1)
 	if errRoll != nil {
 		t.Fatal(errRoll)
 	}
@@ -54,7 +54,7 @@ func TestCustomerRollbackAndDiff(t *testing.T) {
 func TestCustomerRollback(t *testing.T) {
 	customer1, _ := create2CustomersAndPerformSomeUpserts(t)
 	log.Println("Version", customer1.GetVersion(), "FirstName", customer1.Person.FirstName)
-	err := customer1.Rollback(customer1.GetVersion().Number - 1)
+	err := customer1.Rollback(customer1.GetVersion().Current - 1)
 	if err != nil {
 		t.Fatal(err)
 	}

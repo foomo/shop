@@ -8,7 +8,6 @@ import (
 
 	"gopkg.in/mgo.v2/bson"
 
-	"github.com/foomo/shop/crypto"
 	"github.com/foomo/shop/event_log"
 	"github.com/foomo/shop/history"
 	"github.com/foomo/shop/unique"
@@ -49,15 +48,14 @@ type CountryCode string
 // TOP LEVEL OBJECT
 // private, so that changes are limited by API
 type Customer struct {
+	BsonId         bson.ObjectId `bson:"_id,omitempty"`
+	Id             string        // Email is used as LoginID, but can change. This is never changes!
+	unlinkDB       bool          // if true, changes to Customer are not stored in database
 	Flags          *Flags
 	Version        *history.Version
-	unlinkDB       bool          // if true, changes to Customer are not stored in database
-	BsonID         bson.ObjectId `bson:"_id,omitempty"`
-	Id             string        // Email is used as LoginID. This is never changes!
 	CreatedAt      time.Time
 	LastModifiedAt time.Time
-	Email          string // Login Credential
-	Crypto         *crypto.Crypto
+	Email          string // unique, used as Login Credential
 	Person         *Person
 	Company        *Company
 	Addresses      []*Address
@@ -114,18 +112,14 @@ type CustomerCustomProvider interface {
 func NewCustomer(customProvider CustomerCustomProvider) (*Customer, error) {
 
 	customer := &Customer{
-		Flags: &Flags{},
-		Version: &history.Version{
-			Number:    0,
-			TimeStamp: time.Now(),
-		},
+		Flags:          &Flags{},
+		Version:        history.NewVersion(),
 		Id:             unique.GetNewID(),
 		CreatedAt:      utils.TimeNow(),
 		LastModifiedAt: utils.TimeNow(),
 		Person: &Person{
 			Contacts: &Contacts{},
 		},
-		Crypto:       &crypto.Crypto{},
 		Localization: &Localization{},
 	}
 
@@ -195,27 +189,6 @@ func (customer *Customer) RemoveAddress(id string) {
 	}
 }
 
-// CheckLoginAvailable returns true if the email address is available as login credential
-func CheckLoginAvailable(email string) (bool, error) {
-	p := GetCustomerPersistor()
-	query := p.GetCollection().Find(&bson.M{"email": email})
-	count, err := query.Count()
-	if err != nil {
-		return false, err
-	}
-
-	return count == 0, nil
-}
-
-// CheckLoginCredentials returns true if  customer with email exists and password matches with the hash stores in customers Crypto
-func CheckLoginCredentials(email, password string) (bool, error) {
-	customer, err := GetCustomerByEmail(email, nil)
-	if err != nil {
-		return false, err
-	}
-	return crypto.VerifyPassword(customer.GetCrypto(), password), nil
-}
-
 // DiffTwoLatestCustomerVersions compares the two latest Versions of Customer found in history.
 // If openInBrowser, the result is automatically displayed in the default browser.
 func DiffTwoLatestCustomerVersions(customerId string, customProvider CustomerCustomProvider, openInBrowser bool) (string, error) {
@@ -224,7 +197,7 @@ func DiffTwoLatestCustomerVersions(customerId string, customProvider CustomerCus
 		return "", err
 	}
 
-	return DiffCustomerVersions(customerId, version.Number-1, version.Number, customProvider, openInBrowser)
+	return DiffCustomerVersions(customerId, version.Current-1, version.Current, customProvider, openInBrowser)
 }
 
 func DiffCustomerVersions(customerId string, versionA int, versionB int, customProvider CustomerCustomProvider, openInBrowser bool) (string, error) {

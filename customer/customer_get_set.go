@@ -4,7 +4,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/foomo/shop/crypto"
 	"github.com/foomo/shop/history"
 	"github.com/foomo/shop/utils"
 )
@@ -52,10 +51,6 @@ func (customer *Customer) GetCreatedAtFormatted() string {
 }
 func (customer *Customer) GetLastModifiedAtFormatted() string {
 	return utils.GetFormattedTime(customer.LastModifiedAt)
-}
-
-func (customer *Customer) GetCrypto() *crypto.Crypto {
-	return customer.Crypto
 }
 
 func (customer *Customer) GetAddress(id string) (*Address, error) {
@@ -114,15 +109,6 @@ func (c *Contacts) GetPrimaryContact() string {
 // ~ PUBIC SETTERS
 //------------------------------------------------------------------
 
-// SetPassword stores a cryptographic hash and salt for password
-func (customer *Customer) SetPassword(password string) error {
-	crypto, err := crypto.HashPassword(password)
-	if err != nil {
-		return err
-	}
-	customer.Crypto = crypto
-	return customer.Upsert()
-}
 func (customer *Customer) SetDefaultShippingAddress(id string) error {
 	for _, address := range customer.Addresses {
 		if address.Id == id {

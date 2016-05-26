@@ -9,6 +9,10 @@ import (
 	"github.com/foomo/shop/queue"
 )
 
+const (
+	MOCK_PASSWORD = "123456"
+)
+
 func MockMongoURL() string {
 	url := os.Getenv("SHOP_MONGO_TEST_URL")
 	if len(url) == 0 {

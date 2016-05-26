@@ -51,13 +51,12 @@ type OrderStatus string
 // Order of item
 // create revisions
 type Order struct {
-	State             *state.State
-	Flags             *Flags
-	Version           *history.Version
-	CustomProvider    OrderCustomProvider
-	unlinkDB          bool          // if true, changes to Customer are not stored in database
-	BsonID            bson.ObjectId `bson:"_id,omitempty"`
+	BsonId            bson.ObjectId `bson:"_id,omitempty"`
 	Id                string        // automatically generated unique id
+	Version           *history.Version
+	unlinkDB          bool // if true, changes to Customer are not stored in database
+	Flags             *Flags
+	State             *state.State
 	CustomerId        string
 	AddressBillingId  string
 	AddressShippingId string
@@ -65,12 +64,11 @@ type Order struct {
 	CreatedAt         time.Time
 	LastModifiedAt    time.Time
 	CompletedAt       time.Time
-	//Status            OrderStatus
-	Positions []*Position
-	Payment   *payment.Payment
-	PriceInfo *OrderPriceInfo
-	Shipping  *shipping.ShippingProperties
-	queue     *struct {
+	Positions         []*Position
+	Payment           *payment.Payment
+	PriceInfo         *OrderPriceInfo
+	Shipping          *shipping.ShippingProperties
+	queue             *struct {
 		Name           string
 		RetryAfter     time.Duration
 		LastProcessing time.Time
@@ -135,13 +133,10 @@ func NewOrderWithCustomId(customProvider OrderCustomProvider, orderIdFunc func()
 		orderId = unique.GetNewID()
 	}
 	order := &Order{
-		State: stateMachine.GetInitialState(),
-		Flags: &Flags{},
-		Id:    orderId,
-		Version: &history.Version{
-			Number:    0,
-			TimeStamp: time.Now(),
-		},
+		State:          stateMachine.GetInitialState(),
+		Flags:          &Flags{},
+		Id:             orderId,
+		Version:        history.NewVersion(),
 		CreatedAt:      utils.TimeNow(),
 		LastModifiedAt: utils.TimeNow(),
 		OrderType:      OrderTypeOrder,
@@ -280,7 +275,7 @@ func DiffTwoLatestOrderVersions(orderId string, customProvider OrderCustomProvid
 		return "", err
 	}
 
-	return DiffOrderVersions(orderId, version.Number-1, version.Number, customProvider, openInBrowser)
+	return DiffOrderVersions(orderId, version.Current-1, version.Current, customProvider, openInBrowser)
 }
 
 func DiffOrderVersions(orderId string, versionA int, versionB int, customProvider OrderCustomProvider, openInBrowser bool) (string, error) {

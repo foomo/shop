@@ -9,22 +9,30 @@ import (
 )
 
 type Version struct {
-	Number         int
-	NumberPrevious int // Previous version number (relevant, for example, atfer rollbacks)
-	TimeStamp      time.Time
+	Current        int
+	Previous       int // Previous version number (relevant, for example, atfer rollbacks)
+	LastModifiedAt time.Time
+}
+
+func NewVersion() *Version {
+	return &Version{
+		Current:        0,
+		Previous:       0,
+		LastModifiedAt: utils.TimeNow(),
+	}
 }
 
 func (v *Version) Increment() {
-	v.NumberPrevious = v.Number
-	v.Number = v.Number + 1
-	v.TimeStamp = time.Now()
+	v.Previous = v.Current
+	v.Current = v.Current + 1
+	v.LastModifiedAt = utils.TimeNow()
 }
 
 func (v *Version) GetVersion() int {
-	return v.Number
+	return v.Current
 }
 func (v *Version) GetFormattedTime() string {
-	return utils.GetFormattedTime(v.TimeStamp)
+	return utils.GetFormattedTime(v.LastModifiedAt)
 }
 
 // DiffVersions compares to structs and returns the result as html.
