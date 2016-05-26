@@ -14,9 +14,9 @@ import (
 	"github.com/foomo/shop/utils"
 )
 
-/* ++++++++++++++++++++++++++++++++++++++++++++++++
-			CONSTANTS
-+++++++++++++++++++++++++++++++++++++++++++++++++ */
+//------------------------------------------------------------------
+// ~ CONSTANTS
+//------------------------------------------------------------------
 
 const (
 	ContactTypePhoneLandline ContactType    = "landline"
@@ -35,9 +35,9 @@ const (
 	LanguageCodeSwistzerland LanguageCode   = "CH"
 )
 
-/* ++++++++++++++++++++++++++++++++++++++++++++++++
-			PUBLIC TYPES
-+++++++++++++++++++++++++++++++++++++++++++++++++ */
+//------------------------------------------------------------------
+// ~ PUBLIC TYPES
+//------------------------------------------------------------------
 
 type ContactType string
 type SalutationType string
@@ -104,9 +104,9 @@ type CustomerCustomProvider interface {
 	Fields() *bson.M
 }
 
-/* ++++++++++++++++++++++++++++++++++++++++++++++++
-			PUBLIC METHODS
-+++++++++++++++++++++++++++++++++++++++++++++++++ */
+//------------------------------------------------------------------
+// ~ PUBLIC METHODS
+//------------------------------------------------------------------
 
 // NewCustomer creates a new Customer in the database and returns it.
 func NewCustomer(customProvider CustomerCustomProvider) (*Customer, error) {

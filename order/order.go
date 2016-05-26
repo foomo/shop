@@ -21,9 +21,9 @@ import (
 	"github.com/foomo/shop/utils"
 )
 
-/* ++++++++++++++++++++++++++++++++++++++++++++++++
-			CONSTANTS
-+++++++++++++++++++++++++++++++++++++++++++++++++ */
+//------------------------------------------------------------------
+// ~ CONSTANTS
+//------------------------------------------------------------------
 
 const (
 	ActionStatusUpdateHead       ActionOrder = "actionStatusUpdateHead"
@@ -40,9 +40,9 @@ const (
 	OrderTypeReturn              OrderType   = "return"
 )
 
-/* ++++++++++++++++++++++++++++++++++++++++++++++++
-			PUBLIC TYPES
-+++++++++++++++++++++++++++++++++++++++++++++++++ */
+//------------------------------------------------------------------
+// ~ PUBLIC TYPES
+//------------------------------------------------------------------
 
 type ActionOrder string
 type OrderType string
@@ -110,9 +110,9 @@ type Position struct {
 	Custom       interface{}
 }
 
-/* ++++++++++++++++++++++++++++++++++++++++++++++++
-			CONSTRUCTOR
-+++++++++++++++++++++++++++++++++++++++++++++++++ */
+//------------------------------------------------------------------
+// ~ CONSTRUCTOR
+//------------------------------------------------------------------
 
 // NewOrder creates a new Order in the database and returns it.
 func NewOrder(customProvider OrderCustomProvider) (*Order, error) {
@@ -159,9 +159,9 @@ func NewOrderWithCustomId(customProvider OrderCustomProvider, orderIdFunc func()
 
 }
 
-/* ++++++++++++++++++++++++++++++++++++++++++++++++
-			PUBLIC METHODS ON ORDER
-+++++++++++++++++++++++++++++++++++++++++++++++++ */
+//------------------------------------------------------------------
+// ~ PUBLIC METHODS ON ORDER
+//------------------------------------------------------------------
 
 // Unlinks order from database
 // After unlink, persistent changes on order are no longer possible until it is retrieved again from db.
@@ -254,9 +254,9 @@ func (order *Order) OverrideId(id string) {
 	order.Id = id
 }
 
-/* ++++++++++++++++++++++++++++++++++++++++++++++++
-			PUBLIC METHODS ON POSITION
-+++++++++++++++++++++++++++++++++++++++++++++++++ */
+//------------------------------------------------------------------
+// ~ PUBLIC METHODS ON POSITION
+//------------------------------------------------------------------
 
 func (p *Position) IsRefund() bool {
 	return p.Refund
