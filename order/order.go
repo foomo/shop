@@ -101,7 +101,6 @@ type OrderCustomProvider interface {
 
 // Position in an order
 type Position struct {
-	//ID           string
 	ItemID       string
 	Name         string
 	Description  string
