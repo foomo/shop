@@ -25,6 +25,7 @@ const (
 
 var globalCustomerPersistor *persistence.Persistor
 var globalCustomerHistoryPersistor *persistence.Persistor
+var globalCredentialsPersistor *persistence.Persistor
 
 //------------------------------------------------------------------
 // ~ PUBLIC METHODS
@@ -80,6 +81,31 @@ func GetCustomerHistoryPersistor() *persistence.Persistor {
 	return globalCustomerHistoryPersistor
 }
 
+// Returns GLOBAL_PERSISTOR. If GLOBAL_PERSISTOR is nil, a new persistor is created, set as GLOBAL_PERSISTOR and returned
+func GetCredentialsPersistor() *persistence.Persistor {
+	url := configuration.MONGO_URL
+	collection := configuration.MONGO_COLLECTION_CREDENTIALS
+	if globalCredentialsPersistor == nil {
+		p, err := persistence.NewPersistor(url, collection)
+		if err != nil || p == nil {
+			panic(errors.New("failed to create mongoDB order persistor: " + err.Error()))
+		}
+		globalCredentialsPersistor = p
+		return globalCredentialsPersistor
+	}
+
+	if url == globalCredentialsPersistor.GetURL() && collection == globalCredentialsPersistor.GetCollectionName() {
+		return globalCredentialsPersistor
+	}
+
+	p, err := persistence.NewPersistor(url, collection)
+	if err != nil || p == nil {
+		panic(err)
+	}
+	globalCredentialsPersistor = p
+	return globalCredentialsPersistor
+}
+
 // AlreadyExistsInDB checks if a customer with given customerID already exists in the database
 func AlreadyExistsInDB(customerID string) (bool, error) {
 	p := GetCustomerPersistor()
@@ -122,7 +148,7 @@ func UpsertCustomer(c *Customer) error {
 	//log.Println("WhoCalledMe: ", utils.WhoCalledMe())
 	//log.Println("UPSERT CUSTOMER with id", c.GetID())
 	// order is unlinked or not yet inserted in db
-	if c.unlinkDB || c.BsonID == "" {
+	if c.unlinkDB || c.BsonId == "" {
 		return nil
 	}
 	p := GetCustomerPersistor()
@@ -147,28 +173,28 @@ func UpsertCustomer(c *Customer) error {
 
 	if c.Flags.forceUpsert {
 		// Remember this number, so that we later know from which version we came from
-		v := c.Version.Number
+		v := c.Version.Current
 		// Set the current version number to keep history consistent
-		c.Version.Number = latestVersionInDb
+		c.Version.Current = latestVersionInDb
 		c.Version.Increment()
 		c.Flags.forceUpsert = false
 		// Overwrite NumberPrevious, to remember where we came from
-		c.Version.NumberPrevious = v
+		c.Version.Previous = v
 	} else {
 		c.Version.Increment()
 	}
 
-	_, err = p.GetCollection().UpsertId(c.BsonID, c)
+	_, err = p.GetCollection().UpsertId(c.BsonId, c)
 	if err != nil {
 		return err
 	}
 
 	// Store version in history
-	bsonId := c.BsonID
-	c.BsonID = "" // Temporarily reset Mongo ObjectId, so that we can perfrom an Insert.
+	bsonId := c.BsonId
+	c.BsonId = "" // Temporarily reset Mongo ObjectId, so that we can perfrom an Insert.
 	pHistory := GetCustomerHistoryPersistor()
 	pHistory.GetCollection().Insert(c)
-	c.BsonID = bsonId // restore bsonId
+	c.BsonId = bsonId // restore bsonId
 	event_log.SaveShopEvent(event_log.ActionUpsertingCustomer, c.GetID(), err, "")
 	return err
 }
@@ -182,7 +208,7 @@ func UpsertAndGetCustomer(c *Customer, customProvider CustomerCustomProvider) (*
 }
 
 func DeleteCustomer(c *Customer) error {
-	err := GetCustomerPersistor().GetCollection().Remove(bson.M{"_id": c.BsonID})
+	err := GetCustomerPersistor().GetCollection().Remove(bson.M{"_id": c.BsonId})
 	event_log.SaveShopEvent(event_log.ActionDeleteCustomer, c.GetID(), err, "")
 	return err
 }
@@ -202,17 +228,17 @@ func GetCustomerByEmail(email string, customProvider CustomerCustomProvider) (*C
 	return findOneCustomer(&bson.M{"email": email}, nil, "", customProvider, false)
 }
 func GetCurrentCustomerByIdFromHistory(customerId string, customProvider CustomerCustomProvider) (*Customer, error) {
-	return findOneCustomer(&bson.M{"id": customerId}, nil, "-version.number", customProvider, true)
+	return findOneCustomer(&bson.M{"id": customerId}, nil, "-version.current", customProvider, true)
 }
 func GetCurrentVersionOfCustomerFromHistory(customerId string) (*history.Version, error) {
-	customer, err := findOneCustomer(&bson.M{"id": customerId}, &bson.M{"version": 1}, "-version.number", nil, true)
+	customer, err := findOneCustomer(&bson.M{"id": customerId}, &bson.M{"version": 1}, "-version.current", nil, true)
 	if err != nil {
 		return nil, err
 	}
 	return customer.GetVersion(), nil
 }
 func GetCustomerByVersion(customerId string, version int, customProvider CustomerCustomProvider) (*Customer, error) {
-	return findOneCustomer(&bson.M{"id": customerId, "version.number": version}, nil, "", customProvider, true)
+	return findOneCustomer(&bson.M{"id": customerId, "version.current": version}, nil, "", customProvider, true)
 }
 
 func Rollback(customerId string, version int) error {
@@ -220,15 +246,15 @@ func Rollback(customerId string, version int) error {
 	if err != nil {
 		return err
 	}
-	if version >= currentCustomer.GetVersion().Number || version < 0 {
-		return errors.New("Cannot perform rollback to " + strconv.Itoa(version) + " from version " + strconv.Itoa(currentCustomer.GetVersion().Number))
+	if version >= currentCustomer.GetVersion().Current || version < 0 {
+		return errors.New("Cannot perform rollback to " + strconv.Itoa(version) + " from version " + strconv.Itoa(currentCustomer.GetVersion().Current))
 	}
 	customerFromHistory, err := GetCustomerByVersion(customerId, version, nil)
 	if err != nil {
 		return err
 	}
 	// Set bsonId from current customer to customer from history to overwrite current customer on next upsert.
-	customerFromHistory.BsonID = currentCustomer.BsonID
+	customerFromHistory.BsonId = currentCustomer.BsonId
 	customerFromHistory.Flags.forceUpsert = true
 	return customerFromHistory.Upsert()
 
