@@ -249,9 +249,10 @@ func (order *Order) GetPositionByItemId(itemID string) *Position {
 	return nil
 }
 
-// OverrideID may be used to use a different than the automatially genrated if
-func (order *Order) OverrideId(id string) {
+// OverrideID may be used to use a different than the automatially generated if
+func (order *Order) OverrideId(id string) error {
 	order.Id = id
+	return order.Upsert()
 }
 
 //------------------------------------------------------------------
