@@ -35,5 +35,10 @@ func DropAllCollections() {
 		// Do not panic here. If db does not yet exist, it is ok for DropCollection to fail.
 		log.Println("Error: OrderHistoryPersistor DropCollection() ", err)
 	}
+	err = customer.GetCredentialsPersistor().GetCollection().DropCollection()
+	if err != nil {
+		// Do not panic here. If db does not yet exist, it is ok for DropCollection to fail.
+		log.Println("Error: CredentialsPersistor DropCollection() ", err)
+	}
 	//order.LAST_ASSIGNED_ID = -1
 }
