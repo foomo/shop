@@ -9,6 +9,10 @@ import (
 	"gopkg.in/mgo.v2"
 )
 
+//------------------------------------------------------------------
+// ~ PUBLIC TYPES
+//------------------------------------------------------------------
+
 // Persistor persist
 type Persistor struct {
 	session    *mgo.Session
@@ -16,6 +20,10 @@ type Persistor struct {
 	db         string
 	collection string
 }
+
+//------------------------------------------------------------------
+// ~ CONSTRUCTOR
+//------------------------------------------------------------------
 
 // NewPersistor constructor
 func NewPersistor(mongoURL string, collection string) (p *Persistor, err error) {
@@ -42,6 +50,10 @@ func NewPersistor(mongoURL string, collection string) (p *Persistor, err error) 
 	}
 	return p, nil
 }
+
+//------------------------------------------------------------------
+// ~ PUBLIC METHODS
+//------------------------------------------------------------------
 
 func (p *Persistor) GetCollection() *mgo.Collection {
 	return p.session.DB(p.db).C(p.collection)

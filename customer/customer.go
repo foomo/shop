@@ -105,7 +105,7 @@ type CustomerCustomProvider interface {
 }
 
 //------------------------------------------------------------------
-// ~ PUBLIC METHODS
+// ~ CONSTRUCTOR
 //------------------------------------------------------------------
 
 // NewCustomer creates a new Customer in the database and returns it.
@@ -152,6 +152,10 @@ func NewCustomer(email, password string, customProvider CustomerCustomProvider) 
 	}
 	return customer, err
 }
+
+//------------------------------------------------------------------
+// ~ PUBLIC METHODS ON CUSTOMER
+//------------------------------------------------------------------
 
 func (customer *Customer) ChangeEmail(email, newEmail string) error {
 	err := ChangeEmail(email, newEmail)
@@ -220,6 +224,10 @@ func (customer *Customer) RemoveAddress(id string) {
 		}
 	}
 }
+
+//------------------------------------------------------------------
+// ~ PUBLIC METHODS
+//------------------------------------------------------------------
 
 // DiffTwoLatestCustomerVersions compares the two latest Versions of Customer found in history.
 // If openInBrowser, the result is automatically displayed in the default browser.

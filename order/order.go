@@ -268,6 +268,10 @@ func (p *Position) GetAmount() float64 {
 	return p.Price * p.Quantity
 }
 
+//------------------------------------------------------------------
+// ~ PUBLIC METHODS
+//------------------------------------------------------------------
+
 // DiffTwoLatestOrderVersions compares the two latest Versions of Order found in history.
 // If openInBrowser, the result is automatically displayed in the default browser.
 func DiffTwoLatestOrderVersions(orderId string, customProvider OrderCustomProvider, openInBrowser bool) (string, error) {

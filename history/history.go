@@ -8,11 +8,19 @@ import (
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
+//------------------------------------------------------------------
+// ~ PUBLIC TYPES
+//------------------------------------------------------------------
+
 type Version struct {
 	Current        int
 	Previous       int // Previous version number (relevant, for example, atfer rollbacks)
 	LastModifiedAt time.Time
 }
+
+//------------------------------------------------------------------
+// ~ CONSTRUCTOR
+//------------------------------------------------------------------
 
 func NewVersion() *Version {
 	return &Version{
@@ -21,6 +29,10 @@ func NewVersion() *Version {
 		LastModifiedAt: utils.TimeNow(),
 	}
 }
+
+//------------------------------------------------------------------
+// ~ PUBLIC METHODS ON VERSION
+//------------------------------------------------------------------
 
 func (v *Version) Increment() {
 	v.Previous = v.Current
@@ -34,6 +46,10 @@ func (v *Version) GetVersion() int {
 func (v *Version) GetFormattedTime() string {
 	return utils.GetFormattedTime(v.LastModifiedAt)
 }
+
+//------------------------------------------------------------------
+// ~ PUBLIC METHODS
+//------------------------------------------------------------------
 
 // DiffVersions compares to structs and returns the result as html.
 // The html can be displayed with utils.OpenInBrowser()
