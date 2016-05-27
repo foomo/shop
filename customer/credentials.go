@@ -2,24 +2,33 @@ package customer
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/foomo/shop/crypto"
 	"github.com/foomo/shop/history"
 	"gopkg.in/mgo.v2/bson"
 )
 
+//------------------------------------------------------------------
+// ~ PUBIC TYPES
+//------------------------------------------------------------------
+
 type CustomerCredentials struct {
 	BsonId  bson.ObjectId `bson:"_id,omitempty"`
 	Version *history.Version
-	Email   string
+	Email   string // always stored lowercase
 	Crypto  *crypto.Crypto
 }
+
+//------------------------------------------------------------------
+// ~ PUBIC METHODS
+//------------------------------------------------------------------
 
 // GetCredentials from db
 func GetCredentials(email string) (*CustomerCredentials, error) {
 	p := GetCredentialsPersistor()
 	credentials := &CustomerCredentials{}
-	err := p.GetCollection().Find(&bson.M{"email": email}).One(credentials)
+	err := p.GetCollection().Find(&bson.M{"email": lc(email)}).One(credentials)
 	if err != nil {
 		return nil, err
 	}
@@ -28,13 +37,20 @@ func GetCredentials(email string) (*CustomerCredentials, error) {
 
 // CreateCustomerCredentials
 func CreateCustomerCredentials(email, password string) error {
+	available, err := CheckLoginAvailable(lc(email))
+	if err != nil {
+		return err
+	}
+	if !available {
+		return errors.New(lc(email) + " is already taken!")
+	}
 	crypto, err := crypto.HashPassword(password)
 	if err != nil {
 		return err
 	}
 	credentials := &CustomerCredentials{
 		Version: history.NewVersion(),
-		Email:   email,
+		Email:   lc(email),
 		Crypto:  crypto,
 	}
 	p := GetCredentialsPersistor()
@@ -44,8 +60,8 @@ func CreateCustomerCredentials(email, password string) error {
 
 // CheckLoginAvailable returns true if the email address is available as login credential
 func CheckLoginAvailable(email string) (bool, error) {
-	p := GetCustomerPersistor()
-	query := p.GetCollection().Find(&bson.M{"email": email})
+	p := GetCredentialsPersistor()
+	query := p.GetCollection().Find(&bson.M{"email": lc(email)})
 	count, err := query.Count()
 	if err != nil {
 		return false, err
@@ -54,9 +70,10 @@ func CheckLoginAvailable(email string) (bool, error) {
 	return count == 0, nil
 }
 
-// CheckLoginCredentials returns true if  customer with email exists and password matches with the hash stores in customers Crypto
+// CheckLoginCredentials returns true if  customer with email exists and password matches with the hash stores in customers Crypto.
+// Email is not case-sensitive to avoid user frustration
 func CheckLoginCredentials(email, password string) (bool, error) {
-	credentials, err := GetCredentials(email)
+	credentials, err := GetCredentials(lc(email))
 	if err != nil {
 		return false, err
 	}
@@ -65,8 +82,8 @@ func CheckLoginCredentials(email, password string) (bool, error) {
 
 // ChangePassword changes the password of the user.
 // If force, passworldOld is irrelevant and the password is changed in any case.
-func (customer *Customer) ChangePassword(email, password, passwordNew string, force bool) error {
-	credentials, err := GetCredentials(email)
+func ChangePassword(email, password, passwordNew string, force bool) error {
+	credentials, err := GetCredentials(lc(email))
 	if err != nil {
 		return err
 	}
@@ -87,20 +104,32 @@ func (customer *Customer) ChangePassword(email, password, passwordNew string, fo
 }
 
 func ChangeEmail(email, newEmail string) error {
-	available, err := CheckLoginAvailable(newEmail)
+	available, err := CheckLoginAvailable(lc(newEmail))
 	if err != nil {
 		return err
 	}
 	if !available {
-		return errors.New("Could not change Email: \"" + newEmail + "\" is already taken!")
+		return errors.New("Could not change Email: \"" + lc(newEmail) + "\" is already taken!")
 	}
-	credentials, err := GetCredentials(email)
+	credentials, err := GetCredentials(lc(email))
 	if err != nil {
 		return err
 	}
-	credentials.Email = newEmail
+	credentials.Email = lc(newEmail)
 	credentials.Version.Increment()
 	_, err = GetCredentialsPersistor().GetCollection().UpsertId(credentials.BsonId, credentials)
 	return err
+}
 
+func DeleteCredential(email string) error {
+	return GetCredentialsPersistor().GetCollection().Remove(&bson.M{"email": lc(email)})
+}
+
+//------------------------------------------------------------------
+// ~ PRIVATE METHODS
+//------------------------------------------------------------------
+
+// lc returns lowercase version of string
+func lc(s string) string {
+	return strings.ToLower(s)
 }
