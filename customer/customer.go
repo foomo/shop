@@ -153,6 +153,22 @@ func NewCustomer(email, password string, customProvider CustomerCustomProvider) 
 	return customer, err
 }
 
+func (customer *Customer) ChangeEmail(email, newEmail string) error {
+	err := ChangeEmail(email, newEmail)
+	if err != nil {
+		return err
+	}
+	customer.Email = lc(email)
+	return customer.Upsert()
+}
+func (customer *Customer) ChangePassword(password, passwordNew string, force bool) error {
+	err := ChangePassword(customer.Email, password, passwordNew, force)
+	if err != nil {
+		return err
+	}
+	return customer.Upsert()
+}
+
 // Unlinks order from database
 // After unlink, persistent changes on order are no longer possible until it is retrieved again from db.
 func (customer *Customer) UnlinkFromDB() {
@@ -180,9 +196,9 @@ func (customer *Customer) Rollback(version int) error {
 	return Rollback(customer.GetID(), version)
 }
 
-func (customer *Customer) OverrideId(id string) {
+func (customer *Customer) OverrideId(id string) error {
 	customer.Id = id
-	customer.Upsert()
+	return customer.Upsert()
 }
 
 func (customer *Customer) AddAddress(address *Address) {

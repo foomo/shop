@@ -145,7 +145,3 @@ func (customer *Customer) SetPerson(person *Person) error {
 	customer.Person = person
 	return customer.Upsert()
 }
-func (customer *Customer) SetEmail(email string) error {
-	customer.Email = email
-	return customer.Upsert()
-}
