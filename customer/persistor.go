@@ -217,7 +217,11 @@ func DeleteCustomer(c *Customer) error {
 	return err
 }
 func DeleteCustomerById(id string) error {
-	err := GetCustomerPersistor().GetCollection().Remove(bson.M{"id": id})
+	customer, err := GetCustomerById(id, nil)
+	if err != nil {
+		return err
+	}
+	DeleteCustomer(customer)
 	event_log.SaveShopEvent(event_log.ActionDeleteCustomer, id, err, "")
 	return err
 }
