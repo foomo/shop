@@ -266,6 +266,14 @@ func DropAllCustomers() error {
 }
 func DropAllCredentials() error {
 	return GetCredentialsPersistor().GetCollection().DropCollection()
+}
+
+func DropAllCustomersAndCredentials() error {
+	err := GetCustomerPersistor().GetCollection().DropCollection()
+	if err != nil {
+		return err
+	}
+	return GetCredentialsPersistor().GetCollection().DropCollection()
 
 }
 
