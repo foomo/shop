@@ -5,9 +5,16 @@ import (
 	"testing"
 )
 
+const (
+	MOCK_EMAIL     = "Foo@Bar.com"
+	MOCK_PASSWORD  = "supersafepassword!11"
+	MOCK_EMAIL2    = "Alice@Bar.com"
+	MOCK_PASSWORD2 = "evensaferpassword!11!§$%&"
+)
+
 func TestCustomerGetLatestCustomerFromDb(t *testing.T) {
 	DropAllCustomers()
-	customer, err := NewCustomer(nil)
+	customer, err := NewCustomer(MOCK_EMAIL, MOCK_PASSWORD, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +76,7 @@ func TestCustomerRollback(t *testing.T) {
 
 func create2CustomersAndPerformSomeUpserts(t *testing.T) (*Customer, *Customer) {
 	DropAllCustomers()
-	customer, err := NewCustomer(nil)
+	customer, err := NewCustomer(MOCK_EMAIL, MOCK_PASSWORD, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +93,7 @@ func create2CustomersAndPerformSomeUpserts(t *testing.T) (*Customer, *Customer) 
 	}
 	err = customer.Upsert()
 	// Create a second customer to make the history a little more interesting
-	customer2, err := NewCustomer(nil)
+	customer2, err := NewCustomer(MOCK_EMAIL2, MOCK_PASSWORD2, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

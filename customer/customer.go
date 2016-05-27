@@ -109,12 +109,28 @@ type CustomerCustomProvider interface {
 //------------------------------------------------------------------
 
 // NewCustomer creates a new Customer in the database and returns it.
-func NewCustomer(customProvider CustomerCustomProvider) (*Customer, error) {
+// Email must be unique for a customer. customerProvider may be nil at this point.
+func NewCustomer(email, password string, customProvider CustomerCustomProvider) (*Customer, error) {
+
+	// Check is desired Email is available
+	available, err := CheckLoginAvailable(email)
+	if err != nil {
+		return nil, err
+	}
+	if !available {
+		return nil, errors.New("Login " + email + " is already taken!")
+	}
+
+	err = CreateCustomerCredentials(email, password)
+	if err != nil {
+		return nil, err
+	}
 
 	customer := &Customer{
 		Flags:          &Flags{},
 		Version:        history.NewVersion(),
 		Id:             unique.GetNewID(),
+		Email:          lc(email),
 		CreatedAt:      utils.TimeNow(),
 		LastModifiedAt: utils.TimeNow(),
 		Person: &Person{
@@ -127,7 +143,7 @@ func NewCustomer(customProvider CustomerCustomProvider) (*Customer, error) {
 		customer.Custom = customProvider.NewCustomerCustom()
 	}
 	// Store order in database
-	err := customer.insert()
+	err = customer.insert()
 
 	// Retrieve customer again from. (Otherwise upserts on customer would fail because of missing mongo ObjectID)
 	customer, err = GetCustomerById(customer.Id, customProvider)

@@ -10,7 +10,10 @@ import (
 )
 
 const (
-	MOCK_PASSWORD = "123456"
+	MOCK_EMAIL     = "Foo@Bar.com"
+	MOCK_PASSWORD  = "supersafepassword!11"
+	MOCK_EMAIL2    = "Alice@Bar.com"
+	MOCK_PASSWORD2 = "evensaferpassword!11!§$%&"
 )
 
 func MockMongoURL() string {
