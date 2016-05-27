@@ -264,6 +264,10 @@ func DropAllCustomers() error {
 	return GetCustomerPersistor().GetCollection().DropCollection()
 
 }
+func DropAllCredentials() error {
+	return GetCredentialsPersistor().GetCollection().DropCollection()
+
+}
 
 //------------------------------------------------------------------
 // ~ PRIVATE METHODS
