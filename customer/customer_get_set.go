@@ -9,7 +9,7 @@ import (
 )
 
 //------------------------------------------------------------------
-// ~ PUBIC GETTERS
+// ~ PUBLIC GETTERS
 //------------------------------------------------------------------
 
 func (customer *Customer) GetID() string {
@@ -106,7 +106,7 @@ func (c *Contacts) GetPrimaryContact() string {
 }
 
 //------------------------------------------------------------------
-// ~ PUBIC SETTERS
+// ~ PUBLIC SETTERS
 //------------------------------------------------------------------
 
 func (customer *Customer) SetDefaultShippingAddress(id string) error {
