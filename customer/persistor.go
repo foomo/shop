@@ -209,6 +209,10 @@ func UpsertAndGetCustomer(c *Customer, customProvider CustomerCustomProvider) (*
 
 func DeleteCustomer(c *Customer) error {
 	err := GetCustomerPersistor().GetCollection().Remove(bson.M{"_id": c.BsonId})
+	if err != nil {
+		return err
+	}
+	err = DeleteCredential(c.Email)
 	event_log.SaveShopEvent(event_log.ActionDeleteCustomer, c.GetID(), err, "")
 	return err
 }
