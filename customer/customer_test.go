@@ -75,7 +75,7 @@ func TestCustomerRollback(t *testing.T) {
 }
 
 func create2CustomersAndPerformSomeUpserts(t *testing.T) (*Customer, *Customer) {
-	DropAllCustomers()
+	DropAllCustomersAndCredentials()
 	customer, err := NewCustomer(MOCK_EMAIL, MOCK_PASSWORD, nil)
 	if err != nil {
 		t.Fatal(err)
