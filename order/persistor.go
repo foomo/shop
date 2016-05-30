@@ -7,8 +7,8 @@ import (
 	"strconv"
 
 	"github.com/foomo/shop/event_log"
-	"github.com/foomo/shop/history"
 	"github.com/foomo/shop/persistence"
+	"github.com/foomo/shop/version"
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/foomo/shop/configuration"
@@ -199,7 +199,7 @@ func GetOrderById(id string, customProvider OrderCustomProvider) (*Order, error)
 func GetCurrentOrderByIdFromHistory(orderId string, customProvider OrderCustomProvider) (*Order, error) {
 	return findOneOrder(&bson.M{"id": orderId}, nil, "-version.current", customProvider, true)
 }
-func GetCurrentVersionOfOrderFromHistory(orderId string) (*history.Version, error) {
+func GetCurrentVersionOfOrderFromHistory(orderId string) (*version.Version, error) {
 	order, err := findOneOrder(&bson.M{"id": orderId}, &bson.M{"version": 1}, "-version.current", nil, true)
 	if err != nil {
 		return nil, err

@@ -4,8 +4,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/foomo/shop/history"
 	"github.com/foomo/shop/utils"
+	"github.com/foomo/shop/version"
 )
 
 //------------------------------------------------------------------
@@ -16,7 +16,7 @@ func (customer *Customer) GetID() string {
 	return customer.Id
 }
 
-func (customer *Customer) GetVersion() *history.Version {
+func (customer *Customer) GetVersion() *version.Version {
 	return customer.Version
 }
 

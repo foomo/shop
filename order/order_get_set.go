@@ -5,11 +5,11 @@ import (
 
 	"github.com/foomo/shop/customer"
 	"github.com/foomo/shop/event_log"
-	"github.com/foomo/shop/history"
 	"github.com/foomo/shop/payment"
 	"github.com/foomo/shop/shipping"
 	"github.com/foomo/shop/state"
 	"github.com/foomo/shop/utils"
+	"github.com/foomo/shop/version"
 )
 
 //------------------------------------------------------------------
@@ -20,7 +20,7 @@ func (order *Order) GetID() string {
 	return order.Id
 }
 
-func (order *Order) GetVersion() *history.Version {
+func (order *Order) GetVersion() *version.Version {
 	return order.Version
 }
 

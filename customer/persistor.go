@@ -8,8 +8,8 @@ import (
 
 	"github.com/foomo/shop/configuration"
 	"github.com/foomo/shop/event_log"
-	"github.com/foomo/shop/history"
 	"github.com/foomo/shop/persistence"
+	"github.com/foomo/shop/version"
 	"github.com/mitchellh/mapstructure"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -238,7 +238,7 @@ func GetCustomerByEmail(email string, customProvider CustomerCustomProvider) (*C
 func GetCurrentCustomerByIdFromHistory(customerId string, customProvider CustomerCustomProvider) (*Customer, error) {
 	return findOneCustomer(&bson.M{"id": customerId}, nil, "-version.current", customProvider, true)
 }
-func GetCurrentVersionOfCustomerFromHistory(customerId string) (*history.Version, error) {
+func GetCurrentVersionOfCustomerFromHistory(customerId string) (*version.Version, error) {
 	customer, err := findOneCustomer(&bson.M{"id": customerId}, &bson.M{"version": 1}, "-version.current", nil, true)
 	if err != nil {
 		return nil, err

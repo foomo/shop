@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/foomo/shop/crypto"
-	"github.com/foomo/shop/history"
+	"github.com/foomo/shop/version"
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -15,7 +15,7 @@ import (
 
 type CustomerCredentials struct {
 	BsonId  bson.ObjectId `bson:"_id,omitempty"`
-	Version *history.Version
+	Version *version.Version
 	Email   string // always stored lowercase
 	Crypto  *crypto.Crypto
 }
@@ -49,7 +49,7 @@ func CreateCustomerCredentials(email, password string) error {
 		return err
 	}
 	credentials := &CustomerCredentials{
-		Version: history.NewVersion(),
+		Version: version.NewVersion(),
 		Email:   lc(email),
 		Crypto:  crypto,
 	}

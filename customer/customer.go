@@ -9,9 +9,9 @@ import (
 	"gopkg.in/mgo.v2/bson"
 
 	"github.com/foomo/shop/event_log"
-	"github.com/foomo/shop/history"
 	"github.com/foomo/shop/unique"
 	"github.com/foomo/shop/utils"
+	"github.com/foomo/shop/version"
 )
 
 //------------------------------------------------------------------
@@ -52,7 +52,7 @@ type Customer struct {
 	Id             string        // Email is used as LoginID, but can change. This is never changes!
 	unlinkDB       bool          // if true, changes to Customer are not stored in database
 	Flags          *Flags
-	Version        *history.Version
+	Version        *version.Version
 	CreatedAt      time.Time
 	LastModifiedAt time.Time
 	Email          string // unique, used as Login Credential
@@ -128,7 +128,7 @@ func NewCustomer(email, password string, customProvider CustomerCustomProvider) 
 
 	customer := &Customer{
 		Flags:          &Flags{},
-		Version:        history.NewVersion(),
+		Version:        version.NewVersion(),
 		Id:             unique.GetNewID(),
 		Email:          lc(email),
 		CreatedAt:      utils.TimeNow(),
@@ -229,7 +229,7 @@ func (customer *Customer) RemoveAddress(id string) {
 // ~ PUBLIC METHODS
 //------------------------------------------------------------------
 
-// DiffTwoLatestCustomerVersions compares the two latest Versions of Customer found in history.
+// DiffTwoLatestCustomerVersions compares the two latest Versions of Customer found in version.
 // If openInBrowser, the result is automatically displayed in the default browser.
 func DiffTwoLatestCustomerVersions(customerId string, customProvider CustomerCustomProvider, openInBrowser bool) (string, error) {
 	version, err := GetCurrentVersionOfCustomerFromHistory(customerId)
@@ -254,7 +254,7 @@ func DiffCustomerVersions(customerId string, versionA int, versionB int, customP
 		return "", err
 	}
 
-	html, err := history.DiffVersions(customerVersionA, customerVersionB)
+	html, err := version.DiffVersions(customerVersionA, customerVersionB)
 	if err != nil {
 		return "", err
 	}

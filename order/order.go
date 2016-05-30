@@ -13,12 +13,12 @@ import (
 	"gopkg.in/mgo.v2/bson"
 
 	"github.com/foomo/shop/event_log"
-	"github.com/foomo/shop/history"
 	"github.com/foomo/shop/payment"
 	"github.com/foomo/shop/shipping"
 	"github.com/foomo/shop/state"
 	"github.com/foomo/shop/unique"
 	"github.com/foomo/shop/utils"
+	"github.com/foomo/shop/version"
 )
 
 //------------------------------------------------------------------
@@ -53,7 +53,7 @@ type OrderStatus string
 type Order struct {
 	BsonId            bson.ObjectId `bson:"_id,omitempty"`
 	Id                string        // automatically generated unique id
-	Version           *history.Version
+	Version           *version.Version
 	unlinkDB          bool // if true, changes to Customer are not stored in database
 	Flags             *Flags
 	State             *state.State
@@ -136,7 +136,7 @@ func NewOrderWithCustomId(customProvider OrderCustomProvider, orderIdFunc func()
 		State:          stateMachine.GetInitialState(),
 		Flags:          &Flags{},
 		Id:             orderId,
-		Version:        history.NewVersion(),
+		Version:        version.NewVersion(),
 		CreatedAt:      utils.TimeNow(),
 		LastModifiedAt: utils.TimeNow(),
 		OrderType:      OrderTypeOrder,
@@ -272,7 +272,7 @@ func (p *Position) GetAmount() float64 {
 // ~ PUBLIC METHODS
 //------------------------------------------------------------------
 
-// DiffTwoLatestOrderVersions compares the two latest Versions of Order found in history.
+// DiffTwoLatestOrderVersions compares the two latest Versions of Order found in version.
 // If openInBrowser, the result is automatically displayed in the default browser.
 func DiffTwoLatestOrderVersions(orderId string, customProvider OrderCustomProvider, openInBrowser bool) (string, error) {
 	version, err := GetCurrentVersionOfOrderFromHistory(orderId)
@@ -297,7 +297,7 @@ func DiffOrderVersions(orderId string, versionA int, versionB int, customProvide
 		return "", err
 	}
 
-	html, err := history.DiffVersions(orderVersionA, orderVersionB)
+	html, err := version.DiffVersions(orderVersionA, orderVersionB)
 	if err != nil {
 		return "", err
 	}
