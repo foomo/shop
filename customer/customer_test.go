@@ -6,10 +6,11 @@ import (
 )
 
 const (
-	MOCK_EMAIL     = "Foo@Bar.com"
-	MOCK_PASSWORD  = "supersafepassword!11"
-	MOCK_EMAIL2    = "Alice@Bar.com"
-	MOCK_PASSWORD2 = "evensaferpassword!11!§$%&"
+	MOCK_EMAIL            = "Foo@Bar.com"
+	MOCK_PASSWORD         = "supersafepassword!11"
+	MOCK_EMAIL2           = "Alice@Bar.com"
+	MOCK_PASSWORD2        = "evensaferpassword!11!§$%&"
+	OPEN_DIFFS_IN_BROWSER = false
 )
 
 func TestCustomerGetLatestCustomerFromDb(t *testing.T) {
@@ -39,7 +40,7 @@ func TestCustomerGetLatestCustomerFromDb(t *testing.T) {
 func TestCustomerDiff2LatestCustomerVersions(t *testing.T) {
 	customer1, _ := create2CustomersAndPerformSomeUpserts(t)
 
-	_, err := DiffTwoLatestCustomerVersions(customer1.GetID(), nil, true)
+	_, err := DiffTwoLatestCustomerVersions(customer1.GetID(), nil, OPEN_DIFFS_IN_BROWSER)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,7 +54,7 @@ func TestCustomerRollbackAndDiff(t *testing.T) {
 	}
 	customer1, errRoll = GetCustomerById(customer1.GetID(), nil)
 
-	_, err := DiffTwoLatestCustomerVersions(customer1.GetID(), nil, true)
+	_, err := DiffTwoLatestCustomerVersions(customer1.GetID(), nil, OPEN_DIFFS_IN_BROWSER)
 	if err != nil {
 		t.Fatal(err)
 	}
