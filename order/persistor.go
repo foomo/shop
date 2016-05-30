@@ -20,7 +20,7 @@ import (
 //------------------------------------------------------------------
 
 var globalOrderPersistor *persistence.Persistor
-var globalOrderHistoryPersistor *persistence.Persistor
+var globalOrderVersionsPersistor *persistence.Persistor
 
 //------------------------------------------------------------------
 // ~ PUBLIC METHODS
@@ -115,7 +115,7 @@ func UpsertOrder(o *Order) error {
 	// Store version in history
 	bsonId := o.BsonId
 	o.BsonId = "" // Temporarily reset Mongo ObjectId, so that we can perfrom an Insert.
-	pHistory := GetOrderHistoryPersistor()
+	pHistory := GetOrderVersionsPersistor()
 	pHistory.GetCollection().Insert(o)
 	o.BsonId = bsonId // restore bsonId
 	event_log.SaveShopEvent(event_log.ActionUpsertingOrder, o.GetID(), err, "")
@@ -167,28 +167,28 @@ func GetOrderPersistor() *persistence.Persistor {
 }
 
 // Returns GLOBAL_PERSISTOR. If GLOBAL_PERSISTOR is nil, a new persistor is created, set as GLOBAL_PERSISTOR and returned
-func GetOrderHistoryPersistor() *persistence.Persistor {
+func GetOrderVersionsPersistor() *persistence.Persistor {
 	url := configuration.MONGO_URL
 	collection := configuration.MONGO_COLLECTION_ORDERS_HISTORY
-	if globalOrderHistoryPersistor == nil {
+	if globalOrderVersionsPersistor == nil {
 		p, err := persistence.NewPersistor(url, collection)
 		if err != nil || p == nil {
 			panic(errors.New("failed to create mongoDB order persistor: " + err.Error()))
 		}
-		globalOrderHistoryPersistor = p
-		return globalOrderHistoryPersistor
+		globalOrderVersionsPersistor = p
+		return globalOrderVersionsPersistor
 	}
 
-	if url == globalOrderHistoryPersistor.GetURL() && collection == globalOrderHistoryPersistor.GetCollectionName() {
-		return globalOrderHistoryPersistor
+	if url == globalOrderVersionsPersistor.GetURL() && collection == globalOrderVersionsPersistor.GetCollectionName() {
+		return globalOrderVersionsPersistor
 	}
 
 	p, err := persistence.NewPersistor(url, collection)
 	if err != nil || p == nil {
 		panic(err)
 	}
-	globalOrderHistoryPersistor = p
-	return globalOrderHistoryPersistor
+	globalOrderVersionsPersistor = p
+	return globalOrderVersionsPersistor
 }
 
 // GetOrderById returns the order with id
@@ -242,7 +242,7 @@ func DropAllOrders() error {
 func findOneOrder(find *bson.M, selection *bson.M, sort string, customProvider OrderCustomProvider, fromHistory bool) (*Order, error) {
 	var p *persistence.Persistor
 	if fromHistory {
-		p = GetOrderHistoryPersistor()
+		p = GetOrderVersionsPersistor()
 	} else {
 		p = GetOrderPersistor()
 	}
@@ -290,7 +290,7 @@ func insertOrder(o *Order) error {
 	if err != nil {
 		return err
 	}
-	pHistory := GetOrderHistoryPersistor()
+	pHistory := GetOrderVersionsPersistor()
 	err = pHistory.GetCollection().Insert(o)
 	event_log.SaveShopEvent(event_log.ActionCreateOrder, o.GetID(), err, "")
 	return err

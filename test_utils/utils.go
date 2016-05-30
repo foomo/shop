@@ -20,20 +20,20 @@ func DropAllCollections() {
 		// Do not panic here. If db does not yet exist, it is ok for DropCollection to fail.
 		log.Println("Error: CustomerPersistor DropCollection() ", err)
 	}
-	err = customer.GetCustomerHistoryPersistor().GetCollection().DropCollection()
+	err = customer.GetCustomerVersionsPersistor().GetCollection().DropCollection()
 	if err != nil {
 		// Do not panic here. If db does not yet exist, it is ok for DropCollection to fail.
-		log.Println("Error: CustomerHistoryPersistor DropCollection() ", err)
+		log.Println("Error: CustomerVersionsPersistor DropCollection() ", err)
 	}
 	err = order.GetOrderPersistor().GetCollection().DropCollection()
 	if err != nil {
 		// Do not panic here. If db does not yet exist, it is ok for DropCollection to fail.
 		log.Println("Error: OrderPersistor DropCollection() ", err)
 	}
-	err = order.GetOrderHistoryPersistor().GetCollection().DropCollection()
+	err = order.GetOrderVersionsPersistor().GetCollection().DropCollection()
 	if err != nil {
 		// Do not panic here. If db does not yet exist, it is ok for DropCollection to fail.
-		log.Println("Error: OrderHistoryPersistor DropCollection() ", err)
+		log.Println("Error: OrderVersionsPersistor DropCollection() ", err)
 	}
 	err = customer.GetCredentialsPersistor().GetCollection().DropCollection()
 	if err != nil {

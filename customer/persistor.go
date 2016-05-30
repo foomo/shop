@@ -24,7 +24,7 @@ const (
 )
 
 var globalCustomerPersistor *persistence.Persistor
-var globalCustomerHistoryPersistor *persistence.Persistor
+var globalCustomerVersionsPersistor *persistence.Persistor
 var globalCredentialsPersistor *persistence.Persistor
 
 //------------------------------------------------------------------
@@ -57,28 +57,28 @@ func GetCustomerPersistor() *persistence.Persistor {
 }
 
 // Returns GLOBAL_PERSISTOR. If GLOBAL_PERSISTOR is nil, a new persistor is created, set as GLOBAL_PERSISTOR and returned
-func GetCustomerHistoryPersistor() *persistence.Persistor {
+func GetCustomerVersionsPersistor() *persistence.Persistor {
 	url := configuration.MONGO_URL
 	collection := configuration.MONGO_COLLECTION_CUSTOMERS_HISTORY
-	if globalCustomerHistoryPersistor == nil {
+	if globalCustomerVersionsPersistor == nil {
 		p, err := persistence.NewPersistor(url, collection)
 		if err != nil || p == nil {
 			panic(errors.New("failed to create mongoDB order persistor: " + err.Error()))
 		}
-		globalCustomerHistoryPersistor = p
-		return globalCustomerHistoryPersistor
+		globalCustomerVersionsPersistor = p
+		return globalCustomerVersionsPersistor
 	}
 
-	if url == globalCustomerHistoryPersistor.GetURL() && collection == globalCustomerHistoryPersistor.GetCollectionName() {
-		return globalCustomerHistoryPersistor
+	if url == globalCustomerVersionsPersistor.GetURL() && collection == globalCustomerVersionsPersistor.GetCollectionName() {
+		return globalCustomerVersionsPersistor
 	}
 
 	p, err := persistence.NewPersistor(url, collection)
 	if err != nil || p == nil {
 		panic(err)
 	}
-	globalCustomerHistoryPersistor = p
-	return globalCustomerHistoryPersistor
+	globalCustomerVersionsPersistor = p
+	return globalCustomerVersionsPersistor
 }
 
 // Returns GLOBAL_PERSISTOR. If GLOBAL_PERSISTOR is nil, a new persistor is created, set as GLOBAL_PERSISTOR and returned
@@ -192,7 +192,7 @@ func UpsertCustomer(c *Customer) error {
 	// Store version in history
 	bsonId := c.BsonId
 	c.BsonId = "" // Temporarily reset Mongo ObjectId, so that we can perfrom an Insert.
-	pHistory := GetCustomerHistoryPersistor()
+	pHistory := GetCustomerVersionsPersistor()
 	pHistory.GetCollection().Insert(c)
 	c.BsonId = bsonId // restore bsonId
 	event_log.SaveShopEvent(event_log.ActionUpsertingCustomer, c.GetID(), err, "")
@@ -293,7 +293,7 @@ func DropAllCustomersAndCredentials() error {
 func findOneCustomer(find *bson.M, selection *bson.M, sort string, customProvider CustomerCustomProvider, fromHistory bool) (*Customer, error) {
 	var p *persistence.Persistor
 	if fromHistory {
-		p = GetCustomerHistoryPersistor()
+		p = GetCustomerVersionsPersistor()
 	} else {
 		p = GetCustomerPersistor()
 	}
@@ -341,7 +341,7 @@ func insertCustomer(c *Customer) error {
 	if err != nil {
 		return err
 	}
-	pHistory := GetCustomerHistoryPersistor()
+	pHistory := GetCustomerVersionsPersistor()
 	err = pHistory.GetCollection().Insert(c)
 	event_log.SaveShopEvent(event_log.ActionCreateCustomer, c.GetID(), err, "")
 	return err
