@@ -19,7 +19,6 @@ const (
 func MockMongoURL() string {
 	url := os.Getenv("SHOP_MONGO_TEST_URL")
 	if len(url) == 0 {
-		//panic("please export SHOP_MONGO_TEST_URL=mongodb://127.0.0.1/foomo-shop-orders")
 		url = "mongodb://127.0.0.1/foomo-shop-orders-mock"
 	}
 	return url
