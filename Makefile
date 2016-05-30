@@ -1,0 +1,26 @@
+SHELL = "/bin/bash"
+
+TEST_PATH = github.com/foomo/shop
+
+
+clean:
+	rm -f customer/diff-*
+test:
+	clear
+	make clean
+	go test -run Test $(TEST_PATH)/crypto
+	go test -run Test $(TEST_PATH)/customer
+	go test -run Test $(TEST_PATH)/examples
+	go test -run Test $(TEST_PATH)/order
+	go test -run Test $(TEST_PATH)/state
+	go test -run Test $(TEST_PATH)/unique
+testv:
+	clear
+	make clean
+	go test -v -run Test $(TEST_PATH)/crypto
+	go test -v -run Test $(TEST_PATH)/customer
+	go test -v -run Test $(TEST_PATH)/examples
+	go test -v -run Test $(TEST_PATH)/order
+	go test -v -run Test $(TEST_PATH)/state
+	go test -v -run Test $(TEST_PATH)/unique
+
