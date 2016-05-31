@@ -46,6 +46,11 @@ type StateMachine struct {
 	BluePrints   map[string]BluePrint
 }
 
+type StateWrapper struct {
+	StateMachineId string // Reference to associated state machine
+	State          *State // Current State
+}
+
 //------------------------------------------------------------------
 // ~ PUBLIC METHODS
 //------------------------------------------------------------------

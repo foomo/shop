@@ -6,6 +6,7 @@ import (
 	"log"
 	"strconv"
 
+	"github.com/foomo/shop/event_log"
 	"github.com/foomo/shop/persistence"
 	"github.com/foomo/shop/version"
 	"github.com/mitchellh/mapstructure"
@@ -66,9 +67,9 @@ func Find(query *bson.M, customProvider OrderCustomProvider) (iter func() (o *Or
 }
 
 func UpsertOrder(o *Order) error {
-	//log.Println("WhoCalledMe: ", utils.WhoCalledMe())
-	//log.Println("UPSERT CUSTOMER with id", o.GetID())
+	defer event_log.SaveShopEvent(event_log.ActionTest, &event_log.Info{OrderId: o.GetID()}, nil, "")
 	// order is unlinked or not yet inserted in db
+
 	if o.unlinkDB || o.BsonId == "" {
 		return nil
 	}
@@ -105,7 +106,7 @@ func UpsertOrder(o *Order) error {
 		o.Version.Increment()
 	}
 
-	o.State.SetModified()
+	o.StateWrapper.State.SetModified()
 	_, err = p.GetCollection().UpsertId(o.BsonId, o)
 	if err != nil {
 		return err

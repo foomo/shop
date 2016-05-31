@@ -55,7 +55,7 @@ type Order struct {
 	Version           *version.Version
 	unlinkDB          bool // if true, changes to Customer are not stored in database
 	Flags             *Flags
-	State             *state.State
+	StateWrapper      *state.StateWrapper
 	CustomerId        string
 	CustomerFreeze    *Freeze
 	AddressBillingId  string
@@ -137,7 +137,9 @@ func NewOrderWithCustomId(customProvider OrderCustomProvider, orderIdFunc func()
 		orderId = unique.GetNewID()
 	}
 	order := &Order{
-		State:          stateMachine.GetInitialState(),
+		StateWrapper: &state.StateWrapper{
+			StateMachineId: DefaultStateMachine,
+		},
 		Flags:          &Flags{},
 		Id:             orderId,
 		Version:        version.NewVersion(),
@@ -151,12 +153,18 @@ func NewOrderWithCustomId(customProvider OrderCustomProvider, orderIdFunc func()
 		Shipping:       &shipping.ShippingProperties{},
 	}
 
+	stateMachine, err := order.GetStateMachine()
+	if err != nil {
+		return nil, err
+	}
+	order.StateWrapper.State = stateMachine.GetInitialState()
+
 	if customProvider != nil {
 		order.Custom = customProvider.NewOrderCustom()
 	}
 
 	// Store order in database
-	err := order.insert()
+	err = order.insert()
 	// Retrieve order again from. (Otherwise upserts on order would fail because of missing mongo ObjectID)
 	order, err = GetOrderById(order.Id, customProvider)
 	return order, err
@@ -332,4 +340,10 @@ func DiffOrderVersions(orderId string, versionA int, versionB int, customProvide
 		}
 	}
 	return html, err
+}
+
+// add a global State Machine. Don't forget to set the id on the objects that are
+// supposed to use this State Machine
+func AddStateMachine(stateMachineId string, stateMachine *state.StateMachine) {
+	StateMachineMap[stateMachineId] = stateMachine
 }

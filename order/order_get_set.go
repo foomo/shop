@@ -83,12 +83,25 @@ func (order *Order) GetCompletedAtFormatted() string {
 // 	return order.Status
 // }
 func (order *Order) GetState() *state.State {
-	return order.State
+	return order.StateWrapper.State
+}
+
+func (order *Order) GetStateMachine() (*state.StateMachine, error) {
+	stateMachine, ok := StateMachineMap[order.StateWrapper.StateMachineId]
+	if !ok {
+		return nil, errors.New("No StateMachine available for id: " + order.StateWrapper.StateMachineId)
+	}
+	return stateMachine, nil
 }
 
 //------------------------------------------------------------------
 // ~ SIMPLE SETTERS ON ORDER
 //------------------------------------------------------------------
+
+func (order *Order) SetStateMachine(stateMachineId string) error {
+	order.StateWrapper.StateMachineId = stateMachineId
+	return order.Upsert()
+}
 
 func (order *Order) SetState(targetState string) error {
 	return order.setState(targetState, false)
@@ -97,19 +110,23 @@ func (order *Order) ForceState(targetState string) error {
 	return order.setState(targetState, true)
 }
 func (order *Order) setState(targetState string, force bool) error {
+	stateMachine, err := order.GetStateMachine()
+	if err != nil {
+		return err
+	}
 	var state *state.State
-	var err error
+	//var err error
 
 	if force {
-		state, err = stateMachine.ForceTransitionToState(order.State, targetState)
+		state, err = stateMachine.ForceTransitionToState(order.GetState(), targetState)
 	} else {
-		state, err = stateMachine.TransitionToState(order.State, targetState)
+		state, err = stateMachine.TransitionToState(order.GetState(), targetState)
 	}
 
 	if err != nil {
 		return err
 	}
-	order.State = state
+	order.StateWrapper.State = state
 	return order.Upsert()
 }
 func (order *Order) SetCompleted() error {

@@ -13,14 +13,14 @@ func TestOrderStatusTransition(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	log.Println("Current State:", order.State.Key)
+	log.Println("Current State:", order.GetState().Key)
 
 	// This state transistion should work
 	err = order.SetState(OrderStatusConfirmed)
 	if err != nil {
 		t.Fatal(err)
 	}
-	log.Println("Current State:", order.State.Key)
+	log.Println("Current State:", order.GetState().Key)
 
 	// This one should not work
 	err = order.SetState(OrderStatusCreated)
@@ -29,26 +29,26 @@ func TestOrderStatusTransition(t *testing.T) {
 	} else {
 		t.Fatal(err)
 	}
-	log.Println("Current State:", order.State.Key)
+	log.Println("Current State:", order.GetState().Key)
 
 	// This one should work
 	err = order.ForceState(OrderStatusComplete)
 	if err != nil {
 		t.Fatal(err)
 	}
-	log.Println("Current State:", order.State.Key)
+	log.Println("Current State:", order.GetState().Key)
 
 	// This one should work
 	err = order.ForceState(OrderStatusInvalid)
 	if err != nil {
 		t.Fatal(err)
 	}
-	log.Println("Current State:", order.State.Key)
+	log.Println("Current State:", order.GetState().Key)
 
 	// This one should work
 	err = order.ForceState(OrderStatusComplete)
 	if err != nil {
 		t.Fatal(err)
 	}
-	log.Println("Current State:", order.State.Key)
+	log.Println("Current State:", order.GetState().Key)
 }
