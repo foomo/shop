@@ -14,7 +14,7 @@ const (
 )
 
 func TestCustomerGetLatestCustomerFromDb(t *testing.T) {
-	DropAllCustomers()
+	DropAllCustomersAndCredentials()
 	customer, err := NewCustomer(MOCK_EMAIL, MOCK_PASSWORD, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -36,6 +36,7 @@ func TestCustomerGetLatestCustomerFromDb(t *testing.T) {
 		log.Println("Version is ", customer.GetVersion().Current, "- should have been 3.")
 		t.Fail()
 	}
+
 }
 func TestCustomerDiff2LatestCustomerVersions(t *testing.T) {
 	customer1, _ := create2CustomersAndPerformSomeUpserts(t)
