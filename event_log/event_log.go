@@ -28,8 +28,8 @@ type Event struct {
 type Info struct {
 	Description string
 	Caller      trace.Callers `bson:",omitempty"`
-	orderId     string        `bson:",omitempty"`
-	customerId  string        `bson:",omitempty"`
+	OrderId     string        `bson:",omitempty"`
+	CustomerId  string        `bson:",omitempty"`
 }
 
 type EventType string
