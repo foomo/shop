@@ -145,9 +145,8 @@ func Find(query *bson.M, customProvider CustomerCustomProvider) (iter func() (cu
 }
 
 func UpsertCustomer(c *Customer) error {
-	event_log.SaveShopEvent(event_log.ActionTest, nil, nil, "")
-	//log.Println("WhoCalledMe: ", utils.WhoCalledMe())
-	//log.Println("UPSERT CUSTOMER with id", c.GetID())
+	defer event_log.SaveShopEvent(event_log.ActionTest, &event_log.Info{CustomerId: c.GetID()}, nil, "")
+
 	// order is unlinked or not yet inserted in db
 	if c.unlinkDB || c.BsonId == "" {
 		return nil
