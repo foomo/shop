@@ -232,7 +232,7 @@ func (customer *Customer) RemoveAddress(id string) {
 // DiffTwoLatestCustomerVersions compares the two latest Versions of Customer found in version.
 // If openInBrowser, the result is automatically displayed in the default browser.
 func DiffTwoLatestCustomerVersions(customerId string, customProvider CustomerCustomProvider, openInBrowser bool) (string, error) {
-	version, err := GetCurrentVersionOfCustomerFromHistory(customerId)
+	version, err := GetCurrentVersionOfCustomerFromVersionsHistory(customerId)
 	if err != nil {
 		return "", err
 	}

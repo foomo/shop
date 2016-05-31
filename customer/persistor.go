@@ -235,10 +235,10 @@ func GetCustomerById(id string, customProvider CustomerCustomProvider) (*Custome
 func GetCustomerByEmail(email string, customProvider CustomerCustomProvider) (*Customer, error) {
 	return findOneCustomer(&bson.M{"email": email}, nil, "", customProvider, false)
 }
-func GetCurrentCustomerByIdFromHistory(customerId string, customProvider CustomerCustomProvider) (*Customer, error) {
+func GetCurrentCustomerByIdFromVersionsHistory(customerId string, customProvider CustomerCustomProvider) (*Customer, error) {
 	return findOneCustomer(&bson.M{"id": customerId}, nil, "-version.current", customProvider, true)
 }
-func GetCurrentVersionOfCustomerFromHistory(customerId string) (*version.Version, error) {
+func GetCurrentVersionOfCustomerFromVersionsHistory(customerId string) (*version.Version, error) {
 	customer, err := findOneCustomer(&bson.M{"id": customerId}, &bson.M{"version": 1}, "-version.current", nil, true)
 	if err != nil {
 		return nil, err
@@ -257,14 +257,14 @@ func Rollback(customerId string, version int) error {
 	if version >= currentCustomer.GetVersion().Current || version < 0 {
 		return errors.New("Cannot perform rollback to " + strconv.Itoa(version) + " from version " + strconv.Itoa(currentCustomer.GetVersion().Current))
 	}
-	customerFromHistory, err := GetCustomerByVersion(customerId, version, nil)
+	customerFromVersionsHistory, err := GetCustomerByVersion(customerId, version, nil)
 	if err != nil {
 		return err
 	}
 	// Set bsonId from current customer to customer from history to overwrite current customer on next upsert.
-	customerFromHistory.BsonId = currentCustomer.BsonId
-	customerFromHistory.Flags.forceUpsert = true
-	return customerFromHistory.Upsert()
+	customerFromVersionsHistory.BsonId = currentCustomer.BsonId
+	customerFromVersionsHistory.Flags.forceUpsert = true
+	return customerFromVersionsHistory.Upsert()
 
 }
 

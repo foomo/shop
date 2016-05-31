@@ -31,7 +31,7 @@ func TestCustomerGetLatestCustomerFromDb(t *testing.T) {
 	}
 
 	//Check if version number is 3
-	customer, err = GetCurrentCustomerByIdFromHistory(customer.GetID(), nil)
+	customer, err = GetCurrentCustomerByIdFromVersionsHistory(customer.GetID(), nil)
 	if customer.GetVersion().Current != 3 {
 		log.Println("Version is ", customer.GetVersion().Current, "- should have been 3.")
 		t.Fail()
