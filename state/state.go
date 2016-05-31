@@ -83,8 +83,9 @@ func (sm *StateMachine) transitionToState(currentState *State, targetState strin
 	// Get the possible transitions for currentState
 	transitions, ok := sm.Transitions[currentState.Key]
 	if !ok {
-		return currentState, errors.New("No transitions defined for " + targetState)
+		return currentState, errors.New("No transitions defined for " + currentState.Key)
 	}
+
 	// Check if targetState is a possible target state
 	for _, transition := range transitions {
 		if targetState == transition || transition == WILDCARD {
