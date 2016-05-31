@@ -12,7 +12,6 @@ import (
 
 	"gopkg.in/mgo.v2/bson"
 
-	"github.com/foomo/shop/event_log"
 	"github.com/foomo/shop/payment"
 	"github.com/foomo/shop/shipping"
 	"github.com/foomo/shop/state"
@@ -74,8 +73,7 @@ type Order struct {
 		RetryAfter     time.Duration
 		LastProcessing time.Time
 	}
-	History event_log.EventHistory
-	Custom  interface{} `bson:",omitempty"`
+	Custom interface{} `bson:",omitempty"`
 }
 
 type Flags struct {
@@ -147,7 +145,6 @@ func NewOrderWithCustomId(customProvider OrderCustomProvider, orderIdFunc func()
 		LastModifiedAt: utils.TimeNow(),
 		CustomerFreeze: &Freeze{},
 		OrderType:      OrderTypeOrder,
-		History:        event_log.EventHistory{},
 		Positions:      []*Position{},
 		Payment:        &payment.Payment{},
 		PriceInfo:      &OrderPriceInfo{},
@@ -170,8 +167,7 @@ func NewOrderWithCustomId(customProvider OrderCustomProvider, orderIdFunc func()
 // ~ PUBLIC METHODS ON ORDER
 //------------------------------------------------------------------
 
-// Unlinks order from database
-// After unlink, persistent changes on order are no longer possible until it is retrieved again from db.
+// Unlinks order from database. No peristent changes are performed until order is linked again.
 func (order *Order) UnlinkFromDB() {
 	order.unlinkDB = true
 }
@@ -185,6 +181,7 @@ func (order *Order) HasCustomer() bool {
 	return order.CustomerId != ""
 }
 
+// Insert order into database
 func (order *Order) insert() error {
 	return insertOrder(order)
 }
@@ -197,6 +194,9 @@ func (order *Order) UpsertAndGetOrder(customProvider OrderCustomProvider) (*Orde
 func (order *Order) Delete() error {
 	return DeleteOrder(order)
 }
+
+// FreezeCustomer associates the current version of the customer with the order
+// Changes on customer after freeze are no longer considered for this order.
 func (order *Order) FreezeCustomer() error {
 	if order.IsFrozenCustomer() {
 		return errors.New("Customer version has already been frozen! Use UnfreezeCustomer() is necessary")
@@ -226,14 +226,14 @@ func (order *Order) AddPosition(pos *Position) error {
 	existingPos := order.GetPositionByItemId(pos.ItemID)
 	if existingPos != nil {
 		err := errors.New("position already exists use SetPositionQuantity or GetPositionById to manipulate it")
-		order.SaveOrderEvent(ActionAddPosition, err, "Position: "+pos.ItemID)
+		//order.SaveOrderEvent(ActionAddPosition, err, "Position: "+pos.ItemID)
 		return err
 	}
 	order.Positions = append(order.Positions, pos)
 
 	if err := order.Upsert(); err != nil {
-		description := "Could not add position " + pos.ItemID + ".  Upsert failed"
-		order.SaveOrderEvent(ActionAddPosition, err, description)
+		//	description := "Could not add position " + pos.ItemID + ".  Upsert failed"
+		//	order.SaveOrderEvent(ActionAddPosition, err, description)
 		return err
 	}
 
@@ -244,11 +244,11 @@ func (order *Order) SetPositionQuantity(itemID string, quantity float64) error {
 	pos := order.GetPositionByItemId(itemID)
 	if pos == nil {
 		err := fmt.Errorf("position with %q not found in order", itemID)
-		order.SaveOrderEvent(ActionChangeQuantityPosition, err, "Could not set quantity of position "+pos.ItemID+" to "+fmt.Sprint(quantity))
+		//order.SaveOrderEvent(ActionChangeQuantityPosition, err, "Could not set quantity of position "+pos.ItemID+" to "+fmt.Sprint(quantity))
 		return err
 	}
 	pos.Quantity = quantity
-	order.SaveOrderEvent(ActionChangeQuantityPosition, nil, "Set quantity of position "+pos.ItemID+" to "+fmt.Sprint(quantity))
+	//order.SaveOrderEvent(ActionChangeQuantityPosition, nil, "Set quantity of position "+pos.ItemID+" to "+fmt.Sprint(quantity))
 	// remove position if quantity is zero
 	if pos.Quantity == 0.0 {
 		for index := range order.Positions {
@@ -259,7 +259,7 @@ func (order *Order) SetPositionQuantity(itemID string, quantity float64) error {
 		}
 	}
 	if err := order.Upsert(); err != nil {
-		order.SaveOrderEvent(ActionChangeQuantityPosition, err, "Could not update quantity for position "+pos.ItemID+". Upsert failed.")
+		//order.SaveOrderEvent(ActionChangeQuantityPosition, err, "Could not update quantity for position "+pos.ItemID+". Upsert failed.")
 		return err
 	}
 	return nil

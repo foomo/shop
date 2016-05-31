@@ -5,39 +5,44 @@ import (
 	"log"
 	"time"
 
+	"github.com/foomo/shop/debug"
+	"github.com/foomo/shop/trace"
 	"github.com/foomo/shop/utils"
 
 	"gopkg.in/mgo.v2/bson"
 )
 
+//------------------------------------------------------------------
+// ~ PUBLIC TYPES
+//------------------------------------------------------------------
+
 type Event struct {
-	ID             bson.ObjectId `bson:"_id,omitempty"`
-	Type           EventType     // Success or Error. This is not set explicitely but derived from err == nil or err != nil
-	UserFeedBack   bool
-	Action         string
-	OrderID        string
-	PositionItemID string // used only for Actions, where a specific position was involved
-	Description    string
-	Error          string // not type error, because jsonMarshal does not work on error
-	Timestamp      time.Time
+	ID        bson.ObjectId `bson:"_id,omitempty"`
+	Type      EventType     // Success or Error. This is not set explicitely but derived from err == nil or err != nil
+	Action    string
+	Info      *Info
+	Error     string // not type error, because jsonMarshal does not work on error
+	Timestamp time.Time
 }
 
-func NewEvent() *Event {
-	return &Event{
-		Timestamp: utils.TimeNow(),
-	}
+type Info struct {
+	Description string
+	Caller      trace.Callers `bson:",omitempty"`
+	orderId     string        `bson:",omitempty"`
+	customerId  string        `bson:",omitempty"`
 }
 
 type EventType string
 
-const (
-	EventTypeSuccess EventType = "EventSuccess"
-	EventTypeError   EventType = "EventError"
-)
-
 type ActionShop string
 
+//------------------------------------------------------------------
+// ~ CONSTANTS & VARS
+//------------------------------------------------------------------
 const (
+	EventTypeSuccess          EventType  = "EventSuccess"
+	EventTypeError            EventType  = "EventError"
+	ActionTest                ActionShop = "actionTest"
 	ActionCreateOrder         ActionShop = "actionCreateOrder"
 	ActionRetrieveOrder       ActionShop = "actionRetrieveOrder"
 	ActionUpsertingOrder      ActionShop = "actionUpsertOrder"
@@ -55,77 +60,130 @@ const (
 	ActionSendOrder           ActionShop = "actionSendOrder"
 )
 
-// EventHistory is a field of Order
-type EventHistory []*Event
+//------------------------------------------------------------------
+// ~ CONSTRUCTOR
+//------------------------------------------------------------------
 
-func (eh EventHistory) Report() string {
-	jsonBytes, err := json.MarshalIndent(eh, "", "	")
+func NewEvent() *Event {
+	return &Event{
+		Info:      &Info{},
+		Timestamp: utils.TimeNow(),
+	}
+}
+
+//------------------------------------------------------------------
+// ~ PUBLIC METHODS
+//------------------------------------------------------------------
+
+func SaveShopEvent(action ActionShop, info *Info, err error, description string) {
+	debug.Log("Action", string(action))
+	event := NewEvent()
+	if info != nil {
+		event.Info = info
+	}
+
+	event.Info.Caller = trace.WhoCalledMe(4)
 	if err != nil {
-		log.Println("Could not parse json")
-		return ""
+		event.Type = EventTypeError
+		event.Error = err.Error()
+	} else {
+		event.Type = EventTypeSuccess
 	}
-	return string(jsonBytes)
-}
 
-func (eh EventHistory) ReportErrors() string {
-	var result string
-	for _, e := range eh {
-		if e.Type == EventTypeError {
-			jsonBytes, err := json.MarshalIndent(e, "", "	")
-			if err != nil {
-				log.Println("Could not parse json")
-				return ""
-			}
-			result += string(jsonBytes)
+	event.Action = string(action)
+	event.Info.Description = description
+
+	if !saveShopEventDB(event) {
+		jsonBytes, err := json.MarshalIndent(event, "", "	")
+		if err != nil {
+			log.Println("Could not jsonMarshal event")
 		}
+		log.Println("Saving Shop Event failed! ", string(jsonBytes))
 	}
-	return result
+	jsonBytes, _ := json.MarshalIndent(event, "", "	")
+	debug.Log("Saved Shop Event! ", string(jsonBytes))
 }
 
-func Debug(i ...interface{}) {
-	if VERBOSE {
-		log.Println("[DEBUG]", i)
-	}
-}
+//------------------------------------------------------------------
+// ~ Report Methods - no returns, only prints
+//------------------------------------------------------------------
 
-// Print all shop errors in console
-func ReportShopErrors() {
+func Report(query *bson.M) {
 	p := GetEventPersistor()
 
 	event := &Event{}
-	q := p.GetCollection().Find(&bson.M{"type": EventTypeError})
+	q := p.GetCollection().Find(query)
 	iter := q.Iter()
 	var errCount int
 	for iter.Next(event) {
-		errCount++
+		if event.Type == EventTypeError {
+			errCount++
+		}
 		jsonBytes, err := json.MarshalIndent(event, "", "	")
 		if err != nil {
-			panic(err)
+			log.Println(err.Error())
 		}
 		log.Println(string(jsonBytes))
 	}
 	log.Println("Errors:", errCount)
 }
 
-// TODO does not work, errors do not show up
-// Print all Errors on Orders in console
-func ReportOrderErrors() {
-	p := GetEventPersistor()
+// Print all shop events in console
+func ReportShopEvents() {
+	Report(&bson.M{})
+}
 
-	eventHistory := &EventHistory{}
-	q := p.GetCollection().Find(&bson.M{}).Select(bson.M{"eventhistory": true})
-	iter := q.Iter()
-	var errCount int
-	for iter.Next(eventHistory) {
-		if len(*eventHistory) > 0 {
-			errCount++
-			jsonBytes, err := json.MarshalIndent(eventHistory, "", "	")
-			if err != nil {
-				panic(err)
-			}
-			log.Println(string(jsonBytes))
-		}
+// Print all shop error events in console
+func ReportShopErrors() {
+	Report(&bson.M{"type": EventTypeError})
+}
+
+// Print all shop success events in console
+func ReportShopSuccess() {
+	Report(&bson.M{"type": EventTypeSuccess})
+}
+
+func ResetShopEventLog() bool {
+	err := GetEventPersistor().GetCollection().DropCollection()
+	if err != nil {
+		log.Println(err)
+		return false
 	}
-	log.Println("Errors:", errCount)
+	return true
+}
 
+//------------------------------------------------------------------
+// ~ String Methods - get events as formatted string
+//------------------------------------------------------------------
+
+func GetAllShopEventsAsString() string {
+	return GetShopEventsAsString(&bson.M{})
+}
+
+func GetShopErrorsAsString() string {
+	return GetShopEventsAsString(&bson.M{"type": EventTypeError})
+}
+
+func LogShopEvents() {
+	log.Println(GetAllShopEventsAsString())
+}
+
+func LogShopErrors() {
+	log.Println(GetShopErrorsAsString())
+}
+
+func GetShopEventsAsString(query *bson.M) string {
+	p := GetEventPersistor()
+	var result string
+
+	iter := p.GetCollection().Find(query).Iter()
+	event := &Event{}
+	for iter.Next(event) {
+		jsonBytes, err := json.MarshalIndent(event, "", "	")
+		if err != nil {
+			continue
+		}
+		result += string(jsonBytes)
+	}
+	return result
 }

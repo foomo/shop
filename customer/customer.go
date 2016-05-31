@@ -8,7 +8,6 @@ import (
 
 	"gopkg.in/mgo.v2/bson"
 
-	"github.com/foomo/shop/event_log"
 	"github.com/foomo/shop/unique"
 	"github.com/foomo/shop/utils"
 	"github.com/foomo/shop/version"
@@ -60,7 +59,6 @@ type Customer struct {
 	Company        *Company
 	Addresses      []*Address
 	Localization   *Localization
-	History        event_log.EventHistory
 	Custom         interface{}
 }
 

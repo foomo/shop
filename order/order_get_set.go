@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/foomo/shop/customer"
-	"github.com/foomo/shop/event_log"
 	"github.com/foomo/shop/payment"
 	"github.com/foomo/shop/shipping"
 	"github.com/foomo/shop/state"
@@ -54,9 +53,6 @@ func (order *Order) GetAddressShippingId() string {
 	return order.AddressShippingId
 }
 
-func (order *Order) GetHistory() event_log.EventHistory {
-	return order.History
-}
 func (order *Order) GetPayment() *payment.Payment {
 	return order.Payment
 }
