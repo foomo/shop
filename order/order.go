@@ -221,13 +221,8 @@ func (order *Order) IsFrozenCustomer() bool {
 	return !order.CustomerFreeze.Time.IsZero()
 }
 
-// Convenience method for the default case of adding a position with following upsert in db
+// Add Position to Order.
 func (order *Order) AddPosition(pos *Position) error {
-	return order.AddPositionAndUpsert(pos, true)
-}
-
-/* Add Position to Order. Use upsert=false when adding multiple positions. Upsert only once when adding last position for better performacne  */
-func (order *Order) AddPositionAndUpsert(pos *Position, upsert bool) error {
 	existingPos := order.GetPositionByItemId(pos.ItemID)
 	if existingPos != nil {
 		err := errors.New("position already exists use SetPositionQuantity or GetPositionById to manipulate it")
@@ -236,13 +231,12 @@ func (order *Order) AddPositionAndUpsert(pos *Position, upsert bool) error {
 	}
 	order.Positions = append(order.Positions, pos)
 
-	if upsert {
-		if err := order.Upsert(); err != nil {
-			description := "Could not add position " + pos.ItemID + ".  Upsert failed"
-			order.SaveOrderEvent(ActionAddPosition, err, description)
-			return err
-		}
+	if err := order.Upsert(); err != nil {
+		description := "Could not add position " + pos.ItemID + ".  Upsert failed"
+		order.SaveOrderEvent(ActionAddPosition, err, description)
+		return err
 	}
+
 	return nil
 }
 
