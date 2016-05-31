@@ -196,10 +196,10 @@ func GetOrderById(id string, customProvider OrderCustomProvider) (*Order, error)
 	return findOneOrder(&bson.M{"id": id}, nil, "", customProvider, false)
 }
 
-func GetCurrentOrderByIdFromHistory(orderId string, customProvider OrderCustomProvider) (*Order, error) {
+func GetCurrentOrderByIdFromVersionsHistory(orderId string, customProvider OrderCustomProvider) (*Order, error) {
 	return findOneOrder(&bson.M{"id": orderId}, nil, "-version.current", customProvider, true)
 }
-func GetCurrentVersionOfOrderFromHistory(orderId string) (*version.Version, error) {
+func GetCurrentVersionOfOrderFromVersionsHistory(orderId string) (*version.Version, error) {
 	order, err := findOneOrder(&bson.M{"id": orderId}, &bson.M{"version": 1}, "-version.current", nil, true)
 	if err != nil {
 		return nil, err
@@ -218,14 +218,14 @@ func Rollback(orderId string, version int) error {
 	if version >= currentOrder.GetVersion().Current || version < 0 {
 		return errors.New("Cannot perform rollback to " + strconv.Itoa(version) + " from version " + strconv.Itoa(currentOrder.GetVersion().Current))
 	}
-	orderFromHistory, err := GetOrderByVersion(orderId, version, nil)
+	orderFromVersionsHistory, err := GetOrderByVersion(orderId, version, nil)
 	if err != nil {
 		return err
 	}
 	// Set bsonId from current order to order from history to overwrite current order on next upsert.
-	orderFromHistory.BsonId = currentOrder.BsonId
-	orderFromHistory.Flags.forceUpsert = true
-	return orderFromHistory.Upsert()
+	orderFromVersionsHistory.BsonId = currentOrder.BsonId
+	orderFromVersionsHistory.Flags.forceUpsert = true
+	return orderFromVersionsHistory.Upsert()
 
 }
 

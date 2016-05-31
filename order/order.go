@@ -58,6 +58,7 @@ type Order struct {
 	Flags             *Flags
 	State             *state.State
 	CustomerId        string
+	CustomerFreeze    *Freeze
 	AddressBillingId  string
 	AddressShippingId string
 	OrderType         OrderType
@@ -110,6 +111,11 @@ type Position struct {
 	Custom       interface{}
 }
 
+type Freeze struct {
+	Version int
+	Time    time.Time
+}
+
 //------------------------------------------------------------------
 // ~ CONSTRUCTOR
 //------------------------------------------------------------------
@@ -139,6 +145,7 @@ func NewOrderWithCustomId(customProvider OrderCustomProvider, orderIdFunc func()
 		Version:        version.NewVersion(),
 		CreatedAt:      utils.TimeNow(),
 		LastModifiedAt: utils.TimeNow(),
+		CustomerFreeze: &Freeze{},
 		OrderType:      OrderTypeOrder,
 		History:        event_log.EventHistory{},
 		Positions:      []*Position{},
@@ -189,6 +196,29 @@ func (order *Order) UpsertAndGetOrder(customProvider OrderCustomProvider) (*Orde
 }
 func (order *Order) Delete() error {
 	return DeleteOrder(order)
+}
+func (order *Order) FreezeCustomer() error {
+	if order.IsFrozenCustomer() {
+		return errors.New("Customer version has already been frozen! Use UnfreezeCustomer() is necessary")
+	}
+	if !order.HasCustomer() {
+		return errors.New("No customer is associated to this order yet!")
+	}
+	customer, err := order.GetCustomer(nil)
+	if err != nil {
+		return err
+	}
+	order.CustomerFreeze = &Freeze{
+		Version: customer.GetVersion().Current,
+		Time:    utils.TimeNow(),
+	}
+	return nil
+}
+func (order *Order) UnFreezeCustomer() {
+	order.CustomerFreeze = &Freeze{}
+}
+func (order *Order) IsFrozenCustomer() bool {
+	return !order.CustomerFreeze.Time.IsZero()
 }
 
 // Convenience method for the default case of adding a position with following upsert in db
@@ -275,7 +305,7 @@ func (p *Position) GetAmount() float64 {
 // DiffTwoLatestOrderVersions compares the two latest Versions of Order found in version.
 // If openInBrowser, the result is automatically displayed in the default browser.
 func DiffTwoLatestOrderVersions(orderId string, customProvider OrderCustomProvider, openInBrowser bool) (string, error) {
-	version, err := GetCurrentVersionOfOrderFromHistory(orderId)
+	version, err := GetCurrentVersionOfOrderFromVersionsHistory(orderId)
 	if err != nil {
 		return "", err
 	}

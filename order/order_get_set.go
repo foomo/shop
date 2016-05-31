@@ -1,6 +1,7 @@
 package order
 
 import (
+	"errors"
 	"time"
 
 	"github.com/foomo/shop/customer"
@@ -33,9 +34,12 @@ func (order *Order) GetOrderType() OrderType {
 	return order.OrderType
 }
 
-// GetCustomer
-func (order *Order) GetCustomer(customCustomerProvider customer.CustomerCustomProvider) (c *customer.Customer, err error) {
-	return customer.GetCustomerById(order.CustomerId, customCustomerProvider)
+// GetCustomer returns the latest version of the customer or version specified in CustomerFreeze
+func (order *Order) GetCustomer(customProvider customer.CustomerCustomProvider) (c *customer.Customer, err error) {
+	if order.IsFrozenCustomer() {
+		return customer.GetCustomerByVersion(order.CustomerId, order.CustomerFreeze.Version, customProvider)
+	}
+	return customer.GetCustomerById(order.CustomerId, customProvider)
 }
 
 func (order *Order) GetPositions() []*Position {
@@ -129,23 +133,33 @@ func (order *Order) SetPayment(payment *payment.Payment) error {
 	return order.Upsert()
 }
 
-// TODO this does not check if id exists
-func (order *Order) SetAddressShippingId(id string) error {
-	order.AddressShippingId = id
-	return order.Upsert()
-}
 func (order *Order) SetPositions(positions []*Position) error {
 	order.Positions = positions
 	return order.Upsert()
 }
 
 // TODO this does not check if id exists
+func (order *Order) SetAddressShippingId(id string) error {
+	if order.IsFrozenCustomer() {
+		return errors.New("Error: Shipping Address cannot be changed after customer freeze.")
+	}
+	order.AddressShippingId = id
+	return order.Upsert()
+}
+
+// TODO this does not check if id exists
 func (order *Order) SetAddressBillingId(id string) error {
+	if order.IsFrozenCustomer() {
+		return errors.New("Error: Shipping Address cannot be changed after customer freeze.")
+	}
 	order.AddressBillingId = id
 	return order.Upsert()
 }
 
 func (order *Order) SetCustomerId(id string) error {
+	if order.IsFrozenCustomer() {
+		return errors.New("Error: CustomerId cannot be changed after customer freeze.")
+	}
 	order.CustomerId = id
 	return order.Upsert()
 }
