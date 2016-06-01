@@ -114,19 +114,16 @@ func (order *Order) setState(targetState string, force bool) error {
 	if err != nil {
 		return err
 	}
-	var state *state.State
-	//var err error
 
 	if force {
-		state, err = stateMachine.ForceTransitionToState(order.GetState(), targetState)
+		err = stateMachine.ForceTransitionToState(order.GetState(), targetState)
 	} else {
-		state, err = stateMachine.TransitionToState(order.GetState(), targetState)
+		err = stateMachine.TransitionToState(order.GetState(), targetState)
 	}
 
 	if err != nil {
 		return err
 	}
-	order.StateWrapper.State = state
 	return order.Upsert()
 }
 func (order *Order) SetCompleted() error {
