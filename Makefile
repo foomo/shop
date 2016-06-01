@@ -14,6 +14,7 @@ test:
 	go test -run Test $(TEST_PATH)/order
 	go test -run Test $(TEST_PATH)/state
 	go test -run Test $(TEST_PATH)/unique
+	go test -run Test $(TEST_PATH)/shop_error
 testv:
 	clear
 	make clean
@@ -23,4 +24,5 @@ testv:
 	go test -v -run Test $(TEST_PATH)/order
 	go test -v -run Test $(TEST_PATH)/state
 	go test -v -run Test $(TEST_PATH)/unique
+	go test -v -run Test $(TEST_PATH)/shop_error
 
