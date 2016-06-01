@@ -7,10 +7,10 @@ import (
 
 func TestError(t *testing.T) {
 	err := errors.New("not found")
-	if !ErrorIs(err, ErrorNotFound) {
+	if !IsError(err, ErrorNotFound) {
 		t.Fail()
 	}
-	if ErrorIs(err, "ErrorBla") {
+	if IsError(err, "ErrorBla") {
 		t.Fail()
 	}
 }

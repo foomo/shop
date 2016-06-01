@@ -3,6 +3,8 @@ package customer
 import (
 	"log"
 	"testing"
+
+	"github.com/foomo/shop/shop_error"
 )
 
 const (
@@ -121,4 +123,14 @@ func create2CustomersAndPerformSomeUpserts(t *testing.T) (*Customer, *Customer) 
 		t.Fatal(err)
 	}
 	return customer, customer2
+}
+
+// Try to get a customer which is not in the db
+func TestCustomerTryRetrieveNonExistent(t *testing.T) {
+	DropAllCustomersAndCredentials()
+	_, err := GetCustomerByEmail("meNot@existent.com", nil)
+	if !shop_error.IsError(err, shop_error.ErrorNotFound) {
+		t.Fail()
+	}
+	log.Println(err)
 }
