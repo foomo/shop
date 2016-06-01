@@ -116,7 +116,7 @@ func NewCustomer(email, password string, customProvider CustomerCustomProvider) 
 		return nil, err
 	}
 	if !available {
-		return nil, errors.New("Login " + email + " is already taken!")
+		return nil, errors.New("Not available: Login " + email + " is already taken!")
 	}
 
 	err = CreateCustomerCredentials(email, password)
