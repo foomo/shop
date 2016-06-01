@@ -99,6 +99,7 @@ type OrderCustomProvider interface {
 // Position in an order
 type Position struct {
 	ItemID       string
+	StateWrapper *state.StateWrapper
 	Name         string
 	Description  string
 	Quantity     float64
