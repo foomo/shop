@@ -1,4 +1,4 @@
-package error
+package shop_error
 
 import "strings"
 
