@@ -59,36 +59,41 @@ func TestStates(t *testing.T) {
 	log.Println("Current State: ", state.Key)
 
 	// Go to next state
-	state, err := stateMachine.TransitionToState(state, State2)
+	err := stateMachine.TransitionToState(state, State2)
 	if err != nil {
+		log.Println("Error:", err)
 		t.Fatal(err)
 	}
 	log.Println("Current State: ", state.Key)
 	// Go to next state
-	state, err = stateMachine.TransitionToState(state, State3)
+	err = stateMachine.TransitionToState(state, State3)
 	if err != nil {
+		log.Println("Error:", err)
 		t.Fatal(err)
 	}
 	log.Println("Current State: ", state.Key)
 
 	// Go to previous state. This should fail
-	state, err = stateMachine.TransitionToState(state, State2)
+	err = stateMachine.TransitionToState(state, State2)
 	if err == nil {
+		log.Println("Error:", err)
 		t.Fail()
 	}
 	log.Println(err.Error())
 	log.Println("Current State: ", state.Key)
 
 	// Force transition to previous state
-	state, err = stateMachine.ForceTransitionToState(state, State2)
+	err = stateMachine.ForceTransitionToState(state, State2)
 	if err != nil {
+		log.Println("Error:", err)
 		t.Fatal(err)
 	}
 	log.Println("Current State: ", state.Key)
 
 	// Go from state 2 to state 4. This should be possible because of WILDCARD
-	state, err = stateMachine.TransitionToState(state, State4)
+	err = stateMachine.TransitionToState(state, State4)
 	if err != nil {
+		log.Println("Error:", err)
 		t.Fatal(err)
 	}
 	log.Println("Current State: ", state.Key)
