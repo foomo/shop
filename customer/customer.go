@@ -23,15 +23,19 @@ const (
 	ContactTypeEmail         ContactType    = "email"
 	ContactTypeSkype         ContactType    = "skype"
 	ContactTypeFax           ContactType    = "fax"
-	SalutationTypeMr         SalutationType = "Herr"
-	SalutationTypeMrs        SalutationType = "Frau"
+	SalutationTypeMr         SalutationType = "Mr"
+	SalutationTypeMrs        SalutationType = "Mrs"
+	SalutationTypeMrAndMrs   SalutationType = "MrAndMrs"
+	SalutationTypeCompany    SalutationType = "Company" // TODO: find better wording
+	SalutationTypeFamily     SalutationType = "Family"  // TODO: find better wording
 	TitleTypeDr              TitleType      = "Dr"
-	TitleTypeProf            TitleType      = "Prof"
-	TitleTypeProfDr          TitleType      = "ProfDr"
+	TitleTypeProf            TitleType      = "Prof."
+	TitleTypeProfDr          TitleType      = "Prof. Dr."
+	TitleTypePriest          TitleType      = "Priest" // TODO: find better wording
 	CountryCodeGermany       CountryCode    = "DE"
-	CountryCodeSwistzerland  CountryCode    = "CH"
+	CountryCodeSwitzerland   CountryCode    = "CH"
 	LanguageCodeGermany      LanguageCode   = "DE"
-	LanguageCodeSwistzerland LanguageCode   = "CH"
+	LanguageCodeSwitzerland  LanguageCode   = "CH"
 )
 
 //------------------------------------------------------------------
@@ -83,6 +87,7 @@ type Person struct {
 	LastName   string
 	Title      TitleType
 	Salutation SalutationType
+	Birthday   string
 	Contacts   *Contacts
 }
 
@@ -206,7 +211,18 @@ func (customer *Customer) OverrideId(id string) error {
 func (customer *Customer) AddAddress(address *Address) {
 
 	address.Id = unique.GetNewID()
+	// Prevent nil pointer in case we get an incomplete address
+	if address.Person == nil {
+		address.Person = &Person{
+			Contacts: &Contacts{},
+		}
+	}
+
 	customer.Addresses = append(customer.Addresses, address)
+	// Set Address as primary if this is the first added address
+	if address.IsPrimary || len(customer.Addresses) == 1 {
+		customer.SetPrimaryAddress(address.Id)
+	}
 	// Adjust default addresses
 	if address.IsDefaultBillingAddress {
 		customer.SetDefaultBillingAddress(address.Id)
