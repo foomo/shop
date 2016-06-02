@@ -8,6 +8,7 @@ import (
 
 	"gopkg.in/mgo.v2/bson"
 
+	"github.com/foomo/shop/shop_error"
 	"github.com/foomo/shop/unique"
 	"github.com/foomo/shop/utils"
 	"github.com/foomo/shop/version"
@@ -121,7 +122,7 @@ func NewCustomer(email, password string, customProvider CustomerCustomProvider) 
 		return nil, err
 	}
 	if !available {
-		return nil, errors.New("Not available: Login " + email + " is already taken!")
+		return nil, errors.New(shop_error.ErrorNotFound + " Login " + email + " is already taken!")
 	}
 
 	err = CreateCustomerCredentials(email, password)

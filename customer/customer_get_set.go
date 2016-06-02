@@ -4,6 +4,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/foomo/shop/shop_error"
 	"github.com/foomo/shop/utils"
 	"github.com/foomo/shop/version"
 )
@@ -59,13 +60,13 @@ func (customer *Customer) GetAddress(id string) (*Address, error) {
 			return address, nil
 		}
 	}
-	return nil, errors.New("Could not find Address for id: " + id)
+	return nil, errors.New(shop_error.ErrorNotFound + "Could not find Address for id: " + id)
 }
 
 // GetDefaultShippingAddress returns the default shipping address if available, else returns first address
 func (customer *Customer) GetPrimaryAddress() (*Address, error) {
 	if len(customer.Addresses) == 0 {
-		return nil, errors.New("Customer does not have an address")
+		return nil, errors.New(shop_error.ErrorNotFound + " Customer does not have an address")
 	}
 	for _, address := range customer.Addresses {
 		if address.IsPrimary {
@@ -79,7 +80,7 @@ func (customer *Customer) GetPrimaryAddress() (*Address, error) {
 // GetDefaultShippingAddress returns the default shipping address if available, else returns first address
 func (customer *Customer) GetDefaultShippingAddress() (*Address, error) {
 	if len(customer.Addresses) == 0 {
-		return nil, errors.New("Customer does not have an address")
+		return nil, errors.New(shop_error.ErrorNotFound + " Customer does not have an address")
 	}
 	for _, address := range customer.Addresses {
 		if address.IsDefaultShippingAddress {
@@ -92,7 +93,7 @@ func (customer *Customer) GetDefaultShippingAddress() (*Address, error) {
 // GetDefaultBillingAddress returns the default billing address if available, else returns first address
 func (customer *Customer) GetDefaultBillingAddress() (*Address, error) {
 	if len(customer.Addresses) == 0 {
-		return nil, errors.New("Customer does not have an address")
+		return nil, errors.New(shop_error.ErrorNotFound + " Customer does not have an address")
 	}
 	for _, address := range customer.Addresses {
 		if address.IsDefaultBillingAddress {
