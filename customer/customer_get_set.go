@@ -63,29 +63,43 @@ func (customer *Customer) GetAddress(id string) (*Address, error) {
 }
 
 // GetDefaultShippingAddress returns the default shipping address if available, else returns first address
-func (customer *Customer) GetDefaultShippingAddress() *Address {
+func (customer *Customer) GetPrimaryAddress() (*Address, error) {
 	if len(customer.Addresses) == 0 {
-		return nil
+		return nil, errors.New("Customer does not have an address")
+	}
+	for _, address := range customer.Addresses {
+		if address.IsPrimary {
+			return address, nil
+		}
+	}
+	// This case should not appear as first added address is set as primary
+	return customer.Addresses[0], nil
+}
+
+// GetDefaultShippingAddress returns the default shipping address if available, else returns first address
+func (customer *Customer) GetDefaultShippingAddress() (*Address, error) {
+	if len(customer.Addresses) == 0 {
+		return nil, errors.New("Customer does not have an address")
 	}
 	for _, address := range customer.Addresses {
 		if address.IsDefaultShippingAddress {
-			return address
+			return address, nil
 		}
 	}
-	return customer.Addresses[0]
+	return customer.Addresses[0], nil
 }
 
 // GetDefaultBillingAddress returns the default billing address if available, else returns first address
-func (customer *Customer) GetDefaultBillingAddress() *Address {
+func (customer *Customer) GetDefaultBillingAddress() (*Address, error) {
 	if len(customer.Addresses) == 0 {
-		return nil
+		return nil, errors.New("Customer does not have an address")
 	}
 	for _, address := range customer.Addresses {
 		if address.IsDefaultBillingAddress {
-			return address
+			return address, nil
 		}
 	}
-	return customer.Addresses[0]
+	return customer.Addresses[0], nil
 }
 
 // GetPrimaryContact returns primary contact as string
@@ -109,6 +123,16 @@ func (c *Contacts) GetPrimaryContact() string {
 // ~ PUBLIC SETTERS
 //------------------------------------------------------------------
 
+func (customer *Customer) SetPrimaryAddress(id string) error {
+	for _, address := range customer.Addresses {
+		if address.Id == id {
+			address.IsPrimary = true
+		} else {
+			address.IsPrimary = false
+		}
+	}
+	return customer.Upsert()
+}
 func (customer *Customer) SetDefaultShippingAddress(id string) error {
 	for _, address := range customer.Addresses {
 		if address.Id == id {
