@@ -7,7 +7,7 @@ import (
 
 func TestError(t *testing.T) {
 	err := errors.New("not found")
-	if !IsError(err, ErrorNotFound) {
+	if !IsError(err, ErrorNotInDatabase) {
 		t.Fail()
 	}
 	if IsError(err, "ErrorBla") {

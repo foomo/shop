@@ -55,7 +55,7 @@ type Order struct {
 	Version           *version.Version
 	unlinkDB          bool // if true, changes to Customer are not stored in database
 	Flags             *Flags
-	StateWrapper      *state.StateWrapper
+	State             *state.State
 	CustomerId        string
 	CustomerFreeze    *Freeze
 	AddressBillingId  string
@@ -99,7 +99,7 @@ type OrderCustomProvider interface {
 // Position in an order
 type Position struct {
 	ItemID       string
-	StateWrapper *state.StateWrapper
+	State        *state.State
 	Name         string
 	Description  string
 	Quantity     float64
@@ -138,9 +138,6 @@ func NewOrderWithCustomId(customProvider OrderCustomProvider, orderIdFunc func()
 		orderId = unique.GetNewID()
 	}
 	order := &Order{
-		StateWrapper: &state.StateWrapper{
-			StateMachineId: DefaultStateMachine,
-		},
 		Flags:          &Flags{},
 		Id:             orderId,
 		Version:        version.NewVersion(),
@@ -154,18 +151,15 @@ func NewOrderWithCustomId(customProvider OrderCustomProvider, orderIdFunc func()
 		Shipping:       &shipping.ShippingProperties{},
 	}
 
-	stateMachine, err := order.GetStateMachine()
-	if err != nil {
-		return nil, err
-	}
-	order.StateWrapper.State = stateMachine.GetInitialState()
+	// set initial state
+	order.State = DefaultStateMachine.GetInitialState()
 
 	if customProvider != nil {
 		order.Custom = customProvider.NewOrderCustom()
 	}
 
 	// Store order in database
-	err = order.insert()
+	err := order.insert()
 	// Retrieve order again from. (Otherwise upserts on order would fail because of missing mongo ObjectID)
 	order, err = GetOrderById(order.Id, customProvider)
 	return order, err
@@ -301,6 +295,14 @@ func (p *Position) GetAmount() float64 {
 	return p.Price * p.Quantity
 }
 
+func (position *Position) GetState() *state.State {
+	return position.State
+}
+
+func (position *Position) SetInitialState(stateMachine *state.StateMachine) {
+	position.State = stateMachine.GetInitialState()
+}
+
 //------------------------------------------------------------------
 // ~ PUBLIC METHODS
 //------------------------------------------------------------------
@@ -341,10 +343,4 @@ func DiffOrderVersions(orderId string, versionA int, versionB int, customProvide
 		}
 	}
 	return html, err
-}
-
-// add a global State Machine. Don't forget to set the id on the objects that are
-// supposed to use this State Machine
-func AddStateMachine(stateMachineId string, stateMachine *state.StateMachine) {
-	StateMachineMap[stateMachineId] = stateMachine
 }

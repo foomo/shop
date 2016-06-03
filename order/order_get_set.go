@@ -83,49 +83,60 @@ func (order *Order) GetCompletedAtFormatted() string {
 // 	return order.Status
 // }
 func (order *Order) GetState() *state.State {
-	return order.StateWrapper.State
-}
-
-func (order *Order) GetStateMachine() (*state.StateMachine, error) {
-	stateMachine, ok := StateMachineMap[order.StateWrapper.StateMachineId]
-	if !ok {
-		return nil, errors.New("No StateMachine available for id: " + order.StateWrapper.StateMachineId)
-	}
-	return stateMachine, nil
+	return order.State
 }
 
 //------------------------------------------------------------------
 // ~ SIMPLE SETTERS ON ORDER
 //------------------------------------------------------------------
 
-func (order *Order) SetStateMachine(stateMachineId string) error {
-	order.StateWrapper.StateMachineId = stateMachineId
-	return order.Upsert()
+func (order *Order) SetInitialState(stateMachine *state.StateMachine) {
+	order.State = stateMachine.GetInitialState()
 }
 
-func (order *Order) SetState(targetState string) error {
-	return order.setState(targetState, false)
-}
-func (order *Order) ForceState(targetState string) error {
-	return order.setState(targetState, true)
-}
-func (order *Order) setState(targetState string, force bool) error {
-	stateMachine, err := order.GetStateMachine()
-	if err != nil {
-		return err
+// SetState performs the transition to target state
+// If stateMachine is nil, the default state machine is used
+func (order *Order) SetState(stateMachine *state.StateMachine, targetState string) error {
+	if stateMachine == nil {
+		stateMachine = DefaultStateMachine
 	}
-
-	if force {
-		err = stateMachine.ForceTransitionToState(order.GetState(), targetState)
-	} else {
-		err = stateMachine.TransitionToState(order.GetState(), targetState)
-	}
-
+	err := stateMachine.TransitionToState(order.GetState(), targetState)
 	if err != nil {
 		return err
 	}
 	return order.Upsert()
 }
+func (order *Order) ForceState(stateMachine *state.StateMachine, targetState string) error {
+	if stateMachine == nil {
+		stateMachine = DefaultStateMachine
+	}
+	err := stateMachine.ForceTransitionToState(order.GetState(), targetState)
+	if err != nil {
+		return err
+	}
+	return order.Upsert()
+}
+func (order *Order) SetStatePosition(stateMachine *state.StateMachine, targetState string, position *Position) error {
+	if stateMachine == nil {
+		stateMachine = DefaultStateMachine
+	}
+	err := stateMachine.TransitionToState(position.GetState(), targetState)
+	if err != nil {
+		return err
+	}
+	return order.Upsert()
+}
+func (order *Order) ForceStatePosition(stateMachine *state.StateMachine, targetState string, position *Position) error {
+	if stateMachine == nil {
+		stateMachine = DefaultStateMachine
+	}
+	err := stateMachine.ForceTransitionToState(position.GetState(), targetState)
+	if err != nil {
+		return err
+	}
+	return order.Upsert()
+}
+
 func (order *Order) SetCompleted() error {
 	order.CompletedAt = utils.TimeNow()
 	return order.Upsert()

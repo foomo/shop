@@ -9,7 +9,6 @@ const (
 	OrderStatusConfirmed string = "orderStatusConfirmed"
 	OrderStatusComplete  string = "orderStatusComplete"
 	OrderStatusCanceled  string = "orderStatusCanceled"
-	DefaultStateMachine  string = "defaultStateMachine"
 )
 
 var transitions = map[string][]string{
@@ -47,12 +46,8 @@ var blueprints = map[string]state.BluePrint{
 	},
 }
 
-var defaultStateMachine = &state.StateMachine{
+var DefaultStateMachine = &state.StateMachine{
 	InitialState: OrderStatusCreated,
 	Transitions:  transitions,
 	BluePrints:   blueprints,
-}
-
-var StateMachineMap map[string]*state.StateMachine = map[string]*state.StateMachine{
-	DefaultStateMachine: defaultStateMachine,
 }

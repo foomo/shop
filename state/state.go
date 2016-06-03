@@ -48,9 +48,9 @@ type StateMachine struct {
 	BluePrints   map[string]BluePrint
 }
 
-type StateWrapper struct {
-	StateMachineId string // Reference to associated state machine
-	State          *State // Current State
+// Types having a *State field, should implement StateMachineContext
+type StateMachineContext interface {
+	GetStateMachine() *StateMachine
 }
 
 //------------------------------------------------------------------
@@ -84,7 +84,11 @@ func (sm *StateMachine) ForceTransitionToState(currentState *State, targetState 
 // TransitionToState if transition is possible, sets currentState to target state
 // If force, target state is returned whether the transition is possible or not
 func (sm *StateMachine) transitionToState(currentState *State, targetState string, force bool) error {
+
 	if force {
+		if currentState == nil {
+			currentState = sm.GetInitialState() // from InitialState we can force go to any other State
+		}
 		state, err := sm.stateFactory(targetState)
 		if err != nil {
 			return err
@@ -93,10 +97,13 @@ func (sm *StateMachine) transitionToState(currentState *State, targetState strin
 		log.Println("force transitionToState() New current State: ", currentState.Key)
 		return nil
 	}
+	if currentState == nil {
+		return errors.New("StateMachineError: Current State is nil")
+	}
 	// Get the possible transitions for currentState
 	transitions, ok := sm.Transitions[currentState.Key]
 	if !ok {
-		return errors.New("No transitions defined for " + currentState.Key)
+		return errors.New("StateMachineError: No transitions defined for " + currentState.Key)
 	}
 
 	// Check if targetState is a possible target state
@@ -111,7 +118,7 @@ func (sm *StateMachine) transitionToState(currentState *State, targetState strin
 			return nil
 		}
 	}
-	return errors.New("Transition from " + currentState.Key + " to " + targetState + " not possible.")
+	return errors.New("StateMachineError: Transition from " + currentState.Key + " to " + targetState + " not possible.")
 
 }
 
@@ -119,7 +126,7 @@ func (sm *StateMachine) transitionToState(currentState *State, targetState strin
 func (sm *StateMachine) stateFactory(key string) (*State, error) {
 	blueprint, ok := sm.BluePrints[key]
 	if !ok {
-		return nil, errors.New(key + " is not a valid state.")
+		return nil, errors.New("StateMachineError: " + key + " is not a valid state.")
 	}
 
 	return &State{

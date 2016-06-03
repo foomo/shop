@@ -129,7 +129,7 @@ func create2CustomersAndPerformSomeUpserts(t *testing.T) (*Customer, *Customer) 
 func TestCustomerTryRetrieveNonExistent(t *testing.T) {
 	DropAllCustomersAndCredentials()
 	_, err := GetCustomerByEmail("meNot@existent.com", nil)
-	if !shop_error.IsError(err, shop_error.ErrorNotFound) {
+	if !shop_error.IsError(err, shop_error.ErrorNotInDatabase) {
 		t.Fail()
 	}
 	log.Println(err)

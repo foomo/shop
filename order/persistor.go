@@ -106,7 +106,7 @@ func UpsertOrder(o *Order) error {
 		o.Version.Increment()
 	}
 
-	o.StateWrapper.State.SetModified()
+	o.State.SetModified()
 	_, err = p.GetCollection().UpsertId(o.BsonId, o)
 	if err != nil {
 		return err
