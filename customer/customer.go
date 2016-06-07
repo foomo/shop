@@ -115,7 +115,9 @@ type CustomerCustomProvider interface {
 // NewCustomer creates a new Customer in the database and returns it.
 // Email must be unique for a customer. customerProvider may be nil at this point.
 func NewCustomer(email, password string, customProvider CustomerCustomProvider) (*Customer, error) {
-
+	if email == "" || password == "" {
+		return nil, errors.New(shop_error.ErrorRequiredFieldMissing)
+	}
 	// Check is desired Email is available
 	available, err := CheckLoginAvailable(email)
 	if err != nil {
@@ -209,28 +211,54 @@ func (customer *Customer) OverrideId(id string) error {
 	return customer.Upsert()
 }
 
-func (customer *Customer) AddAddress(address *Address) {
+func (customer *Customer) AddAddress(address *Address) error {
+	if address.Person == nil {
+		return errors.New(shop_error.ErrorRequiredFieldMissing)
+	}
 
+	if address.Person.Salutation == "" || address.Person.FirstName == "" || address.Person.LastName == "" || address.Street == "" || address.StreetNumber == "" || address.ZIP == "" || address.City == "" || address.Country == "" {
+		return errors.New(shop_error.ErrorRequiredFieldMissing)
+	}
+
+	// Create a unique id for this address
 	address.Id = unique.GetNewID()
 	// Prevent nil pointer in case we get an incomplete address
 	if address.Person == nil {
 		address.Person = &Person{
 			Contacts: &Contacts{},
 		}
+	} else if address.Person.Contacts == nil {
+		address.Person.Contacts = &Contacts{}
+	}
+
+	// If Person of Customer is still empty and this is the first address
+	// added to the customer, Person of Address is adopted for Customer
+	if len(customer.Addresses) == 0 {
+		*customer.Person = *address.Person
 	}
 
 	customer.Addresses = append(customer.Addresses, address)
 	// Set Address as primary if this is the first added address
 	if address.IsPrimary || len(customer.Addresses) == 1 {
-		customer.SetPrimaryAddress(address.Id)
+		err := customer.SetPrimaryAddress(address.Id)
+		if err != nil {
+			return err
+		}
 	}
 	// Adjust default addresses
 	if address.IsDefaultBillingAddress {
-		customer.SetDefaultBillingAddress(address.Id)
+		err := customer.SetDefaultBillingAddress(address.Id)
+		if err != nil {
+			return err
+		}
 	}
 	if address.IsDefaultShippingAddress {
-		customer.SetDefaultShippingAddress(address.Id)
+		err := customer.SetDefaultShippingAddress(address.Id)
+		if err != nil {
+			return err
+		}
 	}
+	return customer.Upsert()
 }
 func (customer *Customer) RemoveAddress(id string) {
 	for index, address := range customer.Addresses {
