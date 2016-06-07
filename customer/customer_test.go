@@ -92,8 +92,17 @@ func create2CustomersAndPerformSomeUpserts(t *testing.T) (*Customer, *Customer) 
 	customer.Person.LastName = "Bar"
 	err = customer.Upsert()
 	address := &Address{
+		Person: &Person{
+			Salutation: SalutationTypeMr,
+			FirstName:  "Foo",
+			MiddleName: "Bob",
+			LastName:   "Bar",
+		},
 		Street:       "Holzweg",
 		StreetNumber: "5",
+		City:         "Bern",
+		Country:      "CH",
+		ZIP:          "1234",
 	}
 	err = customer.Upsert()
 	// Create a second customer to make the history a little more interesting
@@ -111,7 +120,10 @@ func create2CustomersAndPerformSomeUpserts(t *testing.T) (*Customer, *Customer) 
 		t.Fatal(err)
 	}
 
-	customer.AddAddress(address)
+	err = customer.AddAddress(address)
+	if err != nil {
+		t.Fatal(err)
+	}
 	err = customer.Upsert()
 	if err != nil {
 		t.Fatal(err)
