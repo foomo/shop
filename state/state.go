@@ -48,11 +48,6 @@ type StateMachine struct {
 	BluePrints   map[string]BluePrint
 }
 
-// Types having a *State field, should implement StateMachineContext
-type StateMachineContext interface {
-	GetStateMachine() *StateMachine
-}
-
 //------------------------------------------------------------------
 // ~ PUBLIC METHODS
 //------------------------------------------------------------------
