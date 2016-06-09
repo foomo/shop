@@ -109,7 +109,7 @@ func (sm *StateMachine) transitionToState(currentState *State, targetState strin
 				return err
 			}
 			*currentState = *state
-			log.Println("transitionToState() New current State: ", currentState.Key)
+			log.Println("StateMachine - New current State: ", currentState.Key)
 			return nil
 		}
 	}
