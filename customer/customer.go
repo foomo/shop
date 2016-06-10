@@ -233,7 +233,7 @@ func (customer *Customer) AddAddress(address *Address) error {
 
 	// If Person of Customer is still empty and this is the first address
 	// added to the customer, Person of Address is adopted for Customer
-	if len(customer.Addresses) == 0 {
+	if len(customer.Addresses) == 0 && customer.Person.LastName == "" {
 		*customer.Person = *address.Person
 	}
 
