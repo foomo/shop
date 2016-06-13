@@ -216,6 +216,7 @@ func (customer *Customer) AddAddress(address *Address) error {
 		return errors.New(shop_error.ErrorRequiredFieldMissing)
 	}
 
+	// Return error if required field is missing
 	if address.Person.Salutation == "" || address.Person.FirstName == "" || address.Person.LastName == "" || address.Street == "" || address.StreetNumber == "" || address.ZIP == "" || address.City == "" || address.Country == "" {
 		return errors.New(shop_error.ErrorRequiredFieldMissing)
 	}
@@ -245,14 +246,16 @@ func (customer *Customer) AddAddress(address *Address) error {
 			return err
 		}
 	}
-	// Adjust default addresses
-	if address.IsDefaultBillingAddress {
+
+	// If this is the first added Address, it's set as billing address
+	if address.IsDefaultBillingAddress || len(customer.Addresses) == 1 {
 		err := customer.SetDefaultBillingAddress(address.Id)
 		if err != nil {
 			return err
 		}
 	}
-	if address.IsDefaultShippingAddress {
+	// If this is the first added Address, it's set as shipping address
+	if address.IsDefaultShippingAddress || len(customer.Addresses) == 1 {
 		err := customer.SetDefaultShippingAddress(address.Id)
 		if err != nil {
 			return err
