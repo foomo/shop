@@ -5,6 +5,10 @@ TEST_PATH = github.com/foomo/shop
 
 clean:
 	rm -f customer/diff-*
+cleardbs:
+	clear
+	make clean
+	go test -run TestDropAllCollections $(TEST_PATH)/test_utils
 test:
 	clear
 	make clean
