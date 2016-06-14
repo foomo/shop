@@ -55,6 +55,9 @@ type StateMachine struct {
 func (st *State) SetModified() {
 	st.LastModifiedAt = utils.TimeNow()
 }
+func (st *State) IsState(key string) bool {
+	return st.Key == key
+}
 
 // GetInitialState returns the initial state
 func (sm *StateMachine) GetInitialState() *State {
