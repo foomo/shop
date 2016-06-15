@@ -8,11 +8,12 @@ import (
 
 type Callers []string
 
-func (c Callers) String() {
+func (c Callers) String() string {
 	s := ""
 	for i, caller := range c {
 		s += caller + utils.IteString(i != len(c)-1, "\n", "")
 	}
+	return s
 }
 
 // WhoCalledMe returns a string slice containing all calling functions of the stack trace
