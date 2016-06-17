@@ -39,7 +39,7 @@ type State struct {
 	Description    string
 	CreatedAt      time.Time
 	LastModifiedAt time.Time
-	Finished       bool
+	//Finished       bool
 }
 
 type StateMachine struct {
@@ -96,12 +96,16 @@ func (sm *StateMachine) transitionToState(currentState *State, targetState strin
 		return nil
 	}
 	if currentState == nil {
-		return errors.New("StateMachineError: Current State is nil")
+		e := "StateMachineError: Current State is nil"
+		log.Println("Error:", e)
+		return errors.New(e)
 	}
 	// Get the possible transitions for currentState
 	transitions, ok := sm.Transitions[currentState.Key]
 	if !ok {
-		return errors.New("StateMachineError: No transitions defined for " + currentState.Key)
+		e := "StateMachineError: No transitions defined for " + currentState.Key
+		log.Println("Error:", e)
+		return errors.New(e)
 	}
 
 	// Check if targetState is a possible target state
@@ -116,7 +120,9 @@ func (sm *StateMachine) transitionToState(currentState *State, targetState strin
 			return nil
 		}
 	}
-	return errors.New("StateMachineError: Transition from " + currentState.Key + " to " + targetState + " not possible.")
+	e := "StateMachineError: Transition from " + currentState.Key + " to " + targetState + " not possible."
+	log.Println("Error:", e)
+	return errors.New(e)
 
 }
 
@@ -124,7 +130,9 @@ func (sm *StateMachine) transitionToState(currentState *State, targetState strin
 func (sm *StateMachine) stateFactory(key string) (*State, error) {
 	blueprint, ok := sm.BluePrints[key]
 	if !ok {
-		return nil, errors.New("StateMachineError: " + key + " is not a valid state.")
+		e := "StateMachineError: " + key + " is not a valid state."
+		log.Println("Error:", e)
+		return nil, errors.New(e)
 	}
 
 	return &State{
