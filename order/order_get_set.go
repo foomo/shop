@@ -23,6 +23,16 @@ func (order *Order) GetID() string {
 func (order *Order) GetVersion() *version.Version {
 	return order.Version
 }
+func (order *Order) GetReferenceVersion() int {
+	return order.referenceVersion
+}
+func (order *Order) SetReferenceVersion() error {
+	if order.referenceVersion != 0 {
+		return errors.New("Reference version has already been set and cannot be overridden!")
+	}
+	order.referenceVersion = order.Version.Current
+	return nil
+}
 
 // GetCustomerId
 func (order *Order) GetCustomerId() string {

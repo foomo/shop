@@ -53,6 +53,7 @@ type Order struct {
 	BsonId            bson.ObjectId `bson:"_id,omitempty"`
 	Id                string        // automatically generated unique id
 	Version           *version.Version
+	referenceVersion  int  // Version of final order as it was submitted by customer
 	unlinkDB          bool // if true, changes to Customer are not stored in database
 	Flags             *Flags
 	State             *state.State
