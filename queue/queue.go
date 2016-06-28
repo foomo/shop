@@ -15,8 +15,11 @@ import (
 //------------------------------------------------------------------
 
 type Queue struct {
-	running    bool
-	processors []Processor
+	running                bool
+	processors             []Processor
+	waitGroup              *sync.WaitGroup
+	chanFinished           chan int
+	chanFinishedRegistered bool // true, if GetChanFinished has been called
 }
 
 //------------------------------------------------------------------
@@ -24,12 +27,19 @@ type Queue struct {
 //------------------------------------------------------------------
 
 func NewQueue() *Queue {
-	return &Queue{}
+	return &Queue{
+		chanFinished: make(chan int),
+	}
 }
 
 //------------------------------------------------------------------
 // ~ PUBLIC METHODS
 //------------------------------------------------------------------
+
+func (q *Queue) getChanFinished() chan int {
+	q.chanFinishedRegistered = true
+	return q.chanFinished
+}
 
 // AddProcessor Add a processor to the queue. Do not add multiple processors for the same task!
 func (q *Queue) AddProcessor(processor Processor) {
@@ -48,7 +58,8 @@ func (q *Queue) IsRunning() bool {
 	return q.running
 }
 
-// ScheduleStart continuously tries to run all available processors after interval until ScheduleStop has been called.
+// Start continuously tries to run all available processors until all assigned jobs have been cpmpleted or
+// Stop() has been called.
 // As long as there is only one processor per kind (Status, Payment, ...), there should be no race conditions
 func (q *Queue) Start() error {
 	log.Println("Queue: Schedule Start")
@@ -56,27 +67,40 @@ func (q *Queue) Start() error {
 		return errors.New("Did not start Queue. It's already running!")
 	}
 	q.running = true
-	waitGroup := &sync.WaitGroup{}
+	q.waitGroup = &sync.WaitGroup{}
 	for _, proc := range q.processors {
-		waitGroup.Add(1)
-		go schedule(proc, waitGroup)
+		q.waitGroup.Add(1)
+		go schedule(proc, q.waitGroup)
 	}
-	waitGroup.Wait()
+	q.waitGroup.Wait()
 	q.running = false
+	// for _, proc := range q.processors {
+	// 	proc.ResetStop()
+	// }
 	fmt.Println("")
 	fmt.Println("*****------------------------------------****")
 	for _, proc := range q.processors {
 		proc.Report()
 	}
+	for _, proc := range q.processors {
+		proc.Reset()
+	}
 	fmt.Println("*****------------------------------------****")
+	if q.chanFinishedRegistered { // if true, we suppose that some is listening to the channel. Because otherwise we would block here forever!
+		q.chanFinished <- 1
+		q.chanFinishedRegistered = false
+	}
 	return nil
 }
 
 func (q *Queue) Stop() {
 	log.Println("Queue: Schedule Stop")
+	chanQueueFinished := q.getChanFinished()
 	for _, proc := range q.processors {
 		proc.Stop()
 	}
+	<-chanQueueFinished
+
 }
 
 //------------------------------------------------------------------

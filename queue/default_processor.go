@@ -44,8 +44,10 @@ type Processor interface {
 	GetProcessingTime() time.Duration
 	GetTimePerJob() time.Duration
 	Stop()
+	//	ResetStop()
 	GetStop() bool
 	Report()
+	Reset()
 }
 
 //------------------------------------------------------------------
@@ -88,10 +90,9 @@ func NewDefaultProcessor(id string) *DefaultProcessor {
 		mutex:          &sync.Mutex{},
 		chanRun:        make(chan bool),
 		chanExit:       make(chan int),
-		maxConcurrency: 12,
+		maxConcurrency: 16,
 		ProcessingFunc: func(interface{}) error {
-			// dummy function to avoid nil pointers
-			log.Println("No processing done here... Specify a ProcessingFunc!")
+			log.Println("Nothing happening here... Specify a ProcessingFunc!")
 			return nil
 		},
 	}
@@ -123,13 +124,11 @@ func (proc *DefaultProcessor) IncRunningJobs() {
 	proc.RunningJobs = proc.RunningJobs + 1
 	proc.SetMaxUsedConcurrency(proc.RunningJobs)
 	proc.mutex.Unlock()
-	//log.Println("Inc Jobs. Running:", proc.GetRunningJobs(), " -- ", proc.GetId())
 }
 func (proc *DefaultProcessor) DecRunningJobs() {
 	proc.mutex.Lock()
 	proc.RunningJobs = proc.RunningJobs - 1
 	proc.mutex.Unlock()
-	//log.Println("Dec Jobs. Running:", proc.GetRunningJobs(), " -- ", proc.GetId())
 }
 func (proc *DefaultProcessor) GetId() string {
 	return proc.Id
@@ -187,7 +186,6 @@ func (proc *DefaultProcessor) IncCountProcessed() {
 	proc.mutex.Lock()
 	proc.CountProcessed = proc.CountProcessed + 1
 	proc.mutex.Unlock()
-	//log.Println("Count Processed:", proc.GetCountProcessed())
 }
 
 func (proc *DefaultProcessor) GetMaxUsedConcurrency() int {
@@ -215,11 +213,23 @@ func (proc *DefaultProcessor) GetStop() bool {
 	return proc.stop
 }
 
+// func (proc *DefaultProcessor) ResetStop() {
+// 	proc.stop = false
+// }
+
 func (proc *DefaultProcessor) GetProcessingTime() time.Duration {
 	return time.Duration(proc.endTimeProcessing - proc.startTimeProcessing)
 }
 func (proc *DefaultProcessor) GetTimePerJob() time.Duration {
 	return time.Duration(int64(float64(proc.GetProcessingTime()) / float64(proc.GetCountProcessed())))
+}
+
+func (proc *DefaultProcessor) Reset() {
+	proc.SetWaitGroupFinished(false)
+	proc.chanRun = make(chan bool)
+	proc.chanExit = make(chan int)
+	proc.isRunning = false
+	proc.stop = false
 }
 
 // Find returns an iterator for all entries found matching on query.
