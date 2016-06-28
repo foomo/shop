@@ -1,11 +1,12 @@
-// Package process handles the processing of orders as they change their status
 package queue
 
-import (
-	"log"
+// Package process handles the processing of Datas as they change their status
 
-	"github.com/foomo/shop/order"
-	"github.com/foomo/shop/persistence"
+import (
+	"fmt"
+	"log"
+	"sync"
+	"time"
 )
 
 //------------------------------------------------------------------
@@ -13,98 +14,203 @@ import (
 //------------------------------------------------------------------
 
 type Queue struct {
-	persistor      *persistence.Persistor
-	processors     []order.Processor
-	bulkProcessors []order.BulkProcessor
+	run        bool
+	processors []Processor
 }
 
 //------------------------------------------------------------------
 // ~ PUBLIC METHODS
 //------------------------------------------------------------------
 
-func NewQueue(mongoURL string) (q *Queue, err error) {
-	log.Println("NewQueue()...")
-	return &Queue{
-		persistor: order.GetOrderPersistor(),
-	}, nil
+func NewQueue() (q *Queue, err error) {
+	return &Queue{}, nil
 }
 
-func (q *Queue) AddProcessor(processor order.Processor) {
-	q.processors = append(q.processors, processor)
+// ScheduleStart continuously tries to run all available processors after interval until ScheduleStop has been called.
+// As long as there is only one processor per kind (Status, Payment, ...), there should be no race conditions
+func (q *Queue) ScheduleStart() error {
+	log.Println("Queue: Schedule Start")
+	waitGroup := &sync.WaitGroup{}
+	for _, proc := range q.processors {
+		waitGroup.Add(1)
+		go schedule(proc, waitGroup)
+	}
+	waitGroup.Wait()
+	fmt.Println("")
+	fmt.Println("*****------------------------------------****")
+	for _, proc := range q.processors {
+		proc.Report()
+	}
+	fmt.Println("*****------------------------------------****")
+	return nil
 }
 
-func (q *Queue) AddBulkProcessor(processor order.BulkProcessor) {
-	q.bulkProcessors = append(q.bulkProcessors, processor)
+func (q *Queue) ScheduleStop() {
+	log.Println("Queue: Schedule Stop")
+	for _, proc := range q.processors {
+		proc.Stop()
+	}
 }
 
-func (q *Queue) RunProcessor(processor order.Processor) error {
-	chanDone := make(chan int)
-	chanOrder := make(chan *order.Order)
+func schedule(proc Processor, waitGroup *sync.WaitGroup) {
+	chanStart := make(chan int)
+	chanStop := make(chan int) // this is called by ScheduleStop()
+
 	go func() {
-		i := 0
-		running := 0
-		done := false
-		chanDoneProcessing := make(chan int)
-		var waitingOrder *order.Order
-		process := func(o *order.Order) {
-			running++
-			go func() {
-				processor.Process(o)
-				chanDoneProcessing <- 1
-			}()
-			//	log.Println("yeah, let us do this concurrently", o.ID, running)
-
-		}
-
-		for !done || running > 0 {
+		for {
 			select {
-			case o := <-chanOrder:
-				if running < processor.Concurrency() {
-					process(o)
-					chanOrder <- nil
-
+			case <-proc.GetChanExit():
+				if proc.GetCountProcessed() < proc.GetJobsAssigned() && !proc.GetStop() {
+					time.Sleep(100 * time.Millisecond) // wait a moment and try again
+					chanStart <- 1
 				} else {
-					waitingOrder = o
-					//			log.Println("sorry you have to wait")
+					chanStop <- 1
 				}
-			case <-chanDoneProcessing:
-				i++
-				running--
-				if waitingOrder != nil {
-					process(waitingOrder)
-					waitingOrder = nil
-					chanOrder <- nil
-				}
-			case <-chanDone:
-				done = true
 			}
 		}
-		//log.Println("exiting with", running, i)
-		chanDone <- 1
 	}()
 
-	iter, err := order.Find(processor.GetQuery(), processor.OrderCustomProvider())
+	go func() {
+		for {
+			select {
+			case <-chanStart:
+				log.Println("Started Processor:", proc.GetId())
+				RunProcessor(proc)
+			}
+		}
+	}()
+
+	go func() {
+		for {
+			select {
+			// Initially start processor or stop processing completely
+			case run := <-proc.GetChanRun():
+				if run {
+					chanStart <- 1
+				} else {
+					chanStop <- 1
+				}
+			}
+		}
+	}()
+	proc.GetChanRun() <- true
+	<-chanStop
+	waitGroup.Done()
+	log.Println("Exiting schedule:", proc.GetId())
+
+}
+
+// Adds a processor to the queue. Do not add multiple processors for the same task!
+func (q *Queue) AddProcessor(processor Processor) {
+	q.processors = append(q.processors, processor)
+	log.Println("Added Processor to queue. New length: ", len(q.processors))
+	for _, p := range q.processors {
+		fmt.Println("\t", p.GetId())
+	}
+}
+
+func (q *Queue) GetProcessors() []Processor {
+	return q.processors
+}
+
+func RunProcessor(processor Processor) error {
+	processor.SetStartTimeProcessing(time.Now().UnixNano())
+	chanDone := make(chan int)
+	chanReady := make(chan interface{})
+	chanCheckRunning := make(chan int)
+	chanGoCheckRunning := make(chan int)
+
+	iter, err := processor.Find(processor.GetQuery(), processor.GetPersistor())
 	if err != nil {
+		log.Println(err)
+		processor.GetChanExit() <- 1 // this will be received in schedule() and stop the processor
 		return err
 	}
+	go func() {
+		for {
+			select {
+			case data := <-chanReady:
+				//log.Println("** chanReady", processor.GetId())
+				f := func(data interface{}) {
+					err := processor.Process(data)
+					if err != nil {
+						log.Println(err)
+					}
+					processor.IncCountProcessed()
+					processor.DecRunningJobs()
+					processor.GetWaitGroup().Done()
+				}
 
-	for {
-		order, err := iter()
-		if err != nil {
-			log.Println("could not get order", err)
+				go f(data)
+				chanCheckRunning <- 1
+
+			}
 		}
-		if order != nil {
-			// send to concurrent processing
-			chanOrder <- order
-			// wait unit we are done
-			<-chanOrder
-		} else {
-			break
+	}()
+
+	go func() {
+		for {
+			select {
+			case <-chanDone:
+				// Wait for jobs to finsish and exit
+				//log.Println("** chanDone", processor.GetId())
+				processor.GetWaitGroup().Wait()
+				processor.SetWaitGroupFinished(true)
+				processor.GetChanExit() <- 1
+				processor.SetEndTimeProcessing(time.Now().UnixNano())
+
+			case <-chanGoCheckRunning:
+				//log.Println("** goCheckRunning", processor.GetId())
+				chanCheckRunning <- 1
+			}
 		}
 
-	}
-	log.Println("done feeding order")
-	chanDone <- 1
-	<-chanDone
+	}()
+	go func() {
+		run := true
+	Loop:
+		for run {
+			select {
+			case <-chanCheckRunning:
+				if processor.GetStop() {
+					chanDone <- 1
+					run = false
+					break Loop
+				}
+				//log.Println("** chanCheckRunning", processor.GetId())
+				if processor.GetJobsStarted() >= processor.GetJobsAssigned() { // We are done
+					//	log.Println("** goChanDone :: JobsAssignedProcessed", processor.GetId())
+					chanDone <- 1
+					break Loop
+				} else if processor.GetRunningJobs() >= processor.GetMaxConcurrency() { // Wait for better times
+
+					//	log.Println("** wait", processor.GetId())
+					chanGoCheckRunning <- 1
+				} else {
+					if processor.GetJobsStarted() < processor.GetJobsAssigned() {
+						data, err := iter()
+
+						if err != nil {
+							log.Println("Error: Could not get data", err)
+							chanDone <- 1
+							break
+						}
+						if data != nil {
+							processor.GetWaitGroup().Add(1)
+							processor.IncJobsStarted()
+							processor.IncRunningJobs() // We count here also, because we cannot access current number of jobs through waitgroup
+							chanReady <- data
+						} else {
+							log.Println("data is nil", err)
+							chanDone <- 1
+							break Loop
+						}
+					}
+				}
+
+			}
+		}
+	}()
+	chanCheckRunning <- 1 // Start loop
 	return nil
 }

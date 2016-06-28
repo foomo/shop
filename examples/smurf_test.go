@@ -6,20 +6,19 @@ import (
 	"log"
 	"reflect"
 	"testing"
-	"time"
 
 	"gopkg.in/mgo.v2/bson"
 
 	"github.com/foomo/shop/examples"
 	"github.com/foomo/shop/mock"
 	"github.com/foomo/shop/order"
+	"github.com/foomo/shop/queue"
 	"github.com/foomo/shop/test_utils"
 )
 
 func TestSmurfProcessor(t *testing.T) {
 	//log.Println("runtime.GOMAXPROCS(16)", runtime.GOMAXPROCS(16))
 	test_utils.DropAllCollections()
-	q := mock.GetMockQueue()
 
 	const (
 		pete = "pete"
@@ -27,7 +26,6 @@ func TestSmurfProcessor(t *testing.T) {
 	)
 
 	// add some products in status a
-
 	smurfOrders := map[string]int{
 		pete: 1000,
 		joe:  2000,
@@ -47,31 +45,23 @@ func TestSmurfProcessor(t *testing.T) {
 
 	log.Println("done writing orders")
 
-	start := time.Now()
+	maxConcurrency := 16
+	queue, _ := queue.NewQueue()
+	joeProcessor := examples.NewSmurfProcessor()
+	joeProcessor.SetQuery(&bson.M{"custom.responsiblesmurf": joe})
+	joeProcessor.SetMaxConcurrency(maxConcurrency)
+	joeProcessor.SetJobsAssigned(smurfOrders[joe])
+	peteProcessor := examples.NewSmurfProcessor()
+	peteProcessor.SetQuery(&bson.M{"custom.responsiblesmurf": pete})
+	peteProcessor.SetMaxConcurrency(maxConcurrency)
+	peteProcessor.SetJobsAssigned(smurfOrders[pete])
+	queue.AddProcessor(joeProcessor)
+	queue.AddProcessor(peteProcessor)
 
-	joeProcessor := examples.NewSmurfProcessor(joe)
-	peteProcessor := examples.NewSmurfProcessor(pete)
-
-	chanDone := make(chan string)
-
-	a := func() {
-		q.RunProcessor(peteProcessor)
-		chanDone <- "pete"
-	}
-
-	b := func() {
-		q.RunProcessor(joeProcessor)
-		chanDone <- "joe"
-	}
-	go a()
-	go b()
-	log.Println(<-chanDone)
-	log.Println(<-chanDone)
-	log.Println(time.Now().Sub(start))
-	log.Println("done processing")
+	queue.ScheduleStart()
 
 	fmt.Println("number of orders:", numberOfOrders, ", processed by joe:", joeProcessor.CountProcessed, ", processed by pete:", peteProcessor.CountProcessed)
-	// Output: number of orders: 300 , processed by joe: 200 , processed by pete: 100
+	// Output: number of orders: 300 , processed by joe: 2000 , processed by pete: 1000
 	if numberOfOrders != smurfOrders["pete"]+smurfOrders["joe"] || joeProcessor.CountProcessed != smurfOrders["joe"] || peteProcessor.CountProcessed != smurfOrders["pete"] {
 		t.Fatal("number of orders:", numberOfOrders, ", processed by joe:", joeProcessor.CountProcessed, ", processed by pete:", peteProcessor.CountProcessed)
 	}

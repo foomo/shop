@@ -2,10 +2,12 @@
 package examples
 
 import (
-	"log"
 	"time"
 
+	"git.bestbytes.net/Project-Globus-Services/utils"
 	"github.com/foomo/shop/order"
+	"github.com/foomo/shop/queue"
+
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -36,39 +38,36 @@ type SmurfProcessor struct {
 	chanCount      chan int
 }
 
-func NewSmurfProcessor(name string) *SmurfProcessor {
-	sp := &SmurfProcessor{
-		Smurf:     name,
-		chanCount: make(chan int),
-	}
-	go func() {
-		for {
-			select {
-			case addCount := <-sp.chanCount:
-				sp.CountProcessed += addCount
-				if sp.CountProcessed%100 == 0 {
-					log.Println(sp.Smurf, sp.CountProcessed)
-				}
-			}
-		}
-	}()
-	return sp
+//------------------------------------------------------------------
+// ~ CONSTANTS & VARS
+//------------------------------------------------------------------
+
+var processorIdSmurf int = 0
+
+//------------------------------------------------------------------
+// ~ CONSTRUCTORS
+//------------------------------------------------------------------
+func NewSmurfProcessor() *queue.DefaultProcessor {
+	name := "SmurfProcessor " + utils.IntToString(processorIdSmurf)
+	processorIdSmurf++
+	proc := queue.NewDefaultProcessor(name)
+	proc.ProcessingFunc = processingFunc
+	proc.GetDataWrapper = newOrder
+	proc.Persistor = order.GetOrderPersistor()
+
+	return proc
 }
 
-func (sp *SmurfProcessor) GetQuery() *bson.M {
-	return &bson.M{"custom.responsiblesmurf": sp.Smurf}
+func newOrder() interface{} {
+	return &order.Order{}
 }
 
-func (sp *SmurfProcessor) SetQuery(query *bson.M) {
-	sp.query = query
-}
-
-func (sp *SmurfProcessor) Process(o *order.Order) error {
-	sp.chanCount <- 1
+func processingFunc(v interface{}) error {
+	//data, ok := v.(*order.Order)
+	// DO SOMETHING WITH data
 	time.Sleep(time.Millisecond * 20)
 	return nil
 }
-
 func (sp *SmurfProcessor) Concurrency() int {
 	return 12
 }

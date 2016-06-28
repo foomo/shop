@@ -25,7 +25,7 @@ func MockMongoURL() string {
 }
 
 func GetMockQueue() *queue.Queue {
-	q, err := queue.NewQueue(MockMongoURL())
+	q, err := queue.NewQueue()
 	if err != nil {
 		panic(err)
 	}
