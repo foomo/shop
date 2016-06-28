@@ -58,6 +58,10 @@ func NewSmurfProcessor() *queue.DefaultProcessor {
 	return proc
 }
 
+//------------------------------------------------------------------
+// ~ PRIVATE METHODS
+//------------------------------------------------------------------
+
 func newOrder() interface{} {
 	return &order.Order{}
 }
@@ -68,6 +72,11 @@ func processingFunc(v interface{}) error {
 	time.Sleep(time.Millisecond * 20)
 	return nil
 }
+
+//------------------------------------------------------------------
+// ~ PUBLIC METHODS
+//------------------------------------------------------------------
+
 func (sp *SmurfProcessor) Concurrency() int {
 	return 12
 }

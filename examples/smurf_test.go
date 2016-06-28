@@ -46,7 +46,7 @@ func TestSmurfProcessor(t *testing.T) {
 	log.Println("done writing orders")
 
 	maxConcurrency := 16
-	queue, _ := queue.NewQueue()
+	queue := queue.NewQueue()
 	joeProcessor := examples.NewSmurfProcessor()
 	joeProcessor.SetQuery(&bson.M{"custom.responsiblesmurf": joe})
 	joeProcessor.SetMaxConcurrency(maxConcurrency)
@@ -58,7 +58,7 @@ func TestSmurfProcessor(t *testing.T) {
 	queue.AddProcessor(joeProcessor)
 	queue.AddProcessor(peteProcessor)
 
-	queue.ScheduleStart()
+	queue.Start()
 
 	fmt.Println("number of orders:", numberOfOrders, ", processed by joe:", joeProcessor.CountProcessed, ", processed by pete:", peteProcessor.CountProcessed)
 	// Output: number of orders: 300 , processed by joe: 2000 , processed by pete: 1000

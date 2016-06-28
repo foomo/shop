@@ -3,6 +3,7 @@ package queue
 // Package process handles the processing of Datas as they change their status
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"sync"
@@ -14,28 +15,54 @@ import (
 //------------------------------------------------------------------
 
 type Queue struct {
-	run        bool
+	running    bool
 	processors []Processor
+}
+
+//------------------------------------------------------------------
+// ~ CONSTRUCTORS
+//------------------------------------------------------------------
+
+func NewQueue() *Queue {
+	return &Queue{}
 }
 
 //------------------------------------------------------------------
 // ~ PUBLIC METHODS
 //------------------------------------------------------------------
 
-func NewQueue() (q *Queue, err error) {
-	return &Queue{}, nil
+// AddProcessor Add a processor to the queue. Do not add multiple processors for the same task!
+func (q *Queue) AddProcessor(processor Processor) {
+	q.processors = append(q.processors, processor)
+	log.Println("Added Processor to queue. New length: ", len(q.processors))
+	for _, p := range q.processors {
+		fmt.Println("\t", p.GetId())
+	}
+}
+
+func (q *Queue) GetProcessors() []Processor {
+	return q.processors
+}
+
+func (q *Queue) IsRunning() bool {
+	return q.running
 }
 
 // ScheduleStart continuously tries to run all available processors after interval until ScheduleStop has been called.
 // As long as there is only one processor per kind (Status, Payment, ...), there should be no race conditions
-func (q *Queue) ScheduleStart() error {
+func (q *Queue) Start() error {
 	log.Println("Queue: Schedule Start")
+	if q.IsRunning() {
+		return errors.New("Did not start Queue. It's already running!")
+	}
+	q.running = true
 	waitGroup := &sync.WaitGroup{}
 	for _, proc := range q.processors {
 		waitGroup.Add(1)
 		go schedule(proc, waitGroup)
 	}
 	waitGroup.Wait()
+	q.running = false
 	fmt.Println("")
 	fmt.Println("*****------------------------------------****")
 	for _, proc := range q.processors {
@@ -45,12 +72,16 @@ func (q *Queue) ScheduleStart() error {
 	return nil
 }
 
-func (q *Queue) ScheduleStop() {
+func (q *Queue) Stop() {
 	log.Println("Queue: Schedule Stop")
 	for _, proc := range q.processors {
 		proc.Stop()
 	}
 }
+
+//------------------------------------------------------------------
+// ~ PRIVATE METHODS
+//------------------------------------------------------------------
 
 func schedule(proc Processor, waitGroup *sync.WaitGroup) {
 	chanStart := make(chan int)
@@ -75,7 +106,7 @@ func schedule(proc Processor, waitGroup *sync.WaitGroup) {
 			select {
 			case <-chanStart:
 				log.Println("Started Processor:", proc.GetId())
-				RunProcessor(proc)
+				runProcessor(proc)
 			}
 		}
 	}()
@@ -100,20 +131,7 @@ func schedule(proc Processor, waitGroup *sync.WaitGroup) {
 
 }
 
-// Adds a processor to the queue. Do not add multiple processors for the same task!
-func (q *Queue) AddProcessor(processor Processor) {
-	q.processors = append(q.processors, processor)
-	log.Println("Added Processor to queue. New length: ", len(q.processors))
-	for _, p := range q.processors {
-		fmt.Println("\t", p.GetId())
-	}
-}
-
-func (q *Queue) GetProcessors() []Processor {
-	return q.processors
-}
-
-func RunProcessor(processor Processor) error {
+func runProcessor(processor Processor) error {
 	processor.SetStartTimeProcessing(time.Now().UnixNano())
 	chanDone := make(chan int)
 	chanReady := make(chan interface{})
