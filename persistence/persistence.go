@@ -64,3 +64,9 @@ func (p *Persistor) GetCollectionName() string {
 func (p *Persistor) GetURL() string {
 	return p.url
 }
+func (p *Persistor) LockDb() error {
+	return p.session.FsyncLock()
+}
+func (p *Persistor) UnlockDb() error {
+	return p.session.FsyncUnlock()
+}
