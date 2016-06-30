@@ -96,9 +96,8 @@ func (sm *StateMachine) transitionToState(currentState *State, targetState strin
 		return nil
 	}
 	if currentState == nil {
-		e := "StateMachineError: Current State is nil"
-		log.Println("Error:", e)
-		return errors.New(e)
+		currentState = sm.GetInitialState()
+		log.Println("Warning: State was nil. Set initial State.")
 	}
 	// Get the possible transitions for currentState
 	transitions, ok := sm.Transitions[currentState.Key]
