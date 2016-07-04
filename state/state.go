@@ -103,7 +103,7 @@ func (sm *StateMachine) transitionToState(currentState *State, targetState strin
 	transitions, ok := sm.Transitions[currentState.Key]
 	if !ok {
 		e := "StateMachineError: No transitions defined for " + currentState.Key
-		log.Println("Error:", e)
+		log.Println("Warning:", e)
 		return errors.New(e)
 	}
 
