@@ -25,18 +25,21 @@ import (
 //------------------------------------------------------------------
 
 const (
-	ActionStatusUpdateHead       ActionOrder = "actionStatusUpdateHead"
-	ActionStatusUpdatePosition   ActionOrder = "actionStatusUpdatePosition"
-	ActionNoATPResponseForItemID ActionOrder = "actionNoATPResponseForItemID"
-	ActionValidateStatusHead     ActionOrder = "actionValidateStatusHead"
-	ActionValidateStatusPosition ActionOrder = "actionValidateStatusPosition"
-	ActionAddPosition            ActionOrder = "actionAddPosition"
-	ActionRemovePosition         ActionOrder = "actionRemovePosition"
-	ActionChangeQuantityPosition ActionOrder = "actionChangeQuantityPosition"
-	ActionCreateCustomOrder      ActionOrder = "actionCreateCustomOrder"
-	ActionValidation             ActionOrder = "actionValidation"
-	OrderTypeOrder               OrderType   = "order"
-	OrderTypeReturn              OrderType   = "return"
+	ActionStatusUpdateHead       ActionOrder  = "actionStatusUpdateHead"
+	ActionStatusUpdatePosition   ActionOrder  = "actionStatusUpdatePosition"
+	ActionNoATPResponseForItemID ActionOrder  = "actionNoATPResponseForItemID"
+	ActionValidateStatusHead     ActionOrder  = "actionValidateStatusHead"
+	ActionValidateStatusPosition ActionOrder  = "actionValidateStatusPosition"
+	ActionAddPosition            ActionOrder  = "actionAddPosition"
+	ActionRemovePosition         ActionOrder  = "actionRemovePosition"
+	ActionChangeQuantityPosition ActionOrder  = "actionChangeQuantityPosition"
+	ActionCreateCustomOrder      ActionOrder  = "actionCreateCustomOrder"
+	ActionValidation             ActionOrder  = "actionValidation"
+	OrderTypeOrder               OrderType    = "order"
+	OrderTypeReturn              OrderType    = "return"
+	LanguageCodeGerman           LanguageCode = "DE"
+	LanguageCodeFrench           LanguageCode = "FR"
+	LanguageCodeItalian          LanguageCode = "IT"
 )
 
 //------------------------------------------------------------------
@@ -46,6 +49,7 @@ const (
 type ActionOrder string
 type OrderType string
 type OrderStatus string
+type LanguageCode string
 
 // Order of item
 // create revisions
@@ -69,11 +73,8 @@ type Order struct {
 	Payment           *payment.Payment
 	PriceInfo         *OrderPriceInfo
 	Shipping          *shipping.ShippingProperties
-	queue             *struct {
-		Name           string
-		RetryAfter     time.Duration
-		LastProcessing time.Time
-	}
+	LanguageCode      LanguageCode
+
 	Custom interface{} `bson:",omitempty"`
 }
 
@@ -229,19 +230,41 @@ func (order *Order) IsFrozenCustomer() bool {
 func (order *Order) AddPosition(pos *Position) error {
 	existingPos := order.GetPositionByItemId(pos.ItemID)
 	if existingPos != nil {
-		err := errors.New("position already exists use SetPositionQuantity or GetPositionById to manipulate it")
+		return order.SetPositionQuantity(pos.ItemID, pos.Quantity+1)
+		//err := errors.New("position already exists use SetPositionQuantity or GetPositionById to manipulate it")
 		//order.SaveOrderEvent(ActionAddPosition, err, "Position: "+pos.ItemID)
-		return err
 	}
 	order.Positions = append(order.Positions, pos)
 
-	if err := order.Upsert(); err != nil {
-		//	description := "Could not add position " + pos.ItemID + ".  Upsert failed"
-		//	order.SaveOrderEvent(ActionAddPosition, err, description)
+	return order.Upsert()
+}
+
+// ReplacePosition replaces the itemId of a position, e.g. if article is desired with a different size or color. Quantity is preserved.
+func (order *Order) ReplacePosition(itemIdCurrent, itemIdNew string) error {
+	pos := order.GetPositionByItemId(itemIdCurrent)
+	if pos == nil {
+		err := fmt.Errorf("position with %q not found in order", itemIdCurrent)
 		return err
 	}
+	pos.ItemID = itemIdNew
+	return order.Upsert()
+}
 
-	return nil
+func (order *Order) IncPositionQuantity(itemID string) error {
+	pos := order.GetPositionByItemId(itemID)
+	if pos == nil {
+		err := fmt.Errorf("position with %q not found in order", itemID)
+		return err
+	}
+	return order.SetPositionQuantity(itemID, pos.Quantity+1)
+}
+func (order *Order) DecPositionQuantity(itemID string) error {
+	pos := order.GetPositionByItemId(itemID)
+	if pos == nil {
+		err := fmt.Errorf("position with %q not found in order", itemID)
+		return err
+	}
+	return order.SetPositionQuantity(itemID, pos.Quantity-1)
 }
 
 func (order *Order) SetPositionQuantity(itemID string, quantity float64) error {
@@ -262,11 +285,8 @@ func (order *Order) SetPositionQuantity(itemID string, quantity float64) error {
 			}
 		}
 	}
-	if err := order.Upsert(); err != nil {
-		//order.SaveOrderEvent(ActionChangeQuantityPosition, err, "Could not update quantity for position "+pos.ItemID+". Upsert failed.")
-		return err
-	}
-	return nil
+
+	return order.Upsert()
 }
 func (order *Order) GetPositionByItemId(itemID string) *Position {
 	for _, pos := range order.Positions {
