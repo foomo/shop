@@ -55,7 +55,8 @@ type LanguageCode string
 // create revisions
 type Order struct {
 	BsonId            bson.ObjectId `bson:"_id,omitempty"`
-	Id                string        // automatically generated unique id
+	CartId            string        // unique cartId. This is the initial id when the cart is created
+	Id                string        // unique orderId. This is set when the order is confirmed and sent
 	Version           *version.Version
 	referenceVersion  int  // Version of final order as it was submitted by customer
 	unlinkDB          bool // if true, changes to Customer are not stored in database
@@ -140,7 +141,9 @@ func NewOrderWithCustomId(customProvider OrderCustomProvider, orderIdFunc func()
 		orderId = unique.GetNewID()
 	}
 	order := &Order{
+		State:          DefaultStateMachine.GetInitialState(),
 		Flags:          &Flags{},
+		CartId:         unique.GetNewID(),
 		Id:             orderId,
 		Version:        version.NewVersion(),
 		CreatedAt:      utils.TimeNow(),
@@ -152,9 +155,6 @@ func NewOrderWithCustomId(customProvider OrderCustomProvider, orderIdFunc func()
 		PriceInfo:      &OrderPriceInfo{},
 		Shipping:       &shipping.ShippingProperties{},
 	}
-
-	// set initial state
-	order.State = DefaultStateMachine.GetInitialState()
 
 	if customProvider != nil {
 		order.Custom = customProvider.NewOrderCustom()
@@ -230,7 +230,7 @@ func (order *Order) IsFrozenCustomer() bool {
 func (order *Order) AddPosition(pos *Position) error {
 	existingPos := order.GetPositionByItemId(pos.ItemID)
 	if existingPos != nil {
-		return order.SetPositionQuantity(pos.ItemID, pos.Quantity+1)
+		return nil
 		//err := errors.New("position already exists use SetPositionQuantity or GetPositionById to manipulate it")
 		//order.SaveOrderEvent(ActionAddPosition, err, "Position: "+pos.ItemID)
 	}
@@ -270,22 +270,46 @@ func (order *Order) DecPositionQuantity(itemID string) error {
 func (order *Order) SetPositionQuantity(itemID string, quantity float64) error {
 	pos := order.GetPositionByItemId(itemID)
 	if pos == nil {
-		err := fmt.Errorf("position with %q not found in order", itemID)
-		//order.SaveOrderEvent(ActionChangeQuantityPosition, err, "Could not set quantity of position "+pos.ItemID+" to "+fmt.Sprint(quantity))
-		return err
-	}
-	pos.Quantity = quantity
-	//order.SaveOrderEvent(ActionChangeQuantityPosition, nil, "Set quantity of position "+pos.ItemID+" to "+fmt.Sprint(quantity))
-	// remove position if quantity is zero
-	if pos.Quantity == 0.0 {
-		for index := range order.Positions {
-			if pos.ItemID == itemID {
-				order.Positions = append(order.Positions[:index], order.Positions[index+1:]...)
-				return nil
+		if quantity > 0 {
+			newPos := &Position{
+				// TODO initial state is not yet set
+				ItemID:   itemID,
+				Quantity: quantity,
 			}
+			order.Positions = append(order.Positions, newPos)
+			return order.Upsert()
 		}
+		return nil
+		//order.SaveOrderEvent(ActionChangeQuantityPosition, err, "Could not set quantity of position "+pos.ItemID+" to "+fmt.Sprint(quantity))
 	}
 
+	//order.SaveOrderEvent(ActionChangeQuantityPosition, nil, "Set quantity of position "+pos.ItemID+" to "+fmt.Sprint(quantity))
+	// remove position if quantity is less or equal than zero
+	if quantity <= 0.0 {
+		positions := []*Position{}
+		for index, position := range order.Positions {
+			if position.ItemID == itemID {
+				fmt.Println("====================> skipping index", index)
+				continue
+			}
+			fmt.Println("=======================> taking index", index)
+			positions = append(positions, position)
+		}
+		order.Positions = positions
+		return order.Upsert()
+		/*
+			for index := range order.Positions {
+				if pos.ItemID == itemID {
+					order.Positions = append(order.Positions[:index], order.Positions[index+1:]...)
+					return order.Upsert()
+				}
+			}
+		*/
+	} else {
+		pos.Quantity = quantity
+	}
+	// use project-globus-services-1
+	// db.orders.find({}, {positions:1}).pretty()
 	return order.Upsert()
 }
 func (order *Order) GetPositionByItemId(itemID string) *Position {
