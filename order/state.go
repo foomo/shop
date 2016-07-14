@@ -5,7 +5,7 @@ import "github.com/foomo/shop/state"
 const (
 	StateType            string = "OrderStatus"
 	OrderStatusInvalid   string = "orderStatusInvalid"
-	OrderStatusCreated   string = "orderStatusCreated"
+	OrderStatusCart      string = "orderStatusCart"
 	OrderStatusConfirmed string = "orderStatusConfirmed"
 	OrderStatusComplete  string = "orderStatusComplete"
 	OrderStatusCanceled  string = "orderStatusCanceled"
@@ -13,7 +13,7 @@ const (
 
 var transitions = map[string][]string{
 	OrderStatusInvalid:   []string{state.WILDCARD},
-	OrderStatusCreated:   []string{OrderStatusConfirmed, OrderStatusInvalid},
+	OrderStatusCart:      []string{OrderStatusConfirmed, OrderStatusInvalid},
 	OrderStatusConfirmed: []string{OrderStatusComplete, OrderStatusInvalid},
 	OrderStatusComplete:  []string{},
 }
@@ -26,9 +26,9 @@ var blueprints = map[string]state.BluePrint{
 		Description: "Something went wrong",
 		Initial:     false,
 	},
-	OrderStatusCreated: state.BluePrint{
+	OrderStatusCart: state.BluePrint{
 		Type:        StateType,
-		Key:         OrderStatusCreated,
+		Key:         OrderStatusCart,
 		Description: "Order has been created.",
 		Initial:     true,
 	},
@@ -47,7 +47,7 @@ var blueprints = map[string]state.BluePrint{
 }
 
 var DefaultStateMachine = &state.StateMachine{
-	InitialState: OrderStatusCreated,
+	InitialState: OrderStatusCart,
 	Transitions:  transitions,
 	BluePrints:   blueprints,
 }

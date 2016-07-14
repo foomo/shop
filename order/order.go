@@ -256,7 +256,7 @@ func (order *Order) IncPositionQuantity(itemID string) error {
 		err := fmt.Errorf("position with %q not found in order", itemID)
 		return err
 	}
-	return order.SetPositionQuantity(itemID, pos.Quantity+1)
+	return order.SetPositionQuantity(itemID, pos.Quantity+1, -1)
 }
 func (order *Order) DecPositionQuantity(itemID string) error {
 	pos := order.GetPositionByItemId(itemID)
@@ -264,17 +264,23 @@ func (order *Order) DecPositionQuantity(itemID string) error {
 		err := fmt.Errorf("position with %q not found in order", itemID)
 		return err
 	}
-	return order.SetPositionQuantity(itemID, pos.Quantity-1)
+	return order.SetPositionQuantity(itemID, pos.Quantity-1, -1)
 }
 
-func (order *Order) SetPositionQuantity(itemID string, quantity float64) error {
+// TODO maybe this is probably the wrong place to set the price
+func (order *Order) SetPositionQuantity(itemID string, quantity float64, price float64) error {
+	log.Println("SetPositionQuantity(", itemID, quantity, price, ")")
 	pos := order.GetPositionByItemId(itemID)
 	if pos == nil {
 		if quantity > 0 {
+
 			newPos := &Position{
 				// TODO initial state is not yet set
 				ItemID:   itemID,
 				Quantity: quantity,
+			}
+			if price != -1 {
+				newPos.Price = price
 			}
 			order.Positions = append(order.Positions, newPos)
 			return order.Upsert()
