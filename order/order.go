@@ -282,6 +282,7 @@ func (order *Order) SetPositionQuantity(itemID string, quantity float64, price f
 				ItemID:   itemID,
 				Quantity: quantity,
 			}
+			// -1 is used by methods which only change the quantity and not the price
 			if price != -1 {
 				newPos.Price = price
 			}
