@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/foomo/shop/shop_error"
+	"github.com/foomo/shop/test_utils"
 )
 
 const (
@@ -16,7 +17,7 @@ const (
 )
 
 func TestCustomerGetLatestCustomerFromDb(t *testing.T) {
-	DropAllCustomersAndCredentials()
+	test_utils.DropAllCollections()
 	customer, err := NewCustomer(MOCK_EMAIL, MOCK_PASSWORD, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -79,7 +80,7 @@ func TestCustomerRollback(t *testing.T) {
 }
 
 func create2CustomersAndPerformSomeUpserts(t *testing.T) (*Customer, *Customer) {
-	DropAllCustomersAndCredentials()
+	test_utils.DropAllCollections()
 	customer, err := NewCustomer(MOCK_EMAIL, MOCK_PASSWORD, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -139,10 +140,21 @@ func create2CustomersAndPerformSomeUpserts(t *testing.T) (*Customer, *Customer) 
 
 // Try to get a customer which is not in the db
 func TestCustomerTryRetrieveNonExistent(t *testing.T) {
-	DropAllCustomersAndCredentials()
+	test_utils.DropAllCollections()
 	_, err := GetCustomerByEmail("meNot@existent.com", nil)
 	if !shop_error.IsError(err, shop_error.ErrorNotInDatabase) {
 		t.Fail()
 	}
 	log.Println(err)
+}
+
+func TestCustomerCreateGuest(t *testing.T) {
+	test_utils.DropAllCollections()
+	guest, err := NewGuestCustomer(MOCK_EMAIL, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !guest.IsGuest {
+		t.Fatal("Expected isGuest to be true, but is false")
+	}
 }

@@ -61,6 +61,7 @@ type Customer struct {
 	LastModifiedAt time.Time
 	Email          string // unique, used as Login Credential
 	Person         *Person
+	IsGuest        bool
 	Company        *Company
 	Addresses      []*Address
 	Localization   *Localization
@@ -112,10 +113,17 @@ type CustomerCustomProvider interface {
 // ~ CONSTRUCTOR
 //------------------------------------------------------------------
 
+// NewGuestCustomer creates a new Customer in the database and returns it.
+// Per default, customers have an empty password which does not grant access at login.
+// To transform Guests to regular Customers, the password must be changed and the customer must be marked as regular
+func NewGuestCustomer(email string, customProvider CustomerCustomProvider) (*Customer, error) {
+	return NewCustomer(email, "", customProvider)
+}
+
 // NewCustomer creates a new Customer in the database and returns it.
 // Email must be unique for a customer. customerProvider may be nil at this point.
 func NewCustomer(email, password string, customProvider CustomerCustomProvider) (*Customer, error) {
-	if email == "" || password == "" {
+	if email == "" {
 		return nil, errors.New(shop_error.ErrorRequiredFieldMissing)
 	}
 	// Check is desired Email is available
@@ -143,6 +151,10 @@ func NewCustomer(email, password string, customProvider CustomerCustomProvider) 
 			Contacts: &Contacts{},
 		},
 		Localization: &Localization{},
+	}
+
+	if password == "" {
+		customer.IsGuest = true
 	}
 
 	if customProvider != nil {

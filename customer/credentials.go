@@ -2,6 +2,7 @@ package customer
 
 import (
 	"errors"
+	"log"
 	"strings"
 
 	"github.com/foomo/shop/crypto"
@@ -37,6 +38,9 @@ func GetCredentials(email string) (*CustomerCredentials, error) {
 
 // CreateCustomerCredentials
 func CreateCustomerCredentials(email, password string) error {
+	if password == "" {
+		log.Println("WARNING: Empty password is reserved for guest customer (and will not grant access).")
+	}
 	available, err := CheckLoginAvailable(lc(email))
 	if err != nil {
 		return err
@@ -73,6 +77,10 @@ func CheckLoginAvailable(email string) (bool, error) {
 // CheckLoginCredentials returns true if  customer with email exists and password matches with the hash stores in customers Crypto.
 // Email is not case-sensitive to avoid user frustration
 func CheckLoginCredentials(email, password string) (bool, error) {
+	if password == "" {
+		log.Println("INFO: No access granted, because password is empty. (Empty password is used for guest users)")
+		return false, nil
+	}
 	credentials, err := GetCredentials(lc(email))
 	if err != nil {
 		return false, err

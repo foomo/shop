@@ -1,10 +1,14 @@
 package customer
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/foomo/shop/test_utils"
+)
 
 func TestCredentials(t *testing.T) {
 
-	DropAllCredentials()
+	test_utils.DropAllCollections()
 
 	// Create credentials for a user
 	email := "foo@bar.com"
@@ -58,4 +62,21 @@ func TestCredentials(t *testing.T) {
 
 	// Delete Credentials of trent@bar.com
 	err = DeleteCredential("trent@bar.com")
+}
+
+func TestCredentialsForGuestCustomer(t *testing.T) {
+
+	test_utils.DropAllCollections()
+	// Create credentials for a user
+	email := "foo@bar.com"
+	password := ""
+	err := CreateCustomerCredentials(email, password)
+	if err != nil {
+		t.Fatal(err)
+	}
+	auth, err := CheckLoginCredentials(email, password)
+	if auth || err != nil {
+		t.Fatal(err)
+	}
+
 }
