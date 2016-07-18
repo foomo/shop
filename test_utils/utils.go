@@ -2,43 +2,30 @@ package test_utils
 
 import (
 	"log"
+	"os/exec"
+	"path"
+	"runtime"
+	"strings"
 
-	"github.com/foomo/shop/customer"
-	"github.com/foomo/shop/event_log"
-	"github.com/foomo/shop/order"
+	"github.com/foomo/shop/configuration"
 )
+
+func GetProjectDir() string {
+	_, filename, _, _ := runtime.Caller(1)
+	filename = strings.Replace(filename, "/test_utils.go", "", -1) // remove "utils.go"
+	return path.Dir(filename)                                      // remove //"utils" and return
+}
 
 // Drops order collection and event_log collection
 func DropAllCollections() {
-	err := event_log.GetEventPersistor().GetCollection().DropCollection()
+	cmd := exec.Command("mongo", "dockerhost/"+configuration.MONGO_DB, GetProjectDir()+"/dropCollections.js")
+	log.Println("Command.args: ", cmd.Args)
+	//cmd := exec.Command("mongo", "localhost:27017/"+foomo_shop_config.MONGO_DB, GetProjectDir()+"/mongo/dropCollections.js")
+	err := cmd.Start()
 	if err != nil {
-		// Do not panic here. If db does not yet exist, it is ok for DropCollection to fail.
-		log.Println("Error: EventPersistor DropCollection() ", err)
+		log.Fatal(err)
 	}
-	err = customer.GetCustomerPersistor().GetCollection().DropCollection()
-	if err != nil {
-		// Do not panic here. If db does not yet exist, it is ok for DropCollection to fail.
-		log.Println("Error: CustomerPersistor DropCollection() ", err)
-	}
-	err = customer.GetCustomerVersionsPersistor().GetCollection().DropCollection()
-	if err != nil {
-		// Do not panic here. If db does not yet exist, it is ok for DropCollection to fail.
-		log.Println("Error: CustomerVersionsPersistor DropCollection() ", err)
-	}
-	err = order.GetOrderPersistor().GetCollection().DropCollection()
-	if err != nil {
-		// Do not panic here. If db does not yet exist, it is ok for DropCollection to fail.
-		log.Println("Error: OrderPersistor DropCollection() ", err)
-	}
-	err = order.GetOrderVersionsPersistor().GetCollection().DropCollection()
-	if err != nil {
-		// Do not panic here. If db does not yet exist, it is ok for DropCollection to fail.
-		log.Println("Error: OrderVersionsPersistor DropCollection() ", err)
-	}
-	err = customer.GetCredentialsPersistor().GetCollection().DropCollection()
-	if err != nil {
-		// Do not panic here. If db does not yet exist, it is ok for DropCollection to fail.
-		log.Println("Error: CredentialsPersistor DropCollection() ", err)
-	}
-	//order.LAST_ASSIGNED_ID = -1
+	log.Printf("Waiting for command to finish...")
+	err = cmd.Wait()
+	log.Printf("Command finished with error: %v", err)
 }
