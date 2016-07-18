@@ -23,7 +23,7 @@ func TestOrderStatusTransition(t *testing.T) {
 	log.Println("Current State:", order.GetState().Key)
 
 	// This one should not work
-	err = order.SetState(DefaultStateMachine, OrderStatusCreated)
+	err = order.SetState(DefaultStateMachine, OrderStatusCart)
 	if err != nil {
 		log.Println(err)
 	} else {

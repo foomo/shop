@@ -25,11 +25,7 @@ func MockMongoURL() string {
 }
 
 func GetMockQueue() *queue.Queue {
-	q, err := queue.NewQueue()
-	if err != nil {
-		panic(err)
-	}
-	return q
+	return queue.NewQueue()
 }
 
 func MakeMockOrder(smurf string) *order.Order {

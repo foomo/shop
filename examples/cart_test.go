@@ -7,6 +7,8 @@ import (
 	"github.com/foomo/shop/order"
 )
 
+const MOCK_PRICE = 9.99
+
 func ExampleOrderCustom_createCart() {
 	// a cart is an incomplete order
 	o, _ := order.NewOrder(&examples.SmurfOrderCustomProvider{})
@@ -29,7 +31,7 @@ func ExampleOrderCustom_createCart() {
 	})
 
 	// set qty
-	if o.SetPositionQuantity(positionIDA, 3.01) != nil {
+	if o.SetPositionQuantity(positionIDA, 3.01, MOCK_PRICE) != nil {
 		panic("could not set qty")
 	}
 
@@ -43,7 +45,7 @@ func ExampleOrderCustom_createCart() {
 		},
 	})
 
-	o.SetPositionQuantity(positionIDB, 0)
+	o.SetPositionQuantity(positionIDB, 0, MOCK_PRICE)
 
 	fmt.Println(
 		"responsible smurf:",
