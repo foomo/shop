@@ -121,7 +121,7 @@ func create2CustomersAndPerformSomeUpserts(t *testing.T) (*Customer, *Customer) 
 		t.Fatal(err)
 	}
 
-	err = customer.AddAddress(address)
+	_, err = customer.AddAddress(address)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -63,6 +63,15 @@ func (customer *Customer) GetAddress(id string) (*Address, error) {
 	return nil, errors.New(shop_error.ErrorNotFound + "Could not find Address for id: " + id)
 }
 
+func (customer *Customer) GetAddressById(id string) (*Address, error) {
+	for _, address := range customer.GetAddresses() {
+		if address.GetID() == id {
+			return address, nil
+		}
+	}
+	return nil, errors.New(shop_error.ErrorNotFound)
+}
+
 // GetDefaultShippingAddress returns the default shipping address if available, else returns first address
 func (customer *Customer) GetPrimaryAddress() (*Address, error) {
 	if len(customer.Addresses) == 0 {
