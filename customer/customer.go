@@ -65,6 +65,7 @@ type Customer struct {
 	Company        *Company
 	Addresses      []*Address
 	Localization   *Localization
+	TacAgree       bool // Terms and Conditions
 	Custom         interface{}
 }
 
@@ -223,14 +224,15 @@ func (customer *Customer) OverrideId(id string) error {
 	return customer.Upsert()
 }
 
-func (customer *Customer) AddAddress(address *Address) error {
+// AddAddress adds a new address to the customers profile and returns its unique id
+func (customer *Customer) AddAddress(address *Address) (string, error) {
 	if address.Person == nil {
-		return errors.New(shop_error.ErrorRequiredFieldMissing)
+		return "", errors.New(shop_error.ErrorRequiredFieldMissing)
 	}
 
 	// Return error if required field is missing
 	if address.Person.Salutation == "" || address.Person.FirstName == "" || address.Person.LastName == "" || address.Street == "" || address.StreetNumber == "" || address.ZIP == "" || address.City == "" || address.Country == "" {
-		return errors.New(shop_error.ErrorRequiredFieldMissing)
+		return "", errors.New(shop_error.ErrorRequiredFieldMissing)
 	}
 
 	// Create a unique id for this address
@@ -255,7 +257,7 @@ func (customer *Customer) AddAddress(address *Address) error {
 	if address.IsPrimary || len(customer.Addresses) == 1 {
 		err := customer.SetPrimaryAddress(address.Id)
 		if err != nil {
-			return err
+			return address.Id, err
 		}
 	}
 
@@ -263,17 +265,17 @@ func (customer *Customer) AddAddress(address *Address) error {
 	if address.IsDefaultBillingAddress || len(customer.Addresses) == 1 {
 		err := customer.SetDefaultBillingAddress(address.Id)
 		if err != nil {
-			return err
+			return address.Id, err
 		}
 	}
 	// If this is the first added Address, it's set as shipping address
 	if address.IsDefaultShippingAddress || len(customer.Addresses) == 1 {
 		err := customer.SetDefaultShippingAddress(address.Id)
 		if err != nil {
-			return err
+			return address.Id, err
 		}
 	}
-	return customer.Upsert()
+	return address.Id, customer.Upsert()
 }
 func (customer *Customer) RemoveAddress(id string) {
 	for index, address := range customer.Addresses {
