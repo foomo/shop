@@ -4,36 +4,19 @@ import (
 	"fmt"
 
 	"github.com/bwmarrin/snowflake"
+	"github.com/ventu-io/go-shortid"
 )
 
-/* Package go-shortid guarantees the generation of unique Ids
-with zero collisions for 34 years (1/1/2016-1/1/2050) */
-
-//var generator *shortid.Shortid
-
-// GetNewID returns a new unique identifier string // uses "github.com/ventu-io/go-shortid"
-// func GetNewID() string {
-// 	var seed uint64 = 3214
-// 	if generator == nil {
-// 		newGenerator, err := shortid.New(1, shortid.DefaultABC, seed)
-// 		generator = newGenerator
-// 		if err != nil {
-// 			// The Shop can no longer work without this, therfore panic.
-// 			panic(err)
-// 		}
-// 	}
-
-// 	id, err := generator.Generate()
-// 	if err != nil {
-// 		// The Shop can no longer work without this, therefore panic.
-// 		panic(err)
-// 	}
-// 	return id
-// }
-
 var node *snowflake.Node
+var generator *shortid.Shortid
 
 func GetNewID() string {
+	return GetNewIDSnowFlake() // SnowFlake is default
+}
+
+// GetNewIDSnowFlake returns a new unique identifier string
+// Generates numeric strings
+func GetNewIDSnowFlake() string {
 	if node == nil {
 		var createNodeErr error
 		node, createNodeErr = snowflake.NewNode(1)
@@ -45,4 +28,26 @@ func GetNewID() string {
 	// Generate a snowflake ID.
 	id := node.Generate()
 	return fmt.Sprintf("%s", id)
+}
+
+// GetNewIDShortId returns a new unique identifier string
+// Package go-shortid guarantees the generation of unique Ids
+// with zero collisions for 34 years (1/1/2016-1/1/2050) */
+func GetNewIDShortID() string {
+	var seed uint64 = 3214
+	if generator == nil {
+		newGenerator, err := shortid.New(1, shortid.DefaultABC, seed)
+		generator = newGenerator
+		if err != nil {
+			// The Shop can no longer work without this, therfore panic.
+			panic(err)
+		}
+	}
+
+	id, err := generator.Generate()
+	if err != nil {
+		// The Shop can no longer work without this, therefore panic.
+		panic(err)
+	}
+	return id
 }
