@@ -39,6 +39,10 @@ func TestCreateUniqueIdsConcurrent(t *testing.T) {
 	go generate("3", &wg)
 	go generate("4", &wg)
 	wg.Wait()
+	log.Println("Id's in map: ", len(generatedIds))
+	if len(generatedIds) != 4000 {
+		t.Fatal("Expected 4000 ID's but got ", len(generatedIds))
+	}
 	log.Println("All go routines finished")
 
 }
