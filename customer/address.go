@@ -15,6 +15,7 @@ type Address struct {
 	Department               string
 	Building                 string
 	PostOfficeBox            string
+	TrustWorthy              bool
 	Custom                   interface{}
 }
 
