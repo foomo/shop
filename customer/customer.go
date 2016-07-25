@@ -124,21 +124,27 @@ func NewGuestCustomer(email string, customProvider CustomerCustomProvider) (*Cus
 // NewCustomer creates a new Customer in the database and returns it.
 // Email must be unique for a customer. customerProvider may be nil at this point.
 func NewCustomer(email, password string, customProvider CustomerCustomProvider) (*Customer, error) {
+	isGuest := password == ""
 	if email == "" {
 		return nil, errors.New(shop_error.ErrorRequiredFieldMissing)
 	}
-	// Check is desired Email is available
-	available, err := CheckLoginAvailable(email)
-	if err != nil {
-		return nil, err
-	}
-	if !available {
-		return nil, errors.New(shop_error.ErrorNotFound + " Login " + email + " is already taken!")
-	}
+	var err error
+	// We only create credentials if a customer is available.
+	// A guest customer gets a new entry in the customer db for each order!
+	if !isGuest {
+		// Check is desired Email is available
+		available, err := CheckLoginAvailable(email)
+		if err != nil {
+			return nil, err
+		}
+		if !available {
+			return nil, errors.New(shop_error.ErrorNotFound + " Login " + email + " is already taken!")
+		}
 
-	err = CreateCustomerCredentials(email, password)
-	if err != nil {
-		return nil, err
+		err = CreateCustomerCredentials(email, password)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	customer := &Customer{
@@ -154,7 +160,7 @@ func NewCustomer(email, password string, customProvider CustomerCustomProvider) 
 		Localization: &Localization{},
 	}
 
-	if password == "" {
+	if isGuest {
 		customer.IsGuest = true
 	}
 

@@ -231,7 +231,7 @@ func GetCustomerById(id string, customProvider CustomerCustomProvider) (*Custome
 	return findOneCustomer(&bson.M{"id": id}, nil, "", customProvider, false)
 }
 
-// GetCustomerByEmail
+// GetCustomerByEmail // TODO this won't work for guests, because for guests there could be multiple entries for the same email address
 func GetCustomerByEmail(email string, customProvider CustomerCustomProvider) (*Customer, error) {
 	return findOneCustomer(&bson.M{"email": email}, nil, "", customProvider, false)
 }
