@@ -123,8 +123,8 @@ func (c *Contacts) GetPrimaryContact() string {
 		return string(ContactTypeEmail) + ": " + c.Email
 	case ContactTypeSkype:
 		return string(ContactTypeSkype) + ": " + c.Skype
-	case ContactTypeFax:
-		return string(ContactTypeFax) + ": " + c.Fax
+		// case ContactTypeFax: // 2016 anyone??
+		// 	return string(ContactTypeFax) + ": " + c.Fax
 	}
 	return "No primary contact available!"
 }
