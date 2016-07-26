@@ -6,6 +6,7 @@ import (
 
 	"github.com/foomo/shop/shop_error"
 	"github.com/foomo/shop/test_utils"
+	"github.com/foomo/shop/utils"
 )
 
 const (
@@ -157,4 +158,63 @@ func TestCustomerCreateGuest(t *testing.T) {
 	if !guest.IsGuest {
 		t.Fatal("Expected isGuest to be true, but is false")
 	}
+}
+
+func TestCustomerChangeAddress(t *testing.T) {
+	customer, err := NewCustomer(MOCK_EMAIL, MOCK_PASSWORD, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	address := &Address{
+		Person: &Person{
+			Salutation: SalutationTypeMr,
+			FirstName:  "Foo",
+			MiddleName: "Bob",
+			LastName:   "Bar",
+		},
+		Street:       "Holzweg",
+		StreetNumber: "5",
+		City:         "Bern",
+		Country:      "CH",
+		ZIP:          "1234",
+	}
+	log.Println("Original Address:")
+	utils.PrintJSON(address)
+	id, err := customer.AddAddress(address)
+	if err != nil {
+		t.Fatal(err)
+	}
+	addressNew := &Address{
+		Person: &Person{
+			Salutation: SalutationTypeMr,
+			FirstName:  "FooChanged",
+			MiddleName: "Bob",
+			LastName:   "Bar",
+		},
+		Street:       "Steinweg",
+		StreetNumber: "5",
+		City:         "Bern",
+		Country:      "CH",
+		ZIP:          "1234",
+	}
+	err = customer.ChangeAddress(addressNew)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	changedAddress, err := customer.GetAddressById(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	log.Println("Changed Address:")
+	utils.PrintJSON(changedAddress)
+
+	if changedAddress.Street != "Steinweg" {
+		t.Fatal("Expected customer.Person.FirstName == \"FooChanged\" but got " + changedAddress.Street)
+	}
+	if changedAddress.Person.FirstName != "FooChanged" {
+		t.Fatal("Expected changedAddress.Person.FirstName == \"FooChanged\" but got " + changedAddress.Person.FirstName)
+	}
+
 }

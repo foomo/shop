@@ -78,7 +78,6 @@ type Contacts struct {
 	PhoneMobile   string
 	Email         string
 	Skype         string
-	Fax           string
 	Primary       ContactType
 }
 
@@ -230,17 +229,23 @@ func (customer *Customer) OverrideId(id string) error {
 	return customer.Upsert()
 }
 
+// checkFields Checks if all required fields are specified
+// @TODO which are teh required fields
+func checkFields(address *Address) error {
+	// Return error if required field is missing
+	if address.Person == nil || address.Person.Salutation == "" || address.Person.FirstName == "" || address.Person.LastName == "" || address.Street == "" || address.StreetNumber == "" || address.ZIP == "" || address.City == "" || address.Country == "" {
+		return errors.New(shop_error.ErrorRequiredFieldMissing)
+	}
+	return nil
+}
+
 // AddAddress adds a new address to the customers profile and returns its unique id
 func (customer *Customer) AddAddress(address *Address) (string, error) {
-	if address.Person == nil {
-		return "", errors.New(shop_error.ErrorRequiredFieldMissing)
-	}
 
-	// Return error if required field is missing
-	if address.Person.Salutation == "" || address.Person.FirstName == "" || address.Person.LastName == "" || address.Street == "" || address.StreetNumber == "" || address.ZIP == "" || address.City == "" || address.Country == "" {
-		return "", errors.New(shop_error.ErrorRequiredFieldMissing)
+	err := checkFields(address)
+	if err != nil {
+		return "", err
 	}
-
 	// Create a unique id for this address
 	address.Id = unique.GetNewID()
 	// Prevent nil pointer in case we get an incomplete address
@@ -283,12 +288,31 @@ func (customer *Customer) AddAddress(address *Address) (string, error) {
 	}
 	return address.Id, customer.Upsert()
 }
-func (customer *Customer) RemoveAddress(id string) {
-	for index, address := range customer.Addresses {
+func (customer *Customer) RemoveAddress(id string) error {
+
+	addresses := []*Address{}
+	for _, address := range customer.Addresses {
 		if address.Id == id {
-			customer.Addresses = append(customer.Addresses[:index], customer.Addresses[index+1:]...)
+			continue
 		}
+		addresses = append(addresses, address)
 	}
+	customer.Addresses = addresses
+	return customer.Upsert()
+}
+
+func (customer *Customer) ChangeAddress(address *Address) error {
+	addressToBeChanged, err := customer.GetAddressById(address.GetID())
+	if err != nil {
+		return err
+	}
+	err = checkFields(address)
+	if err != nil {
+		return err
+	}
+	*addressToBeChanged = *address
+	*addressToBeChanged.Person = *address.Person
+	return customer.Upsert()
 }
 
 //------------------------------------------------------------------
