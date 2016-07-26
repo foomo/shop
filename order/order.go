@@ -226,29 +226,30 @@ func (order *Order) IsFrozenCustomer() bool {
 	return !order.CustomerFreeze.Time.IsZero()
 }
 
-// Add Position to Order.
-func (order *Order) AddPosition(pos *Position) error {
-	existingPos := order.GetPositionByItemId(pos.ItemID)
-	if existingPos != nil {
-		return nil
-		//err := errors.New("position already exists use SetPositionQuantity or GetPositionById to manipulate it")
-		//order.SaveOrderEvent(ActionAddPosition, err, "Position: "+pos.ItemID)
-	}
-	order.Positions = append(order.Positions, pos)
-
-	return order.Upsert()
-}
-
 // ReplacePosition replaces the itemId of a position, e.g. if article is desired with a different size or color. Quantity is preserved.
-func (order *Order) ReplacePosition(itemIdCurrent, itemIdNew string, price float64, qty float64) error {
+func (order *Order) ReplacePosition(itemIdCurrent, itemIdNew string, price float64) error {
 	pos := order.GetPositionByItemId(itemIdCurrent)
 	if pos == nil {
 		err := fmt.Errorf("position with %q not found in order", itemIdCurrent)
 		return err
 	}
+	currentQty := pos.Quantity
+	// If the item already exists, teh quantity is accumulated.
+	// (Example: The same shirt in two different sizes is in the order. The size of one shirt is changed to the size of the other shirt. Now there would be two positions for the same shirt)
+	posMatchNew := order.GetPositionByItemId(itemIdNew)
+	if posMatchNew != nil {
+		// Remove position for itemIdCurrent
+		err := order.SetPositionQuantity(itemIdCurrent, 0, -1)
+		if err != nil {
+			return err
+		}
+		// And adjust quantity for already existing position for itemIdNew
+		return order.SetPositionQuantity(itemIdNew, currentQty+posMatchNew.Quantity, -1)
+	}
+
+	// Otherwise replace current position
 	pos.ItemID = itemIdNew
 	pos.Price = price
-	pos.Quantity = qty
 
 	return order.Upsert()
 }
@@ -270,10 +271,22 @@ func (order *Order) DecPositionQuantity(itemID string) error {
 	return order.SetPositionQuantity(itemID, pos.Quantity-1, -1)
 }
 
+// Add Position to Order.
+func (order *Order) AddPosition(pos *Position) error {
+	existingPos := order.GetPositionByItemId(pos.ItemID)
+	if existingPos != nil {
+		return nil
+	}
+	order.Positions = append(order.Positions, pos)
+
+	return order.Upsert()
+}
+
 // TODO maybe this is probably the wrong place to set the price
 func (order *Order) SetPositionQuantity(itemID string, quantity float64, price float64) error {
 	log.Println("SetPositionQuantity(", itemID, quantity, price, ")")
 	pos := order.GetPositionByItemId(itemID)
+	// If position for this itemID does not yet exist, create it.
 	if pos == nil {
 		if quantity > 0 {
 
@@ -290,31 +303,20 @@ func (order *Order) SetPositionQuantity(itemID string, quantity float64, price f
 			return order.Upsert()
 		}
 		return nil
-		//order.SaveOrderEvent(ActionChangeQuantityPosition, err, "Could not set quantity of position "+pos.ItemID+" to "+fmt.Sprint(quantity))
 	}
 
-	//order.SaveOrderEvent(ActionChangeQuantityPosition, nil, "Set quantity of position "+pos.ItemID+" to "+fmt.Sprint(quantity))
-	// remove position if quantity is less or equal than zero
+	// Remove position if quantity is less or equal than zero
 	if quantity <= 0.0 {
 		positions := []*Position{}
-		for index, position := range order.Positions {
+		for _, position := range order.Positions {
 			if position.ItemID == itemID {
-				fmt.Println("====================> skipping index", index)
 				continue
 			}
-			fmt.Println("=======================> taking index", index)
 			positions = append(positions, position)
 		}
 		order.Positions = positions
 		return order.Upsert()
-		/*
-			for index := range order.Positions {
-				if pos.ItemID == itemID {
-					order.Positions = append(order.Positions[:index], order.Positions[index+1:]...)
-					return order.Upsert()
-				}
-			}
-		*/
+
 	} else {
 		pos.Quantity = quantity
 	}
