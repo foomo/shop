@@ -20,6 +20,7 @@ func TestCryptoPasswordStrength(t *testing.T) {
 	DeterminePasswordStrength(passwords[1], []string{"Table"})
 	utils.PrintJSON(DeterminePasswordStrength(passwords[1], []string{"Table"}))
 
+	//for i := 0; i < 1000; i++ {
 	for _, password := range passwords {
 		fmt.Println("\n---------- GetScore:", password, " -------------")
 		score, err := GetPasswordScore(password, nil)
@@ -28,6 +29,7 @@ func TestCryptoPasswordStrength(t *testing.T) {
 		}
 		fmt.Println("Password:", password, "\tScore:", score)
 	}
+	//}
 	SetMinLength(11)
 	SetMaxLength(15)
 	fmt.Println("\n\n -- Added restriction min=11, max=15 --")
