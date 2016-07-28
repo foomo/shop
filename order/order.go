@@ -68,6 +68,7 @@ type Order struct {
 	AddressShippingId string
 	OrderType         OrderType
 	CreatedAt         time.Time
+	ConfirmedAt       time.Time // not yet used
 	LastModifiedAt    time.Time
 	CompletedAt       time.Time
 	Positions         []*Position
