@@ -8,7 +8,6 @@ import (
 )
 
 func TestCryptoPasswordStrength(t *testing.T) {
-	// expected scores 0 (poor), 2, 4 (excellent)
 	passwords := []string{"mypassword", "summertablecactus+", "osome+#,,brassford"}
 	for _, password := range passwords {
 		fmt.Println("---------- Password:", password, "-------------")
