@@ -59,7 +59,10 @@ func Find(query *bson.M, customProvider OrderCustomProvider) (iter func() (o *Or
 		o = &Order{}
 
 		if mgoiter.Next(o) {
-			return mapDecode(o, customProvider)
+			if customProvider != nil {
+				return mapDecode(o, customProvider)
+			}
+			return o, nil
 		}
 		return nil, nil
 	}
@@ -194,6 +197,53 @@ func GetOrderVersionsPersistor() *persistence.Persistor {
 // GetOrderById returns the order with id
 func GetOrderById(id string, customProvider OrderCustomProvider) (*Order, error) {
 	return findOneOrder(&bson.M{"id": id}, nil, "", customProvider, false)
+}
+
+func GetOrdersOfCustomer(customerId string, customProvider OrderCustomProvider) ([]*Order, error) {
+	if customProvider == nil {
+		return nil, errors.New("Error: customProvider must not be nil")
+	}
+
+	orderIter, err := Find(&bson.M{"customerid": customerId}, customProvider)
+	if err != nil {
+		return nil, err
+	}
+	orders := []*Order{}
+	for {
+		o, err := orderIter()
+		if err != nil {
+			return nil, err
+		}
+		if o != nil {
+			orders = append(orders, o)
+		} else {
+			break
+		}
+	}
+
+	return orders, nil
+}
+
+// GetOrderIdsOfCustomer returns all orderIds associated with this customer
+func GetOrderIdsOfCustomer(customerId string) ([]string, error) {
+	orderIter, err := Find(&bson.M{"customerid": customerId}, nil) // @TODO this could use a select as we only want the id's
+	if err != nil {
+		return nil, err
+	}
+	ids := []string{}
+	for {
+		o, err := orderIter()
+		if err != nil {
+			return nil, err
+		}
+		if o != nil {
+			ids = append(ids, o.GetID())
+		} else {
+			break
+		}
+	}
+	return ids, nil
+
 }
 
 func GetCurrentOrderByIdFromVersionsHistory(orderId string, customProvider OrderCustomProvider) (*Order, error) {
