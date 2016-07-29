@@ -1,3 +1,13 @@
+// db.orders.createCollection("orders")
+// db.customers.createCollection("customers")
+// db.credentials.createCollection("credentials")
+// db.customers_history.createCollection("customers_history")
+// db.orders_history.createCollection("orders_history")
+// db.shop_event_log.createCollection("shop_event_log")
+// db.status_updates.createCollection("status_updates")
+// db.payment_jobs.createCollection("payment_jobs")
+// db.tlog_jobs.createCollection("tlog_jobs")
+
 db.orders.drop()
 db.customers.drop()
 db.credentials.drop()
