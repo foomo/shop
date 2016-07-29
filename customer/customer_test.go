@@ -1,6 +1,7 @@
 package customer
 
 import (
+	"fmt"
 	"log"
 	"testing"
 
@@ -66,9 +67,11 @@ func TestCustomerRollbackAndDiff(t *testing.T) {
 }
 func TestCustomerRollback(t *testing.T) {
 	customer1, _ := create2CustomersAndPerformSomeUpserts(t)
+	utils.PrintJSON(customer1)
 	log.Println("Version", customer1.GetVersion(), "FirstName", customer1.Person.FirstName)
-	err := customer1.Rollback(customer1.GetVersion().Current - 1)
+	err := customer1.Rollback(customer1.GetVersion().Current - 2) // We need tp go 2 versions back to see the name change
 	if err != nil {
+		fmt.Println("Error: Could not roll back to previous version!")
 		t.Fatal(err)
 	}
 	customer1, err = GetCustomerById(customer1.GetID(), nil)
@@ -76,6 +79,7 @@ func TestCustomerRollback(t *testing.T) {
 
 	// Due to Rollback, FirstName should be "Foo" again
 	if customer1.Person.FirstName != "Foo" {
+		fmt.Println("Error: Expected Name to be Foo but got " + customer1.Person.FirstName)
 		t.Fail()
 	}
 }
@@ -161,6 +165,7 @@ func TestCustomerCreateGuest(t *testing.T) {
 }
 
 func TestCustomerChangeAddress(t *testing.T) {
+	test_utils.DropAllCollections()
 	customer, err := NewCustomer(MOCK_EMAIL, MOCK_PASSWORD, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -182,10 +187,12 @@ func TestCustomerChangeAddress(t *testing.T) {
 	log.Println("Original Address:")
 	utils.PrintJSON(address)
 	id, err := customer.AddAddress(address)
+	log.Println("Added Address with id ", id)
 	if err != nil {
 		t.Fatal(err)
 	}
 	addressNew := &Address{
+		Id: id, // Set id of address we want to replace
 		Person: &Person{
 			Salutation: SalutationTypeMr,
 			FirstName:  "FooChanged",
