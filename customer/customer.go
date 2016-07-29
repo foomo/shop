@@ -304,6 +304,7 @@ func (customer *Customer) RemoveAddress(id string) error {
 func (customer *Customer) ChangeAddress(address *Address) error {
 	addressToBeChanged, err := customer.GetAddressById(address.GetID())
 	if err != nil {
+		log.Println("Error: Could not find address with id "+address.GetID(), "for customer ", customer.Person.LastName)
 		return err
 	}
 	err = checkFields(address)
