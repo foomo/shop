@@ -62,6 +62,7 @@ type Customer struct {
 	Email          string // unique, used as Login Credential
 	Person         *Person
 	IsGuest        bool
+	IsLoggedIn     bool
 	Company        *Company
 	Addresses      []*Address
 	Localization   *Localization
@@ -150,11 +151,13 @@ func NewCustomer(email, password string, customProvider CustomerCustomProvider) 
 		Flags:          &Flags{},
 		Version:        version.NewVersion(),
 		Id:             unique.GetNewID(),
-		Email:          lc(email),
+		Email:          utils.IteString(isGuest, "", lc(email)), // If Customer is a guest, we do not set the email address. This field should be unique in the database (and would not be if the guest ordered twice).
 		CreatedAt:      utils.TimeNow(),
 		LastModifiedAt: utils.TimeNow(),
 		Person: &Person{
-			Contacts: &Contacts{},
+			Contacts: &Contacts{
+				Email: email,
+			},
 		},
 		Localization: &Localization{},
 	}
@@ -197,8 +200,8 @@ func (customer *Customer) ChangePassword(password, passwordNew string, force boo
 	return customer.Upsert()
 }
 
-// Unlinks order from database
-// After unlink, persistent changes on order are no longer possible until it is retrieved again from db.
+// Unlinks customer from database
+// After unlink, persistent changes on customer are no longer possible until it is retrieved again from db.
 func (customer *Customer) UnlinkFromDB() {
 	customer.unlinkDB = true
 }
@@ -231,7 +234,7 @@ func (customer *Customer) OverrideId(id string) error {
 
 // checkFields Checks if all required fields are specified
 // @TODO which are teh required fields
-func checkFields(address *Address) error {
+func CheckRequiredAddressFields(address *Address) error {
 	// Return error if required field is missing
 	if address.Person == nil || address.Person.Salutation == "" || address.Person.FirstName == "" || address.Person.LastName == "" || address.Street == "" || address.StreetNumber == "" || address.ZIP == "" || address.City == "" || address.Country == "" {
 		return errors.New(shop_error.ErrorRequiredFieldMissing)
@@ -242,7 +245,7 @@ func checkFields(address *Address) error {
 // AddAddress adds a new address to the customers profile and returns its unique id
 func (customer *Customer) AddAddress(address *Address) (string, error) {
 
-	err := checkFields(address)
+	err := CheckRequiredAddressFields(address)
 	if err != nil {
 		return "", err
 	}
@@ -264,13 +267,6 @@ func (customer *Customer) AddAddress(address *Address) (string, error) {
 	}
 
 	customer.Addresses = append(customer.Addresses, address)
-	// Set Address as primary if this is the first added address
-	if address.IsPrimary || len(customer.Addresses) == 1 {
-		err := customer.SetPrimaryAddress(address.Id)
-		if err != nil {
-			return address.Id, err
-		}
-	}
 
 	// If this is the first added Address, it's set as billing address
 	if address.IsDefaultBillingAddress || len(customer.Addresses) == 1 {
@@ -307,7 +303,7 @@ func (customer *Customer) ChangeAddress(address *Address) error {
 		log.Println("Error: Could not find address with id "+address.GetID(), "for customer ", customer.Person.LastName)
 		return err
 	}
-	err = checkFields(address)
+	err = CheckRequiredAddressFields(address)
 	if err != nil {
 		return err
 	}
