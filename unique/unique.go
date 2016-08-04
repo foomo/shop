@@ -2,7 +2,6 @@ package unique
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/bwmarrin/snowflake"
 	"github.com/ventu-io/go-shortid"
@@ -14,8 +13,8 @@ var generator *shortid.Shortid
 func GetNewID() string {
 	//return GetNewIDSnowFlake() // SnowFlake is default
 	id := GetNewIDSnowFlake() // SnowFlake is default
-	id = "4020" + id[len(id)-4:]
-	log.Println("WARNING: This is not really random to satisfy CRM limits: ", id)
+	//id = "4020" + id[len(id)-4:]
+	//log.Println("WARNING: This is not really random to satisfy CRM limits: ", id)
 	return id
 }
 
