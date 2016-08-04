@@ -72,6 +72,7 @@ func TestSmurfProcessor(t *testing.T) {
 const NumOrders = 500
 
 func TestPersistor(t *testing.T) {
+	test_utils.DropAllCollections()
 
 	ptp := "Pete the persistor"
 
