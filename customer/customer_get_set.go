@@ -63,11 +63,6 @@ func (customer *Customer) GetAddress(id string) (*Address, error) {
 	return nil, errors.New(shop_error.ErrorNotFound + "Could not find Address for id: " + id)
 }
 
-func (customer *Customer) SetLoggedOut() error {
-	customer.IsLoggedIn = false
-	return customer.Upsert()
-}
-
 func (customer *Customer) GetAddressById(id string) (*Address, error) {
 	for _, address := range customer.GetAddresses() {
 		if address.GetID() == id {
@@ -179,5 +174,10 @@ func (customer *Customer) SetPerson(person *Person) error {
 
 func (customer *Customer) SetLoggedIn() error {
 	customer.IsLoggedIn = true
+	return customer.Upsert()
+}
+
+func (customer *Customer) SetLoggedOut() error {
+	customer.IsLoggedIn = false
 	return customer.Upsert()
 }
