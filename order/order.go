@@ -255,21 +255,22 @@ func (order *Order) ReplacePosition(itemIdCurrent, itemIdNew string, price float
 	return order.Upsert()
 }
 
-func (order *Order) IncPositionQuantity(itemID string) error {
+// Increase Quantity by one. Price is required, if item is not already part of order
+func (order *Order) IncPositionQuantity(itemID string, price float64) error {
 	pos := order.GetPositionByItemId(itemID)
 	if pos == nil {
 		err := fmt.Errorf("position with %q not found in order", itemID)
 		return err
 	}
-	return order.SetPositionQuantity(itemID, pos.Quantity+1, -1)
+	return order.SetPositionQuantity(itemID, pos.Quantity+1, price)
 }
-func (order *Order) DecPositionQuantity(itemID string) error {
+func (order *Order) DecPositionQuantity(itemID string, price float64) error {
 	pos := order.GetPositionByItemId(itemID)
 	if pos == nil {
 		err := fmt.Errorf("position with %q not found in order", itemID)
 		return err
 	}
-	return order.SetPositionQuantity(itemID, pos.Quantity-1, -1)
+	return order.SetPositionQuantity(itemID, pos.Quantity-1, price)
 }
 
 // Add Position to Order.
