@@ -171,13 +171,12 @@ func NewCustomer(email, password string, customProvider CustomerCustomProvider) 
 	}
 	// Store order in database
 	err = customer.insert()
-
-	// Retrieve customer again from. (Otherwise upserts on customer would fail because of missing mongo ObjectID)
-	customer, err = GetCustomerById(customer.Id, customProvider)
 	if err != nil {
+		log.Println("Could not insert customer", email)
 		return nil, err
 	}
-	return customer, err
+	// Retrieve customer again from. (Otherwise upserts on customer would fail because of missing mongo ObjectID)
+	return GetCustomerById(customer.Id, customProvider)
 }
 
 //------------------------------------------------------------------
@@ -237,9 +236,17 @@ func (customer *Customer) OverrideId(id string) error {
 func CheckRequiredAddressFields(address *Address) error {
 	// Return error if required field is missing
 	if address.Person == nil || address.Person.Salutation == "" || address.Person.FirstName == "" || address.Person.LastName == "" || address.Street == "" || address.StreetNumber == "" || address.ZIP == "" || address.City == "" || address.Country == "" {
-		return errors.New(shop_error.ErrorRequiredFieldMissing)
+		return errors.New(shop_error.ErrorRequiredFieldMissing + "\n" + utils.ToJSON(address))
 	}
 	return nil
+}
+func (customer *Customer) AddDefaultBillingAddress(address *Address) (string, error) {
+	address.IsDefaultBillingAddress = true
+	return customer.AddAddress(address)
+}
+func (customer *Customer) AddDefaultShippingAddress(address *Address) (string, error) {
+	address.IsDefaultShippingAddress = true
+	return customer.AddAddress(address)
 }
 
 // AddAddress adds a new address to the customers profile and returns its unique id
@@ -247,6 +254,7 @@ func (customer *Customer) AddAddress(address *Address) (string, error) {
 
 	err := CheckRequiredAddressFields(address)
 	if err != nil {
+		log.Println("Error", err)
 		return "", err
 	}
 	// Create a unique id for this address
