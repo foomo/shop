@@ -24,6 +24,7 @@ func (address *Address) GetID() string {
 
 type Score struct {
 	Trusted          bool
+	TrustedString    string
 	DateOfTrustCheck string
 }
 
