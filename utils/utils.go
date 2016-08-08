@@ -16,6 +16,9 @@ import (
 func GetDateYYYYMMDD() string {
 	return time.Now().Format("20060102")
 }
+func GetDateYYYY_MM_DD() string {
+	return time.Now().Format("2006-01-02")
+}
 
 func GetFormattedTime(t time.Time) string {
 	return t.Format("Mon Jan 2 2006 15:04:05")
