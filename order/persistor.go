@@ -85,7 +85,7 @@ func UpsertOrder(o *Order) error {
 	err := p.GetCollection().Find(&bson.M{"id": o.GetID()}).Select(&bson.M{"version": 1}).One(orderLatestFromDb)
 
 	if err != nil {
-		log.Println("Error Upsert Order", err)
+		log.Println("Upsert failed: Could not find order with id", o.GetID(), "Error:", err)
 		return err
 	}
 

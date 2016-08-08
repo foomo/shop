@@ -7,7 +7,6 @@ import (
 	"strconv"
 
 	"github.com/foomo/shop/configuration"
-	"github.com/foomo/shop/event_log"
 	"github.com/foomo/shop/persistence"
 	"github.com/foomo/shop/version"
 	"github.com/mitchellh/mapstructure"
@@ -145,7 +144,7 @@ func Find(query *bson.M, customProvider CustomerCustomProvider) (iter func() (cu
 }
 
 func UpsertCustomer(c *Customer) error {
-	defer event_log.SaveShopEvent(event_log.ActionTest, &event_log.Info{CustomerId: c.GetID()}, nil, "")
+	//defer event_log.SaveShopEvent(event_log.ActionTest, &event_log.Info{CustomerId: c.GetID()}, nil, "")
 
 	// order is unlinked or not yet inserted in db
 	if c.unlinkDB || c.BsonId == "" {
@@ -157,10 +156,11 @@ func UpsertCustomer(c *Customer) error {
 	// If they are not identical, there must have been another upsert which would be overwritten by this one.
 	// In this case upsert is skipped and an error is returned,
 	customerLatestFromDb := &Customer{}
-	err := p.GetCollection().Find(&bson.M{"id": c.GetID()}).Select(&bson.M{"version": 1}).One(customerLatestFromDb)
+	err := p.GetCollection().Find(&bson.M{"_id": c.BsonId}).Select(&bson.M{"version": 1}).One(customerLatestFromDb)
 
 	if err != nil {
-		log.Println("Error Upsert Customer", err)
+		log.Println("Upsert failed: Could not find customer with id", c.GetID(), "Error:", err)
+
 		return err
 	}
 
