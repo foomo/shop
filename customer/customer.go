@@ -24,8 +24,8 @@ const (
 	ContactTypeEmail         ContactType    = "email"
 	ContactTypeSkype         ContactType    = "skype"
 	ContactTypeFax           ContactType    = "fax"
-	SalutationTypeMr         SalutationType = "Mr"
-	SalutationTypeMrs        SalutationType = "Mrs"
+	SalutationTypeMr         SalutationType = "male"   //"Mr"
+	SalutationTypeMrs        SalutationType = "female" //"Mrs"
 	SalutationTypeMrAndMrs   SalutationType = "MrAndMrs"
 	SalutationTypeCompany    SalutationType = "Company" // TODO: find better wording
 	SalutationTypeFamily     SalutationType = "Family"  // TODO: find better wording
