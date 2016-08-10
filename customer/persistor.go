@@ -8,6 +8,7 @@ import (
 
 	"github.com/foomo/shop/configuration"
 	"github.com/foomo/shop/persistence"
+	"github.com/foomo/shop/utils"
 	"github.com/foomo/shop/version"
 	"github.com/mitchellh/mapstructure"
 	"gopkg.in/mgo.v2/bson"
@@ -226,6 +227,10 @@ func DeleteCustomerById(id string) error {
 	return err
 }
 
+func GetCustomerByQuery(query *bson.M, customProvider CustomerCustomProvider) (*Customer, error) {
+	return findOneCustomer(query, nil, "", customProvider, false)
+}
+
 // GetCustomerById returns the customer with id
 func GetCustomerById(id string, customProvider CustomerCustomProvider) (*Customer, error) {
 	return findOneCustomer(&bson.M{"id": id}, nil, "", customProvider, false)
@@ -321,6 +326,9 @@ func findOneCustomer(find *bson.M, selection *bson.M, sort string, customProvide
 		if err != nil {
 			return nil, err
 		}
+	}
+	if customer == nil {
+		return nil, errors.New("No result for " + utils.ToJSON(find))
 	}
 	//event_log.SaveShopEvent(event_log.ActionRetrieveCustomer, customer.GetID(), nil, customer.GetEmail())
 	return customer, nil
