@@ -101,6 +101,23 @@ func (customer *Customer) GetDefaultShippingAddress() (*Address, error) {
 	return customer.Addresses[0], nil
 }
 
+func (customer *Customer) GetDefaultBillingAddressID() (string, error) {
+	address, err := customer.GetDefaultBillingAddress()
+	if err != nil {
+		return "", err
+	}
+	return address.GetID(), nil
+
+}
+func (customer *Customer) GetDefaultShippingAddressID() (string, error) {
+	address, err := customer.GetDefaultShippingAddress()
+	if err != nil {
+		return "", err
+	}
+	return address.GetID(), nil
+
+}
+
 // GetDefaultBillingAddress returns the default billing address if available, else returns first address
 func (customer *Customer) GetDefaultBillingAddress() (*Address, error) {
 	if len(customer.Addresses) == 0 {

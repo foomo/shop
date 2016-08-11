@@ -199,6 +199,33 @@ func GetOrderById(id string, customProvider OrderCustomProvider) (*Order, error)
 	return findOneOrder(&bson.M{"id": id}, nil, "", customProvider, false)
 }
 
+func GetOrderByQuery(query *bson.M, customProvider OrderCustomProvider) (*Order, error) {
+	return findOneOrder(query, nil, "", customProvider, false)
+}
+
+// HasCart returns true if an order with state OrderStatusCart exist for customer
+func HasCart(customerId string) bool {
+	order, _ := GetCart(customerId, nil)
+	if order != nil {
+		return true
+	}
+	return false
+}
+
+// Get Order for customer which is in state OrderStatusCart
+func GetCart(customerId string, customProvider OrderCustomProvider) (*Order, error) {
+	query := &bson.M{"customerid:": customerId, "state.key": OrderStatusCart}
+	return GetOrderByQuery(query, customProvider)
+}
+func GetCartID(customerId string) (string, error) {
+	query := &bson.M{"customerid:": customerId, "state.key": OrderStatusCart}
+	order, err := GetOrderByQuery(query, nil)
+	if err != nil {
+		return "", err
+	}
+	return order.GetID(), nil
+}
+
 func GetOrdersOfCustomer(customerId string, customProvider OrderCustomProvider) ([]*Order, error) {
 	if customProvider == nil {
 		return nil, errors.New("Error: customProvider must not be nil")
