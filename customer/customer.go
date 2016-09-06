@@ -241,11 +241,11 @@ func CheckRequiredAddressFields(address *Address) error {
 	return nil
 }
 func (customer *Customer) AddDefaultBillingAddress(address *Address) (string, error) {
-	address.IsDefaultBillingAddress = true
+	address.Type = AddressDefaultBilling
 	return customer.AddAddress(address)
 }
 func (customer *Customer) AddDefaultShippingAddress(address *Address) (string, error) {
-	address.IsDefaultShippingAddress = true
+	address.Type = AddressDefaultShipping
 	return customer.AddAddress(address)
 }
 
@@ -277,14 +277,14 @@ func (customer *Customer) AddAddress(address *Address) (string, error) {
 	customer.Addresses = append(customer.Addresses, address)
 
 	// If this is the first added Address, it's set as billing address
-	if address.IsDefaultBillingAddress || len(customer.Addresses) == 1 {
+	if address.Type == AddressDefaultBilling || len(customer.Addresses) == 1 {
 		err := customer.SetDefaultBillingAddress(address.Id)
 		if err != nil {
 			return address.Id, err
 		}
 	}
 	// If this is the first added Address, it's set as shipping address
-	if address.IsDefaultShippingAddress || len(customer.Addresses) == 1 {
+	if address.Type == AddressDefaultShipping {
 		err := customer.SetDefaultShippingAddress(address.Id)
 		if err != nil {
 			return address.Id, err

@@ -1,21 +1,30 @@
 package customer
 
+type AddressType string
+
+const (
+	AddressDefaultBilling  AddressType = "addresDefaultBilling"
+	AddressDefaultShipping AddressType = "addressDefaultShipping"
+	AddressOther           AddressType = "addressOther"
+)
+
 type Address struct {
-	Id                       string // is automatically set on AddAddress()
-	Person                   *Person
-	IsDefaultBillingAddress  bool
-	IsDefaultShippingAddress bool
-	Street                   string
-	StreetNumber             string
-	ZIP                      string
-	City                     string
-	Country                  string
-	Company                  string
-	Department               string
-	Building                 string
-	PostOfficeBox            string
-	Score                    *Score
-	Custom                   interface{}
+	Id     string // is automatically set on AddAddress()
+	Person *Person
+	// IsDefaultBillingAddress  bool
+	// IsDefaultShippingAddress bool
+	Type          AddressType
+	Street        string
+	StreetNumber  string
+	ZIP           string
+	City          string
+	Country       string
+	Company       string
+	Department    string
+	Building      string
+	PostOfficeBox string
+	Score         *Score
+	Custom        interface{}
 }
 
 func (address *Address) GetID() string {
@@ -35,7 +44,7 @@ func (address *Address) HasScore() bool {
 	return true
 }
 
-// Equals checks if this is BASICALLY the same address. Custom, IsDefaultBilling/Shipping may be different
+// Equals checks if this is BASICALLY the same address. (Type may be different).
 func (address *Address) Equals(otherAddress *Address) bool {
 	equal := true
 

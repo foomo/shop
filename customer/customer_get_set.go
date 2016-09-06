@@ -94,7 +94,7 @@ func (customer *Customer) GetDefaultShippingAddress() (*Address, error) {
 		return nil, errors.New(shop_error.ErrorNotFound + " Customer does not have an address")
 	}
 	for _, address := range customer.Addresses {
-		if address.IsDefaultShippingAddress {
+		if address.Type == AddressDefaultShipping {
 			return address, nil
 		}
 	}
@@ -124,7 +124,7 @@ func (customer *Customer) GetDefaultBillingAddress() (*Address, error) {
 		return nil, errors.New(shop_error.ErrorNotFound + " Customer does not have an address")
 	}
 	for _, address := range customer.Addresses {
-		if address.IsDefaultBillingAddress {
+		if address.Type == AddressDefaultBilling {
 			return address, nil
 		}
 	}
@@ -155,9 +155,11 @@ func (c *Contacts) GetPrimaryContact() string {
 func (customer *Customer) SetDefaultShippingAddress(id string) error {
 	for _, address := range customer.Addresses {
 		if address.Id == id {
-			address.IsDefaultShippingAddress = true
+			address.Type = AddressDefaultShipping
 		} else {
-			address.IsDefaultShippingAddress = false
+			if address.Type == AddressDefaultShipping {
+				address.Type = AddressOther
+			}
 		}
 	}
 	return customer.Upsert()
@@ -165,9 +167,11 @@ func (customer *Customer) SetDefaultShippingAddress(id string) error {
 func (customer *Customer) SetDefaultBillingAddress(id string) error {
 	for _, address := range customer.Addresses {
 		if address.Id == id {
-			address.IsDefaultBillingAddress = true
+			address.Type = AddressDefaultBilling
 		} else {
-			address.IsDefaultBillingAddress = false
+			if address.Type == AddressDefaultBilling {
+				address.Type = AddressOther
+			}
 		}
 	}
 	return customer.Upsert()
