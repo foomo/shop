@@ -11,6 +11,15 @@ import (
 	"github.com/foomo/shop/configuration"
 )
 
+// These collections are not dropped on DropAllCollections
+var NoDropList = map[string]bool{
+	"erv_invoice_numbers":      true,
+	"mock_trx":                 true,
+	"mock_trx_cashreport_test": true,
+	"orders_many":              true,
+	"status_updates_many":      true,
+}
+
 func GetTestUtilsDir() string {
 	_, filename, _, _ := runtime.Caller(1)
 	filename = strings.Replace(filename, "/test_utils.go", "", -1) // remove "utils.go"
@@ -35,18 +44,22 @@ func DropAllCollections() error {
 	}
 
 	for _, collectionName := range collections {
-		collection := session.DB(configuration.MONGO_DB).C(collectionName)
-		count, err := collection.Count()
+		_, ok := NoDropList[collectionName]
+		// Only Drop Collections which are not on the no drop list
+		if !ok {
+			collection := session.DB(configuration.MONGO_DB).C(collectionName)
+			count, err := collection.Count()
 
-		if err != nil {
-			log.Println("failed to find docs:", collectionName)
-		}
+			if err != nil {
+				log.Println("failed to find docs:", collectionName)
+			}
 
-		err = collection.DropCollection()
-		if err != nil {
-			log.Println("failed to drop collection:", collectionName, collection)
-		} else {
-			log.Printf("dropped collection %s with %d docs", collectionName, count)
+			err = collection.DropCollection()
+			if err != nil {
+				log.Println("failed to drop collection:", collectionName, collection)
+			} else {
+				log.Printf("dropped collection %s with %d docs", collectionName, count)
+			}
 		}
 	}
 
