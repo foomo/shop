@@ -55,28 +55,26 @@ type LanguageCode string
 // Order of item
 // create revisions
 type Order struct {
-	BsonId            bson.ObjectId `bson:"_id,omitempty"`
-	CartId            string        // unique cartId. This is the initial id when the cart is created
-	Id                string        // unique orderId. This is set when the order is confirmed and sent
-	Version           *version.Version
-	referenceVersion  int  // Version of final order as it was submitted by customer
-	unlinkDB          bool // if true, changes to Customer are not stored in database
-	Flags             *Flags
-	State             *state.State
-	CustomerId        string
-	CustomerFreeze    *Freeze
-	AddressBillingId  string
-	AddressShippingId string
-	OrderType         OrderType
-	CreatedAt         time.Time
-	ConfirmedAt       time.Time // not yet used
-	LastModifiedAt    time.Time
-	CompletedAt       time.Time
-	Positions         []*Position
-	Payment           *payment.Payment
-	PriceInfo         *OrderPriceInfo
-	Shipping          *shipping.ShippingProperties
-	LanguageCode      LanguageCode
+	BsonId           bson.ObjectId `bson:"_id,omitempty"`
+	CartId           string        // unique cartId. This is the initial id when the cart is created
+	Id               string        // unique orderId. This is set when the order is confirmed and sent
+	Version          *version.Version
+	referenceVersion int  // Version of final order as it was submitted by customer
+	unlinkDB         bool // if true, changes to Customer are not stored in database
+	Flags            *Flags
+	State            *state.State
+	CustomerFreeze   *Freeze
+	CustomerData     *CustomerData
+	OrderType        OrderType
+	CreatedAt        time.Time
+	ConfirmedAt      time.Time // not yet used
+	LastModifiedAt   time.Time
+	CompletedAt      time.Time
+	Positions        []*Position
+	Payment          *payment.Payment
+	PriceInfo        *OrderPriceInfo
+	Shipping         *shipping.ShippingProperties
+	LanguageCode     LanguageCode
 
 	Custom interface{} `bson:",omitempty"`
 }
@@ -158,6 +156,7 @@ func NewOrderWithCustomId(customProvider OrderCustomProvider, orderIdFunc func()
 		CreatedAt:      utils.TimeNow(),
 		LastModifiedAt: utils.TimeNow(),
 		CustomerFreeze: &Freeze{},
+		CustomerData:   &CustomerData{},
 		OrderType:      OrderTypeOrder,
 		Positions:      []*Position{},
 		Payment:        &payment.Payment{},
@@ -192,7 +191,7 @@ func (order *Order) LinkDB() {
 // Returns true, if order is associated to a Customer id.
 // Otherwise the order is a cart of on anonymous user
 func (order *Order) HasCustomer() bool {
-	return order.CustomerId != ""
+	return order.CustomerData.CustomerId != ""
 }
 
 // Insert order into database
