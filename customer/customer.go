@@ -6,12 +6,12 @@ import (
 	"strconv"
 	"time"
 
-	"gopkg.in/mgo.v2/bson"
-
+	"github.com/foomo/shop/address"
 	"github.com/foomo/shop/shop_error"
 	"github.com/foomo/shop/unique"
 	"github.com/foomo/shop/utils"
 	"github.com/foomo/shop/version"
+	"gopkg.in/mgo.v2/bson"
 )
 
 //------------------------------------------------------------------
@@ -19,33 +19,16 @@ import (
 //------------------------------------------------------------------
 
 const (
-	ContactTypePhoneLandline ContactType    = "landline"
-	ContactTypePhoneMobile   ContactType    = "mobile"
-	ContactTypeEmail         ContactType    = "email"
-	ContactTypeSkype         ContactType    = "skype"
-	ContactTypeFax           ContactType    = "fax"
-	SalutationTypeMr         SalutationType = "male"   //"Mr"
-	SalutationTypeMrs        SalutationType = "female" //"Mrs"
-	SalutationTypeMrAndMrs   SalutationType = "MrAndMrs"
-	SalutationTypeCompany    SalutationType = "Company" // TODO: find better wording
-	SalutationTypeFamily     SalutationType = "Family"  // TODO: find better wording
-	TitleTypeDr              TitleType      = "Dr"
-	TitleTypeProf            TitleType      = "Prof."
-	TitleTypeProfDr          TitleType      = "Prof. Dr."
-	TitleTypePriest          TitleType      = "Priest" // TODO: find better wording
-	CountryCodeGermany       CountryCode    = "DE"
-	CountryCodeSwitzerland   CountryCode    = "CH"
-	LanguageCodeGermany      LanguageCode   = "DE"
-	LanguageCodeSwitzerland  LanguageCode   = "CH"
+	CountryCodeGermany      CountryCode  = "DE"
+	CountryCodeSwitzerland  CountryCode  = "CH"
+	LanguageCodeGermany     LanguageCode = "DE"
+	LanguageCodeSwitzerland LanguageCode = "CH"
 )
 
 //------------------------------------------------------------------
 // ~ PUBLIC TYPES
 //------------------------------------------------------------------
 
-type ContactType string
-type SalutationType string
-type TitleType string
 type LanguageCode string
 type CountryCode string
 
@@ -60,11 +43,11 @@ type Customer struct {
 	CreatedAt      time.Time
 	LastModifiedAt time.Time
 	Email          string // unique, used as Login Credential
-	Person         *Person
+	Person         *address.Person
 	IsGuest        bool
 	IsLoggedIn     bool
 	Company        *Company
-	Addresses      []*Address
+	Addresses      []*address.Address
 	Localization   *Localization
 	TacAgree       bool // Terms and Conditions
 	Custom         interface{}
@@ -72,26 +55,6 @@ type Customer struct {
 
 type Flags struct {
 	forceUpsert bool // if true, Upsert is performed even if there is a version conflict. This is important for rollbacks.
-}
-
-type Contacts struct {
-	PhoneLandLine string
-	PhoneMobile   string
-	Email         string
-	Skype         string
-	Primary       ContactType
-}
-
-// Person is a field Customer and of Address
-// Only Customer->Person has Contacts
-type Person struct {
-	FirstName  string
-	MiddleName string
-	LastName   string
-	Title      TitleType
-	Salutation SalutationType
-	Birthday   string
-	Contacts   *Contacts
 }
 
 type Company struct {
@@ -154,8 +117,8 @@ func NewCustomer(email, password string, customProvider CustomerCustomProvider) 
 		Email:          utils.IteString(isGuest, "", lc(email)), // If Customer is a guest, we do not set the email address. This field should be unique in the database (and would not be if the guest ordered twice).
 		CreatedAt:      utils.TimeNow(),
 		LastModifiedAt: utils.TimeNow(),
-		Person: &Person{
-			Contacts: &Contacts{
+		Person: &address.Person{
+			Contacts: &address.Contacts{
 				Email: email,
 			},
 		},
@@ -233,68 +196,68 @@ func (customer *Customer) OverrideId(id string) error {
 
 // checkFields Checks if all required fields are specified
 // @TODO which are teh required fields
-func CheckRequiredAddressFields(address *Address) error {
+func CheckRequiredAddressFields(address *address.Address) error {
 	// Return error if required field is missing
 	if address.Person == nil || address.Person.Salutation == "" || address.Person.FirstName == "" || address.Person.LastName == "" || address.Street == "" || address.StreetNumber == "" || address.ZIP == "" || address.City == "" || address.Country == "" {
 		return errors.New(shop_error.ErrorRequiredFieldMissing + "\n" + utils.ToJSON(address))
 	}
 	return nil
 }
-func (customer *Customer) AddDefaultBillingAddress(address *Address) (string, error) {
-	address.Type = AddressDefaultBilling
-	return customer.AddAddress(address)
+func (customer *Customer) AddDefaultBillingAddress(addr *address.Address) (string, error) {
+	addr.Type = address.AddressDefaultBilling
+	return customer.AddAddress(addr)
 }
-func (customer *Customer) AddDefaultShippingAddress(address *Address) (string, error) {
-	address.Type = AddressDefaultShipping
-	return customer.AddAddress(address)
+func (customer *Customer) AddDefaultShippingAddress(addr *address.Address) (string, error) {
+	addr.Type = address.AddressDefaultShipping
+	return customer.AddAddress(addr)
 }
 
 // AddAddress adds a new address to the customers profile and returns its unique id
-func (customer *Customer) AddAddress(address *Address) (string, error) {
+func (customer *Customer) AddAddress(addr *address.Address) (string, error) {
 
-	err := CheckRequiredAddressFields(address)
+	err := CheckRequiredAddressFields(addr)
 	if err != nil {
 		log.Println("Error", err)
 		return "", err
 	}
 	// Create a unique id for this address
-	address.Id = unique.GetNewID()
+	addr.Id = unique.GetNewID()
 	// Prevent nil pointer in case we get an incomplete address
-	if address.Person == nil {
-		address.Person = &Person{
-			Contacts: &Contacts{},
+	if addr.Person == nil {
+		addr.Person = &address.Person{
+			Contacts: &address.Contacts{},
 		}
-	} else if address.Person.Contacts == nil {
-		address.Person.Contacts = &Contacts{}
+	} else if addr.Person.Contacts == nil {
+		addr.Person.Contacts = &address.Contacts{}
 	}
 
 	// If Person of Customer is still empty and this is the first address
 	// added to the customer, Person of Address is adopted for Customer
 	if len(customer.Addresses) == 0 && customer.Person.LastName == "" {
-		*customer.Person = *address.Person
+		*customer.Person = *addr.Person
 	}
 
-	customer.Addresses = append(customer.Addresses, address)
+	customer.Addresses = append(customer.Addresses, addr)
 
 	// If this is the first added Address, it's set as billing address
-	if address.Type == AddressDefaultBilling || len(customer.Addresses) == 1 {
-		err := customer.SetDefaultBillingAddress(address.Id)
+	if addr.Type == address.AddressDefaultBilling || len(customer.Addresses) == 1 {
+		err := customer.SetDefaultBillingAddress(addr.Id)
 		if err != nil {
-			return address.Id, err
+			return addr.Id, err
 		}
 	}
 	// If this is the first added Address, it's set as shipping address
-	if address.Type == AddressDefaultShipping {
-		err := customer.SetDefaultShippingAddress(address.Id)
+	if addr.Type == address.AddressDefaultShipping {
+		err := customer.SetDefaultShippingAddress(addr.Id)
 		if err != nil {
-			return address.Id, err
+			return addr.Id, err
 		}
 	}
-	return address.Id, customer.Upsert()
+	return addr.Id, customer.Upsert()
 }
 func (customer *Customer) RemoveAddress(id string) error {
 
-	addresses := []*Address{}
+	addresses := []*address.Address{}
 	for _, address := range customer.Addresses {
 		if address.Id == id {
 			continue
@@ -305,18 +268,18 @@ func (customer *Customer) RemoveAddress(id string) error {
 	return customer.Upsert()
 }
 
-func (customer *Customer) ChangeAddress(address *Address) error {
-	addressToBeChanged, err := customer.GetAddressById(address.GetID())
+func (customer *Customer) ChangeAddress(addr *address.Address) error {
+	addressToBeChanged, err := customer.GetAddressById(addr.GetID())
 	if err != nil {
-		log.Println("Error: Could not find address with id "+address.GetID(), "for customer ", customer.Person.LastName)
+		log.Println("Error: Could not find address with id "+addr.GetID(), "for customer ", customer.Person.LastName)
 		return err
 	}
-	err = CheckRequiredAddressFields(address)
+	err = CheckRequiredAddressFields(addr)
 	if err != nil {
 		return err
 	}
-	*addressToBeChanged = *address
-	*addressToBeChanged.Person = *address.Person
+	*addressToBeChanged = *addr
+	*addressToBeChanged.Person = *addr.Person
 	return customer.Upsert()
 }
 

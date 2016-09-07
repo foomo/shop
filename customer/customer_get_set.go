@@ -4,6 +4,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/foomo/shop/address"
 	"github.com/foomo/shop/shop_error"
 	"github.com/foomo/shop/utils"
 	"github.com/foomo/shop/version"
@@ -25,7 +26,7 @@ func (customer *Customer) GetEmail() string {
 	return customer.Email
 }
 
-func (customer *Customer) GetPerson() *Person {
+func (customer *Customer) GetPerson() *address.Person {
 	return customer.Person
 }
 
@@ -37,7 +38,7 @@ func (customer *Customer) GetLocalization() *Localization {
 	return customer.Localization
 }
 
-func (customer *Customer) GetAddresses() []*Address {
+func (customer *Customer) GetAddresses() []*address.Address {
 	return customer.Addresses
 }
 
@@ -54,7 +55,7 @@ func (customer *Customer) GetLastModifiedAtFormatted() string {
 	return utils.GetFormattedTime(customer.LastModifiedAt)
 }
 
-func (customer *Customer) GetAddress(id string) (*Address, error) {
+func (customer *Customer) GetAddress(id string) (*address.Address, error) {
 	for _, address := range customer.Addresses {
 		if address.Id == id {
 			return address, nil
@@ -63,7 +64,7 @@ func (customer *Customer) GetAddress(id string) (*Address, error) {
 	return nil, errors.New(shop_error.ErrorNotFound + "Could not find Address for id: " + id)
 }
 
-func (customer *Customer) GetAddressById(id string) (*Address, error) {
+func (customer *Customer) GetAddressById(id string) (*address.Address, error) {
 	for _, address := range customer.GetAddresses() {
 		if address.GetID() == id {
 			return address, nil
@@ -72,7 +73,7 @@ func (customer *Customer) GetAddressById(id string) (*Address, error) {
 	return nil, errors.New(shop_error.ErrorNotFound)
 }
 
-func (customer *Customer) GetScoreForAddress(addressId string) (*Score, error) {
+func (customer *Customer) GetScoreForAddress(addressId string) (*address.Score, error) {
 	address, err := customer.GetAddressById(addressId)
 	if err != nil {
 		return nil, err
@@ -84,18 +85,18 @@ func (customer *Customer) GetScoreForAddress(addressId string) (*Score, error) {
 }
 
 // GetPrimaryAddress returns the default billing address
-func (customer *Customer) GetPrimaryAddress() (*Address, error) {
+func (customer *Customer) GetPrimaryAddress() (*address.Address, error) {
 	return customer.GetDefaultBillingAddress()
 }
 
 // GetDefaultShippingAddress returns the default shipping address if available, else returns first address
-func (customer *Customer) GetDefaultShippingAddress() (*Address, error) {
+func (customer *Customer) GetDefaultShippingAddress() (*address.Address, error) {
 	if len(customer.Addresses) == 0 {
 		return nil, errors.New(shop_error.ErrorNotFound + " Customer does not have an address")
 	}
-	for _, address := range customer.Addresses {
-		if address.Type == AddressDefaultShipping {
-			return address, nil
+	for _, addr := range customer.Addresses {
+		if addr.Type == address.AddressDefaultShipping {
+			return addr, nil
 		}
 	}
 	return customer.Addresses[0], nil
@@ -119,33 +120,16 @@ func (customer *Customer) GetDefaultShippingAddressID() (string, error) {
 }
 
 // GetDefaultBillingAddress returns the default billing address if available, else returns first address
-func (customer *Customer) GetDefaultBillingAddress() (*Address, error) {
+func (customer *Customer) GetDefaultBillingAddress() (*address.Address, error) {
 	if len(customer.Addresses) == 0 {
 		return nil, errors.New(shop_error.ErrorNotFound + " Customer does not have an address")
 	}
-	for _, address := range customer.Addresses {
-		if address.Type == AddressDefaultBilling {
-			return address, nil
+	for _, addr := range customer.Addresses {
+		if addr.Type == address.AddressDefaultBilling {
+			return addr, nil
 		}
 	}
 	return customer.Addresses[0], nil
-}
-
-// GetPrimaryContact returns primary contact as string
-func (c *Contacts) GetPrimaryContact() string {
-	switch c.Primary {
-	case ContactTypePhoneLandline:
-		return string(ContactTypePhoneLandline) + ": " + c.PhoneLandLine
-	case ContactTypePhoneMobile:
-		return string(ContactTypePhoneMobile) + ": " + c.PhoneMobile
-	case ContactTypeEmail:
-		return string(ContactTypeEmail) + ": " + c.Email
-	case ContactTypeSkype:
-		return string(ContactTypeSkype) + ": " + c.Skype
-		// case ContactTypeFax: // 2016 anyone??
-		// 	return string(ContactTypeFax) + ": " + c.Fax
-	}
-	return "No primary contact available!"
 }
 
 //------------------------------------------------------------------
@@ -153,24 +137,24 @@ func (c *Contacts) GetPrimaryContact() string {
 //------------------------------------------------------------------
 
 func (customer *Customer) SetDefaultShippingAddress(id string) error {
-	for _, address := range customer.Addresses {
-		if address.Id == id {
-			address.Type = AddressDefaultShipping
+	for _, addr := range customer.Addresses {
+		if addr.Id == id {
+			addr.Type = address.AddressDefaultShipping
 		} else {
-			if address.Type == AddressDefaultShipping {
-				address.Type = AddressOther
+			if addr.Type == address.AddressDefaultShipping {
+				addr.Type = address.AddressOther
 			}
 		}
 	}
 	return customer.Upsert()
 }
 func (customer *Customer) SetDefaultBillingAddress(id string) error {
-	for _, address := range customer.Addresses {
-		if address.Id == id {
-			address.Type = AddressDefaultBilling
+	for _, addr := range customer.Addresses {
+		if addr.Id == id {
+			addr.Type = address.AddressDefaultBilling
 		} else {
-			if address.Type == AddressDefaultBilling {
-				address.Type = AddressOther
+			if addr.Type == address.AddressDefaultBilling {
+				addr.Type = address.AddressOther
 			}
 		}
 	}
@@ -188,7 +172,7 @@ func (customer *Customer) SetLocalization(localization *Localization) error {
 	customer.Localization = localization
 	return customer.Upsert()
 }
-func (customer *Customer) SetPerson(person *Person) error {
+func (customer *Customer) SetPerson(person *address.Person) error {
 	customer.Person = person
 	return customer.Upsert()
 }

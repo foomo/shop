@@ -12,6 +12,7 @@ import (
 
 	"gopkg.in/mgo.v2/bson"
 
+	"github.com/foomo/shop/address"
 	"github.com/foomo/shop/payment"
 	"github.com/foomo/shop/shipping"
 	"github.com/foomo/shop/state"
@@ -78,6 +79,13 @@ type Order struct {
 	LanguageCode      LanguageCode
 
 	Custom interface{} `bson:",omitempty"`
+}
+
+type CustomerData struct {
+	CustomerId      string
+	Email           string
+	BillingAddress  *address.Address
+	ShippingAddress *address.Address
 }
 
 type Flags struct {

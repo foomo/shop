@@ -5,6 +5,7 @@ import (
 	"log"
 	"testing"
 
+	"github.com/foomo/shop/address"
 	"github.com/foomo/shop/shop_error"
 	"github.com/foomo/shop/test_utils"
 	"github.com/foomo/shop/utils"
@@ -97,9 +98,9 @@ func create2CustomersAndPerformSomeUpserts(t *testing.T) (*Customer, *Customer) 
 	err = customer.Upsert()
 	customer.Person.LastName = "Bar"
 	err = customer.Upsert()
-	address := &Address{
-		Person: &Person{
-			Salutation: SalutationTypeMr,
+	address := &address.Address{
+		Person: &address.Person{
+			Salutation: address.SalutationTypeMr,
 			FirstName:  "Foo",
 			MiddleName: "Bob",
 			LastName:   "Bar",
@@ -171,9 +172,9 @@ func TestCustomerChangeAddress(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	address := &Address{
-		Person: &Person{
-			Salutation: SalutationTypeMr,
+	addr := &address.Address{
+		Person: &address.Person{
+			Salutation: address.SalutationTypeMr,
 			FirstName:  "Foo",
 			MiddleName: "Bob",
 			LastName:   "Bar",
@@ -185,16 +186,16 @@ func TestCustomerChangeAddress(t *testing.T) {
 		ZIP:          "1234",
 	}
 	log.Println("Original Address:")
-	utils.PrintJSON(address)
-	id, err := customer.AddAddress(address)
+	utils.PrintJSON(addr)
+	id, err := customer.AddAddress(addr)
 	log.Println("Added Address with id ", id)
 	if err != nil {
 		t.Fatal(err)
 	}
-	addressNew := &Address{
+	addressNew := &address.Address{
 		Id: id, // Set id of address we want to replace
-		Person: &Person{
-			Salutation: SalutationTypeMr,
+		Person: &address.Person{
+			Salutation: address.SalutationTypeMr,
 			FirstName:  "FooChanged",
 			MiddleName: "Bob",
 			LastName:   "Bar",

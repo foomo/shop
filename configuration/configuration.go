@@ -6,8 +6,8 @@ const (
 	LocalUnitTests = "dockerhost/" + MONGO_DB
 	WithDocker     = "mongo/" + MONGO_DB
 
-	//MONGO_URL string = "mongodb://" + LocalUnitTests
-	MONGO_URL string = "mongodb://" + WithDocker
+	MONGO_URL string = "mongodb://" + LocalUnitTests
+	//MONGO_URL string = "mongodb://" + WithDocker
 
 	MONGO_COLLECTION_CREDENTIALS       string = "credentials"
 	MONGO_COLLECTION_SHOP_EVENT_LOG    string = "shop_event_log"
