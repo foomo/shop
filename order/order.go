@@ -231,6 +231,9 @@ func (order *Order) UnFreezeCustomer() {
 	order.CustomerFreeze = &Freeze{}
 }
 func (order *Order) IsFrozenCustomer() bool {
+	if order.CustomerFreeze == nil {
+		return false
+	}
 	return !order.CustomerFreeze.Time.IsZero()
 }
 
