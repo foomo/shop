@@ -31,6 +31,11 @@ func newSalt() ([]byte, error) {
 	return salt, nil
 }
 
+func CreateHash(s string) (string, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(s), bcrypt.DefaultCost+2)
+	return string(hash), err
+}
+
 //------------------------------------------------------------------
 // ~ PUBLIC METHODS
 //------------------------------------------------------------------

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/foomo/shop/address"
+	"github.com/foomo/shop/crypto"
 	"github.com/foomo/shop/shop_error"
 	"github.com/foomo/shop/unique"
 	"github.com/foomo/shop/utils"
@@ -50,7 +51,13 @@ type Customer struct {
 	Addresses      []*address.Address
 	Localization   *Localization
 	TacAgree       bool // Terms and Conditions
+	Tracking       *Tracking
 	Custom         interface{}
+}
+
+type Tracking struct {
+	TrackingID string
+	SessionIDs []string
 }
 
 type Flags struct {
@@ -123,7 +130,14 @@ func NewCustomer(email, password string, customProvider CustomerCustomProvider) 
 			},
 		},
 		Localization: &Localization{},
+		Tracking:     &Tracking{},
 	}
+
+	trackingId, err := crypto.CreateHash(customer.GetID())
+	if err != nil {
+		return nil, err
+	}
+	customer.Tracking.TrackingID = "tid" + trackingId
 
 	if isGuest {
 		customer.IsGuest = true
