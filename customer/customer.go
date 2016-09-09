@@ -52,6 +52,7 @@ type Customer struct {
 	Localization   *Localization
 	TacAgree       bool // Terms and Conditions
 	Tracking       *Tracking
+	WishLists      *WishLists
 	Custom         interface{}
 }
 
@@ -131,6 +132,7 @@ func NewCustomer(email, password string, customProvider CustomerCustomProvider) 
 		},
 		Localization: &Localization{},
 		Tracking:     &Tracking{},
+		WishLists:    &WishLists{},
 	}
 
 	trackingId, err := crypto.CreateHash(customer.GetID())
