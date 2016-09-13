@@ -112,6 +112,7 @@ func NewCustomer(email, password string, customProvider CustomerCustomProvider) 
 			return nil, errors.New(shop_error.ErrorNotFound + " Login " + email + " is already taken!")
 		}
 
+		// These credentials are not used at the moment
 		err = CreateCustomerCredentials(email, password)
 		if err != nil {
 			return nil, err
@@ -163,11 +164,16 @@ func NewCustomer(email, password string, customProvider CustomerCustomProvider) 
 //------------------------------------------------------------------
 
 func (customer *Customer) ChangeEmail(email, newEmail string) error {
-	err := ChangeEmail(email, newEmail)
-	if err != nil {
-		return err
+	// err := ChangeEmail(email, newEmail)
+	// if err != nil {
+	// 	return err
+	// }
+	customer.Email = lc(newEmail)
+	for _, addr := range customer.GetAddresses() {
+		if addr.Person.Contacts.Email == lc(email) {
+			addr.Person.Contacts.Email = lc(newEmail)
+		}
 	}
-	customer.Email = lc(email)
 	return customer.Upsert()
 }
 func (customer *Customer) ChangePassword(password, passwordNew string, force bool) error {
