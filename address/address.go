@@ -36,6 +36,7 @@ type Address struct {
 	ZIP           string
 	City          string
 	Country       string
+	CountryCode   string
 	Company       string
 	Department    string
 	Building      string
