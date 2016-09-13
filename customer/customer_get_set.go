@@ -44,9 +44,12 @@ func (customer *Customer) GetAddresses() []*address.Address {
 
 // GetSecondaryAddress returns all Addresses but the default billing address (Which is the address the customer is mainly associated with)
 func (customer *Customer) GetSecondaryAddresses() []*address.Address {
+
 	addresses := []*address.Address{}
 	for _, addr := range customer.GetAddresses() {
-		addresses = append(addresses, addr)
+		if addr.Type != address.AddressDefaultBilling {
+			addresses = append(addresses, addr)
+		}
 	}
 	return addresses
 }
