@@ -274,6 +274,15 @@ func (order *Order) IncPositionQuantity(itemID string, price float64) error {
 	}
 	return order.SetPositionQuantity(itemID, quantity, price)
 }
+
+func (order *Order) AddToPositionQuantity(itemID string, addQty float64, price float64) error {
+	pos := order.GetPositionByItemId(itemID)
+	quantity := 1.0
+	if pos != nil {
+		quantity = pos.Quantity + addQty
+	}
+	return order.SetPositionQuantity(itemID, quantity, price)
+}
 func (order *Order) DecPositionQuantity(itemID string, price float64) error {
 	pos := order.GetPositionByItemId(itemID)
 	if pos == nil {
