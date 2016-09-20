@@ -14,6 +14,7 @@ test:
 	make clean
 	go test -run Test $(TEST_PATH)/crypto
 	go test -run Test $(TEST_PATH)/customer
+	go test -run Test $(TEST_PATH)/watchlist
 	go test -run Test $(TEST_PATH)/examples
 	go test -run Test $(TEST_PATH)/order
 	go test -run Test $(TEST_PATH)/state
@@ -24,6 +25,7 @@ testv:
 	make clean
 	go test -v -run Test $(TEST_PATH)/crypto
 	go test -v -run Test $(TEST_PATH)/customer
+	go test -v -run Test $(TEST_PATH)/watchlist
 	go test -v -run Test $(TEST_PATH)/examples
 	go test -v -run Test $(TEST_PATH)/order
 	go test -v -run Test $(TEST_PATH)/state
