@@ -3,7 +3,8 @@ package shop_error
 import "strings"
 
 const (
-	ErrorNotInDatabase        = "not found" // do not change, this string is returned by MongoDB
+	ErrorAlreadyExists        = "already existing in db" // do not change, this string is returned by MongoDB
+	ErrorNotInDatabase        = "not found"              // do not change, this string is returned by MongoDB
 	ErrorNotFound             = "Error: Not Found: "
 	ErrorRequiredFieldMissing = "Error: A required field is missing!"
 )
