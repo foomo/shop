@@ -45,7 +45,7 @@ func (cw *CustomerWatchLists) AddList(watchlistType string, name string, public 
 		Recipient:     recipient,
 		TargetDate:    targetDate,
 		Description:   description,
-		PublicURIHash: unique.GetNewID(),
+		PublicURIHash: "",
 	}
 	cw.Lists = append(cw.Lists, watchList)
 	err := cw.Upsert()
@@ -96,8 +96,8 @@ func (cw *CustomerWatchLists) ListAddItem(listId string, id string, quantity flo
 	return cw.Upsert()
 }
 
-// ListRemoveItem will reduce the quantity of the item by one. if quantity equals zero, item is removed from list.
-func (cw *CustomerWatchLists) ListRemoveItem(listId string, Id string) error {
+// ListRemoveItem will reduce the quantity of the item by one. if quantity equals or is less than zero, item is removed from list.
+func (cw *CustomerWatchLists) ListRemoveItem(listId string, Id string, quantity float64) error {
 	listExists := false
 	for _, list := range cw.Lists {
 		if list.Id == listId {
@@ -105,7 +105,7 @@ func (cw *CustomerWatchLists) ListRemoveItem(listId string, Id string) error {
 			itemsTmp := []*WatchListItem{}
 			for _, item := range list.Items {
 				if item.Id == Id {
-					item.Quantity = item.Quantity - 1
+					item.Quantity = item.Quantity - quantity
 					if item.Quantity > 0 {
 						itemsTmp = append(itemsTmp, item)
 					}
@@ -172,7 +172,7 @@ func (cw *CustomerWatchLists) GetItem(listId string, itemId string) (*WatchListI
 	return nil, errors.New("No item found for id " + itemId)
 }
 
-func (cw *CustomerWatchLists) EditList(listId string, name string, public bool, recipient string, targetDate string, description string) error {
+func (cw *CustomerWatchLists) EditList(listId string, name string, public bool, recipient string, targetDate string, description string) (*WatchList, error) {
 	for _, list := range cw.Lists {
 		if list.Id == listId {
 			if list.Name != "" {
@@ -192,10 +192,14 @@ func (cw *CustomerWatchLists) EditList(listId string, name string, public bool, 
 			} else {
 				list.PublicURIHash = ""
 			}
-			return cw.Upsert()
+			err := cw.Upsert()
+			if err != nil {
+				return nil, err
+			}
+			return list, nil
 		}
 	}
-	return errors.New("List with Id " + listId + " not found")
+	return nil, errors.New("List with Id " + listId + " not found")
 }
 
 // MergeLists merges a list from one CustomerWatchLists cwFrom Into a list of CustomerWatchLists cwInto

@@ -2,11 +2,13 @@ package watchlist
 
 import (
 	"errors"
+	"log"
 
 	"gopkg.in/mgo.v2/bson"
 
 	"github.com/foomo/shop/configuration"
 	"github.com/foomo/shop/persistence"
+	shopError "github.com/foomo/shop/shop_error"
 )
 
 //------------------------------------------------------------------
@@ -54,16 +56,52 @@ func GetWatchListPersistor() *persistence.Persistor {
 }
 
 func NewCustomerWatchListsFromCustomerID(customerID string) error {
+	exists, err := alreadyExists(customerID, "")
+	if err != nil {
+		log.Println(err)
+		return errors.New(shopError.ErrorAlreadyExists)
+	}
+	if exists {
+		log.Println("Did not insert CustomerWatchLists for customer", customerID, "- vo already exists")
+		return nil
+	}
 	return insertCustomerWatchLists(&CustomerWatchLists{
 		CustomerID: customerID,
 		Lists:      []*WatchList{},
 	})
 }
 func NewCustomerWatchListsFromSessionID(sessionID string) error {
+	exists, err := alreadyExists("", sessionID)
+	if err != nil {
+		return err
+	}
+	if exists {
+		log.Println("Did not insert CustomerWatchLists for session", sessionID, "- vo already exists")
+		return nil
+	}
 	return insertCustomerWatchLists(&CustomerWatchLists{
 		SessionID: sessionID,
 		Lists:     []*WatchList{},
 	})
+}
+
+func alreadyExists(customerId, sessionId string) (bool, error) {
+	key := ""
+	value := ""
+	if customerId != "" {
+		key = "customerID"
+		value = customerId
+	} else if sessionId != "" {
+		key = "sessionID"
+		value = sessionId
+	}
+	p := GetWatchListPersistor()
+	q := p.GetCollection().Find(&bson.M{key: value})
+	count, err := q.Count()
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }
 
 func DeleteCustomerWatchLists(cw *CustomerWatchLists) error {
@@ -115,7 +153,7 @@ func findOne(customerID, sessionID, email string) (*CustomerWatchLists, error) {
 	if sessionID != "" {
 		find = &bson.M{"sessionID": sessionID}
 	}
-	if customerID != "" {
+	if email != "" {
 		find = &bson.M{"email": email}
 	}
 

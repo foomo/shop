@@ -8,7 +8,7 @@ import (
 	"github.com/foomo/shop/utils"
 )
 
-func TestWatchLists(t *testing.T) {
+func TestWatchListsManipulate(t *testing.T) {
 	test_utils.DropAllCollections()
 	customerID := unique.GetNewID()
 	err := NewCustomerWatchListsFromCustomerID(customerID)
@@ -54,7 +54,7 @@ func TestWatchLists(t *testing.T) {
 		t.Fatal("Wrong Quantity, expected 5")
 	}
 	// Reduce Quantity of item by 1
-	err = cw.ListRemoveItem(listA.Id, "item2")
+	err = cw.ListRemoveItem(listA.Id, "item2", 1)
 	if err != nil {
 		utils.PrintJSON(cw)
 		t.Fatal(err)
@@ -68,7 +68,7 @@ func TestWatchLists(t *testing.T) {
 		t.Fatal("Wrong Quantity, expected 1")
 	}
 	// Remove last of item2
-	err = cw.ListRemoveItem(listA.Id, "item2")
+	err = cw.ListRemoveItem(listA.Id, "item2", 1)
 	if err != nil {
 		utils.PrintJSON(cw)
 		t.Fatal(err)
@@ -81,7 +81,7 @@ func TestWatchLists(t *testing.T) {
 	newDescription := "new description"
 	newName := "newName"
 	// Edit list
-	err = cw.EditList(listA.Id, newName, false, "", "", newDescription)
+	_, err = cw.EditList(listA.Id, newName, false, "", "", newDescription)
 	if err != nil {
 		utils.PrintJSON(cw)
 		t.Fatal(err)
@@ -156,6 +156,18 @@ func TestWatchLists(t *testing.T) {
 		t.Fatal("Expected Quantity == 2")
 	}
 	utils.PrintJSON(cw)
-	//utils.PrintJSON(cw2)
+
+	// Test Getter
+	cw, err = GetCustomerWatchListsByCustomerID(customerID)
+	if err != nil {
+		utils.PrintJSON(cw)
+		t.Fatal(err)
+	}
+
+	// Test for non existant Id
+	_, err = GetCustomerWatchListsByCustomerID("InvalidID")
+	if err == nil {
+		t.Fatal("Expected error not found")
+	}
 
 }
