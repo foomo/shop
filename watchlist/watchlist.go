@@ -48,6 +48,11 @@ func (cw *CustomerWatchLists) AddList(watchlistType string, name string, public 
 		PublicURIHash: "",
 		Items:         []*WatchListItem{},
 	}
+	if public {
+		watchList.PublicURIHash = unique.GetNewID()
+	} else {
+		watchList.PublicURIHash = ""
+	}
 	cw.Lists = append(cw.Lists, watchList)
 	err := cw.Upsert()
 	if err != nil {
