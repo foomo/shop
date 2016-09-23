@@ -253,8 +253,9 @@ func GetOrdersOfCustomer(customerId string, customProvider OrderCustomProvider) 
 
 // GetOrderIdsOfCustomer returns all orderIds associated with this customer
 func GetOrderIdsOfCustomer(customerId string) ([]string, error) {
-	orderIter, err := Find(&bson.M{"customerid": customerId}, nil) // @TODO this could use a select as we only want the id's
+	orderIter, err := Find(&bson.M{"customerdata.customerid": customerId}, nil) // @TODO this could use a select as we only want the id's
 	if err != nil {
+		log.Println("Could not find customerid")
 		return nil, err
 	}
 	ids := []string{}
