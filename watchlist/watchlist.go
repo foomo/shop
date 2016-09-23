@@ -46,6 +46,7 @@ func (cw *CustomerWatchLists) AddList(watchlistType string, name string, public 
 		TargetDate:    targetDate,
 		Description:   description,
 		PublicURIHash: "",
+		Items:         []*WatchListItem{},
 	}
 	cw.Lists = append(cw.Lists, watchList)
 	err := cw.Upsert()
