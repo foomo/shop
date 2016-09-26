@@ -8,7 +8,6 @@ import (
 
 	"github.com/foomo/shop/configuration"
 	"github.com/foomo/shop/persistence"
-	shopError "github.com/foomo/shop/shop_error"
 )
 
 //------------------------------------------------------------------
@@ -55,37 +54,44 @@ func GetWatchListPersistor() *persistence.Persistor {
 	return globalWatchListPersistor
 }
 
-func NewCustomerWatchListsFromCustomerID(customerID string) error {
-	exists, err := alreadyExists(customerID, "")
+func NewCustomerWatchListsFromCustomerID(customerID string) (*CustomerWatchLists, error) {
+	exists, err := CustomerWatchListsExists(customerID, "", "")
 	if err != nil {
-		log.Println(err)
-		return errors.New(shopError.ErrorAlreadyExists)
+		return nil, err
 	}
 	if exists {
 		log.Println("Did not insert CustomerWatchLists for customer", customerID, "- vo already exists")
-		return nil
+		return nil, errors.New("CustomerWatchLists for customerID " + customerID + " already exists.")
 	}
-	return insertCustomerWatchLists(&CustomerWatchLists{
+	err = insertCustomerWatchLists(&CustomerWatchLists{
 		CustomerID: customerID,
 		Lists:      []*WatchList{},
 	})
-}
-func NewCustomerWatchListsFromSessionID(sessionID string) error {
-	exists, err := alreadyExists("", sessionID)
 	if err != nil {
-		return err
+		return nil, err
+	}
+	return GetCustomerWatchListsByCustomerID(customerID)
+}
+func NewCustomerWatchListsFromSessionID(sessionID string) (*CustomerWatchLists, error) {
+	exists, err := CustomerWatchListsExists("", sessionID, "")
+	if err != nil {
+		return nil, err
 	}
 	if exists {
 		log.Println("Did not insert CustomerWatchLists for session", sessionID, "- vo already exists")
-		return nil
+		return nil, errors.New("CustomerWatchLists for sessionID " + sessionID + " already exists.")
 	}
-	return insertCustomerWatchLists(&CustomerWatchLists{
+	err = insertCustomerWatchLists(&CustomerWatchLists{
 		SessionID: sessionID,
 		Lists:     []*WatchList{},
 	})
+	if err != nil {
+		return nil, err
+	}
+	return GetCustomerWatchListsBySessionID(sessionID)
 }
 
-func alreadyExists(customerId, sessionId string) (bool, error) {
+func CustomerWatchListsExists(customerId, sessionId, email string) (bool, error) {
 	key := ""
 	value := ""
 	if customerId != "" {
@@ -94,6 +100,9 @@ func alreadyExists(customerId, sessionId string) (bool, error) {
 	} else if sessionId != "" {
 		key = "sessionID"
 		value = sessionId
+	} else if email != "" {
+		key = "email"
+		value = email
 	}
 	p := GetWatchListPersistor()
 	q := p.GetCollection().Find(&bson.M{key: value})
