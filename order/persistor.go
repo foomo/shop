@@ -46,10 +46,10 @@ func Find(query *bson.M, customProvider OrderCustomProvider) (iter func() (o *Or
 	}
 	//log.Println("Persistor.Find(): ", n, "items found for query ", query)
 	q := p.GetCollection().Find(query)
-	fields := customProvider.Fields()
-	if fields != nil {
-		q.Select(fields)
-	}
+	// fields := customProvider.Fields()
+	// if fields != nil {
+	// 	q.Select(fields)
+	// }
 	_, err = q.Count()
 	if err != nil {
 		return
@@ -231,8 +231,9 @@ func GetOrdersOfCustomer(customerId string, customProvider OrderCustomProvider) 
 		return nil, errors.New("Error: customProvider must not be nil")
 	}
 
-	orderIter, err := Find(&bson.M{"customerid": customerId}, customProvider)
+	orderIter, err := Find(&bson.M{"customerdata.customerid": customerId}, customProvider)
 	if err != nil {
+		log.Println("Query customerdata.customerid failed", customerId)
 		return nil, err
 	}
 	orders := []*Order{}
@@ -255,7 +256,7 @@ func GetOrdersOfCustomer(customerId string, customProvider OrderCustomProvider) 
 func GetOrderIdsOfCustomer(customerId string) ([]string, error) {
 	orderIter, err := Find(&bson.M{"customerdata.customerid": customerId}, nil) // @TODO this could use a select as we only want the id's
 	if err != nil {
-		log.Println("Could not find customerid")
+		log.Println("Query customerdata.customerid failed:", customerId)
 		return nil, err
 	}
 	ids := []string{}
