@@ -11,7 +11,7 @@ import (
 func TestWatchListsManipulate(t *testing.T) {
 	test_utils.DropAllCollections()
 	customerID := unique.GetNewID()
-	err := NewCustomerWatchListsFromCustomerID(customerID)
+	_, err := NewCustomerWatchListsFromCustomerID(customerID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,11 +108,11 @@ func TestWatchListsManipulate(t *testing.T) {
 
 	// Create second CustomerWatchLists and merge
 	sessionID := unique.GetNewID()
-	err = NewCustomerWatchListsFromCustomerID(sessionID)
+	_, err = NewCustomerWatchListsFromSessionID(sessionID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	cw2, err := GetCustomerWatchListsByCustomerID(sessionID)
+	cw2, err := GetCustomerWatchListsBySessionID(sessionID)
 	if err != nil {
 		utils.PrintJSON(cw)
 		t.Fatal(err)
