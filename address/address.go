@@ -26,10 +26,8 @@ const (
 )
 
 type Address struct {
-	Id     string // is automatically set on AddAddress()
-	Person *Person
-	// IsDefaultBillingAddress  bool
-	// IsDefaultShippingAddress bool
+	Id            string // is automatically set on AddAddress()
+	Person        *Person
 	Type          AddressType
 	Street        string
 	StreetNumber  string
