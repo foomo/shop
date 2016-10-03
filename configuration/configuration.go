@@ -16,6 +16,10 @@ const (
 	MONGO_COLLECTION_CUSTOMERS_HISTORY string = "customers_history"
 	MONGO_COLLECTION_CUSTOMERS         string = "customers"
 	MONGO_COLLECTION_WATCHLISTS        string = "watchlists"
+
+	MONGO_COLLECTION_PRICERULES          string = "pricerules"
+	MONGO_COLLECTION_PRICERULES_VOUCHERS string = "pricerules_vouchers"
+	MONGO_COLLECTION_PRICERULES_GROUPS   string = "pricerules_groups"
 )
 
 // AllowedLanguages contains language codes for all allowed languages
