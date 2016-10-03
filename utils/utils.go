@@ -12,6 +12,13 @@ import (
 	"github.com/skratchdot/open-golang/open"
 )
 
+func TimeIsWithinLifeTime(date time.Time, start time.Time, end time.Time) bool {
+	if date.Equal(start) || date.Equal(end) || (date.After(start) && date.Before(end)) {
+		return true
+	}
+	return false
+}
+
 // Returns string in format YYYYMMDD
 func GetDateYYYYMMDD() string {
 	return time.Now().Format("20060102")
@@ -20,11 +27,19 @@ func GetDateYYYY_MM_DD() string {
 	return time.Now().Format("2006-01-02")
 }
 
+func GetFormattedTimeYYYYMMDD(t time.Time) string {
+	return t.Format("20060102")
+}
 func GetFormattedTime(t time.Time) string {
 	return t.Format("Mon Jan 2 2006 15:04:05")
 }
 func GetFormattedTimeShort(t time.Time) string {
 	return t.Format("Mon Jan 2 2006 150405")
+}
+
+func GetTimeFromYYYYMMDD(date string) (time.Time, error) {
+	layout := "20060102"
+	return time.Parse(layout, date)
 }
 
 func TimeNow() time.Time {

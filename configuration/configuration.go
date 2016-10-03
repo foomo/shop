@@ -1,13 +1,21 @@
 package configuration
 
 const (
-	MONGO_DB string = "shop"
+	MONGO_DB          string = "shop"
+	MONGO_DB_PRODUCTS string = "products"
 
 	LocalUnitTests = "dockerhost/" + MONGO_DB
 	WithDocker     = "mongo/" + MONGO_DB
 
-	//MONGO_URL string = "mongodb://" + LocalUnitTests
-	MONGO_URL string = "mongodb://" + WithDocker
+	ProductsLocal  = "dockerhost/" + MONGO_DB_PRODUCTS
+	ProductsDocker = "mongo/" + MONGO_DB_PRODUCTS
+
+	MONGO_BASE_URL = "mongodb://dockerhost/"
+	//MONGO_BASE_URL = "mongodb://mongo/"
+
+	MONGO_URL string = "mongodb://" + LocalUnitTests
+	//MONGO_URL string = "mongodb://" + WithDocker
+	MONGO_URL_PRODUCTS string = "mongodb://" + ProductsLocal
 
 	MONGO_COLLECTION_CREDENTIALS       string = "credentials"
 	MONGO_COLLECTION_SHOP_EVENT_LOG    string = "shop_event_log"
