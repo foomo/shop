@@ -70,6 +70,7 @@ type Score struct {
 	Trusted          bool
 	TrustedString    string
 	DateOfTrustCheck string
+	ScoringFailed    bool
 }
 
 func (address *Address) HasScore() bool {
