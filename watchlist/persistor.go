@@ -126,6 +126,10 @@ func DeleteCustomerWatchListsByEmail(email string) error {
 	return GetWatchListPersistor().GetCollection().Remove(bson.M{"email": email})
 }
 
+// GetCustomerWatchListsByURIHash returns the CustomerWatchLists VO which contains a WatchList with the given URI hash
+func GetCustomerWatchListsByURIHash(uriHash string) (*CustomerWatchLists, error) {
+	return findOneByQuery(&bson.M{"lists.publicurihash": uriHash})
+}
 func GetCustomerWatchListsByCustomerID(customerID string) (*CustomerWatchLists, error) {
 	return findOne(customerID, "", "")
 }
@@ -168,6 +172,20 @@ func findOne(customerID, sessionID, email string) (*CustomerWatchLists, error) {
 
 	CustomerWatchLists := &CustomerWatchLists{}
 	err := p.GetCollection().Find(find).One(CustomerWatchLists)
+	if err != nil {
+		return nil, err
+	}
+
+	return CustomerWatchLists, nil
+}
+func findOneByQuery(query *bson.M) (*CustomerWatchLists, error) {
+	if query == nil {
+		return nil, errors.New("Query must not be empty!")
+	}
+	p := GetWatchListPersistor()
+
+	CustomerWatchLists := &CustomerWatchLists{}
+	err := p.GetCollection().Find(query).One(CustomerWatchLists)
 	if err != nil {
 		return nil, err
 	}
