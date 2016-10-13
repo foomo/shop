@@ -41,8 +41,10 @@ func GetFormattedTimeShort(t time.Time) string {
 }
 
 func GetTimeFromYYYYMMDD(date string) (time.Time, error) {
-	layout := "20060102"
-	return time.Parse(layout, date)
+	return time.Parse("20060102", date)
+}
+func GetTimeFromYYY_MM_DD(date string) (time.Time, error) {
+	return time.Parse("2006-01-02", date)
 }
 
 func TimeNow() time.Time {
