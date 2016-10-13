@@ -28,6 +28,13 @@ func GetTestUtilsDir() string {
 
 // Drops order collection and event_log collection
 
+func DropAllShopCollections() error {
+	err := DropAllCollectionsFromUrl(configuration.MONGO_URL, configuration.MONGO_DB)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 func DropAllCollections() error {
 	err := DropAllCollectionsFromUrl(configuration.MONGO_URL, configuration.MONGO_DB)
 	if err != nil {
