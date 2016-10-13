@@ -177,6 +177,14 @@ func (cw *CustomerWatchLists) GetItem(listId string, itemId string) (*WatchListI
 	}
 	return nil, errors.New("No item found for id " + itemId)
 }
+func (cw *CustomerWatchLists) GetListByURIHash(uriHash string) (*WatchList, error) {
+	for _, list := range cw.Lists {
+		if list.PublicURIHash == uriHash {
+			return list, nil
+		}
+	}
+	return nil, errors.New("No list found for URI hash")
+}
 
 func (cw *CustomerWatchLists) EditList(listId string, name string, public bool, recipient string, targetDate string, description string) (*WatchList, error) {
 	for _, list := range cw.Lists {
@@ -194,7 +202,9 @@ func (cw *CustomerWatchLists) EditList(listId string, name string, public bool, 
 				list.Description = description
 			}
 			if public {
-				list.PublicURIHash = unique.GetNewID()
+				if list.PublicURIHash == "" {
+					list.PublicURIHash = unique.GetNewID()
+				}
 			} else {
 				list.PublicURIHash = ""
 			}
