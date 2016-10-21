@@ -211,7 +211,7 @@ func testPricerulesWorkflow(t *testing.T) {
 }
 
 // Test checkout functionality
-func TestCheckoutWorkflow(t *testing.T) {
+func testCheckoutWorkflow(t *testing.T) {
 	//remove all and add again
 	Init(t)
 
