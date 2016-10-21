@@ -6,9 +6,9 @@ import (
 
 	"gopkg.in/mgo.v2/bson"
 
-	"github.com/foomoShop/configuration"
-	"github.com/foomoShop/persistence"
-	"github.com/foomoShop/utils"
+	"github.com/foomo/shop/configuration"
+	"github.com/foomo/shop/persistence"
+	"github.com/foomo/shop/utils"
 	"github.com/mitchellh/mapstructure"
 )
 

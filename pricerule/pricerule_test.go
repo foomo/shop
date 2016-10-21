@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/foomoShop/order"
+	"github.com/foomo/shop/order"
 )
 
 const (

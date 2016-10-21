@@ -5,7 +5,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/foomoShop/order"
+	"github.com/foomo/shop/order"
 )
 
 //------------------------------------------------------------------
