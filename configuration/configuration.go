@@ -5,7 +5,8 @@ const (
 	MONGO_DB_PRODUCTS string = "products"
 
 	LocalUnitTests = "dockerhost/" + MONGO_DB
-	WithDocker     = "mongo/" + MONGO_DB
+
+	WithDocker = "mongo/" + MONGO_DB
 
 	ProductsLocal  = "dockerhost/" + MONGO_DB_PRODUCTS
 	ProductsDocker = "mongo/" + MONGO_DB_PRODUCTS
