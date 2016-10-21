@@ -167,7 +167,21 @@ func TestWatchListsManipulate(t *testing.T) {
 	// Test for non existant Id
 	_, err = GetCustomerWatchListsByCustomerID("InvalidID")
 	if err == nil {
-		t.Fatal("Expected error not found")
+		t.Fatal("Expected error not found", err)
 	}
 
+	watchList, err := cw2.EditList(listB.Id, "", true, "", "", "")
+	if err != nil {
+		t.Fatal("Edit List failed", err)
+	}
+
+	cw, err = GetCustomerWatchListsByURIHash(watchList.PublicURIHash)
+	if err != nil {
+		t.Fatal(err)
+	}
+	watchList, err = cw.GetListByURIHash(watchList.PublicURIHash)
+	if err != nil {
+		t.Fatal(err)
+	}
+	utils.PrintJSON(watchList)
 }

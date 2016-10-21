@@ -33,13 +33,18 @@ func GetFormattedTimeYYYYMMDD(t time.Time) string {
 func GetFormattedTime(t time.Time) string {
 	return t.Format("Mon Jan 2 2006 15:04:05")
 }
+func GetFormattedTimeYYYY_MM_DD(t time.Time) string {
+	return t.Format("2006-01-02")
+}
 func GetFormattedTimeShort(t time.Time) string {
 	return t.Format("Mon Jan 2 2006 150405")
 }
 
 func GetTimeFromYYYYMMDD(date string) (time.Time, error) {
-	layout := "20060102"
-	return time.Parse(layout, date)
+	return time.Parse("20060102", date)
+}
+func GetTimeFromYYY_MM_DD(date string) (time.Time, error) {
+	return time.Parse("2006-01-02", date)
 }
 
 func TimeNow() time.Time {
