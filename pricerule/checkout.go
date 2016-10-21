@@ -3,6 +3,7 @@ package pricerule
 import (
 	"sort"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/foomoShop/order"
 )
 
@@ -126,7 +127,7 @@ func CommitDiscounts(orderDiscounts *OrderDiscounts, customerID string) error {
 		for _, appliedDiscount := range orderDiscount.AppliedDiscounts {
 			//if voucher - we need to redeem vouchers so we keep the separately
 			if len(appliedDiscount.VoucherCode) > 0 {
-				appliedVoucherCodes = append(appliedVoucherRuleIDs, appliedDiscount.VoucherCode)
+				appliedVoucherCodes = append(appliedVoucherCodes, appliedDiscount.VoucherCode)
 				appliedVoucherRuleIDs = append(appliedVoucherRuleIDs, appliedDiscount.PriceRuleID)
 			} else {
 				//else normal rule
@@ -135,15 +136,24 @@ func CommitDiscounts(orderDiscounts *OrderDiscounts, customerID string) error {
 		}
 	}
 
+	appliedRuleIDs = RemoveDuplicates(appliedRuleIDs)
+	appliedVoucherRuleIDs = RemoveDuplicates(appliedVoucherRuleIDs)
+	appliedVoucherCodes = RemoveDuplicates(appliedVoucherCodes)
+
+	spew.Dump(appliedRuleIDs)
+	spew.Dump(appliedVoucherRuleIDs)
+
 	//redeem vouchers first
 	//NOTE: redeem internaly manipulates the associated pricerule as well
 	for _, voucherCode := range appliedVoucherCodes {
+
 		err := redeemVoucherByCode(voucherCode, customerID)
 		if err != nil {
 			return err
 		}
 	}
 
+	spew.Dump(appliedRuleIDs)
 	for _, ruleID := range appliedRuleIDs {
 		err := UpdatePriceRuleUsageHistoryAtomic(ruleID, customerID)
 		if err != nil {

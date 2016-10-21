@@ -236,6 +236,10 @@ func TestCheckoutWorkflow(t *testing.T) {
 
 	now = time.Now()
 	err = CommitDiscounts(&discountsVo, orderVo.CustomerData.CustomerId)
+	err = CommitDiscounts(&discountsVo, orderVo.CustomerData.CustomerId)
+	if err != nil {
+		log.Println("Already redeemed********************")
+	}
 	timeTrack(now, "Order committed")
 
 }

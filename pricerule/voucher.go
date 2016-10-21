@@ -110,7 +110,6 @@ func (voucher *Voucher) SetApplied() error {
 // Redeem - set redeem time and store
 func (voucher *Voucher) Redeem(customerID string) error {
 	mutex := sync.Mutex{}
-	defer mutex.Unlock()
 
 	if voucher.VoucherType == VoucherTypePersonalized && len(voucher.CustomerID) > 0 {
 		if voucher.CustomerID != customerID {
@@ -123,6 +122,7 @@ func (voucher *Voucher) Redeem(customerID string) error {
 	}
 
 	mutex.Lock()
+	defer mutex.Unlock()
 	voucher.TimeRedeemed = time.Now()
 	err := voucher.Upsert()
 	log.Println("redeemed voucher " + voucher.VoucherCode)

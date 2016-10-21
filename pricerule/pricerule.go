@@ -193,8 +193,9 @@ func (pricerule *PriceRule) Upsert() error {
 // UpdatePriceRuleUsageHistoryAtomic - atomicaly update times used and times used per customer if customer id provided
 func UpdatePriceRuleUsageHistoryAtomic(ID string, customerID string) error {
 	mutex := sync.Mutex{}
-	defer mutex.Unlock()
+
 	mutex.Lock()
+	defer mutex.Unlock()
 	priceRule, err := LoadPriceRule(ID, nil)
 	if err != nil {
 		return err
@@ -214,7 +215,7 @@ func (pricerule *PriceRule) UpdateUsageHistory(customerID string) error {
 	if len(customerID) > 0 {
 		pricerule.UsageHistory.UsagesPerCustomer[customerID]++
 	}
-	log.Println("updated rule usage history " + pricerule.ID)
+	log.Println("updated rule usage history: " + pricerule.ID)
 	return pricerule.Upsert()
 }
 
