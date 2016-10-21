@@ -22,8 +22,8 @@ func createPriceRule() {
 	priceRule.Amount = 10.0
 
 	priceRule.Priority = 10
-    priceRule.CustomerActionType "402"
-    priceRule.CustomerPromoID ="5273639"
+	priceRule.CustomerActionType = "402"
+	priceRule.CustomerPromoID = "5273639"
 	priceRule.IncludedProductGroupIDS = []string{"SaleProducts"}
 
 	// priceRule.IncludedCustomerGroupIDS = []string{CustomerGroupID1}
@@ -42,7 +42,7 @@ func CreateProductGroup() {
 	group.AddGroupItemIDs([]string{"12387678"})
 	err := group.Upsert()
 	if err != nil {
-		t.Fatal("Could not upsert product group " + groupID)
+		panic(err)
 	}
 
 }

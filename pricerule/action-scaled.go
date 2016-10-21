@@ -1,6 +1,6 @@
 package pricerule
 
-import "github.com/foomoShop/order"
+import "github.com/foomo/shop/order"
 
 // CalculateScaledDiscounts -
 func calculateScaledDiscounts(order *order.Order, priceRuleVoucherPair *RuleVoucherPair, orderDiscounts OrderDiscounts, productGroupIDsPerPosition map[string][]string, groupIDsForCustomer []string, roundTo float64) OrderDiscounts {

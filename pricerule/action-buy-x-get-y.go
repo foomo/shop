@@ -4,7 +4,7 @@ import (
 	"math"
 	"sort"
 
-	"github.com/foomoShop/order"
+	"github.com/foomo/shop/order"
 )
 
 // CalculateDiscountsBuyXGetY -

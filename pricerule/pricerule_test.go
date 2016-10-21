@@ -211,7 +211,7 @@ func testPricerulesWorkflow(t *testing.T) {
 }
 
 // Test checkout functionality
-func testCheckoutWorkflow(t *testing.T) {
+func TestCheckoutWorkflow(t *testing.T) {
 	//remove all and add again
 	Init(t)
 
@@ -238,7 +238,7 @@ func testCheckoutWorkflow(t *testing.T) {
 	err = CommitDiscounts(&discountsVo, orderVo.CustomerData.CustomerId)
 	err = CommitDiscounts(&discountsVo, orderVo.CustomerData.CustomerId)
 	if err != nil {
-		log.Println("Already redeemed********************")
+		log.Println("Already redeemed")
 	}
 	timeTrack(now, "Order committed")
 
