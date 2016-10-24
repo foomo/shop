@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/foomo/shop/order"
+	"github.com/foomo/shop/utils"
 )
 
 // CalculateDiscountsCartByAbsolute -
@@ -48,6 +49,7 @@ func calculateDiscountsCartByAbsolute(order *order.Order, priceRuleVoucherPair *
 					orderDiscountsForPosition := orderDiscounts[position.ItemID]
 					orderDiscountsForPosition.TotalDiscountAmount += discountApplied.DiscountAmount
 					orderDiscountsForPosition.AppliedDiscounts = append(orderDiscountsForPosition.AppliedDiscounts, *discountApplied)
+					orderDiscountsForPosition.CurrentItemPrice = utils.Round(discountApplied.CalculationBasePrice-discountAmount, 2)
 
 					if priceRuleVoucherPair.Rule.Exclusive {
 						orderDiscountsForPosition.StopApplyingDiscounts = true
