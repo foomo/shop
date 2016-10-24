@@ -354,10 +354,20 @@ func (order *Order) GetPositionByItemId(itemID string) *Position {
 	return nil
 }
 
-// OverrideID may be used to use a different than the automatially generated if
-func (order *Order) OverrideId(id string) error {
-	order.Id = id
-	return order.Upsert()
+// OverrideID may be used to use a different than the automatially generated id (Unit tests)
+func OverrideId(oldID, newID string) error {
+	log.Println("+++ INFO: Overriding orderID", oldID, "with id", newID, "+++")
+	o := &Order{}
+	p := GetOrderPersistor()
+	err := p.GetCollection().Find(&bson.M{"id": oldID}).One(o)
+	if err != nil {
+		log.Println("Upsert failed: Could not find order with id", oldID, "Error:", err)
+		return err
+	}
+	o.Id = newID
+	o.State.SetModified()
+	_, err = p.GetCollection().UpsertId(o.BsonId, o)
+	return err
 }
 
 //------------------------------------------------------------------
