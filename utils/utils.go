@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"os"
 	"reflect"
 	"runtime"
@@ -103,4 +104,13 @@ func IteString(condition bool, thenDo string, elseDo string) string {
 	} else {
 		return elseDo
 	}
+}
+
+func Round(input float64, decimals int) float64 {
+	input = input * math.Pow10(decimals)
+
+	if input < 0 {
+		return math.Ceil(input-0.5) / math.Pow10(decimals)
+	}
+	return math.Floor(input+0.5) / math.Pow10(decimals)
 }
