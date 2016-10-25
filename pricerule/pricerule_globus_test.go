@@ -22,8 +22,8 @@ func createPriceRule() {
 	priceRule.Amount = 10.0
 
 	priceRule.Priority = 10
-	priceRule.CustomerActionType = "402"
-	priceRule.CustomerPromoID = "5273639"
+	priceRule.ActionType = "402"
+	priceRule.PromoID = "5273639"
 	priceRule.IncludedProductGroupIDS = []string{"SaleProducts"}
 
 	// priceRule.IncludedCustomerGroupIDS = []string{CustomerGroupID1}
