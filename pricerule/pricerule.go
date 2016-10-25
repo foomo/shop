@@ -50,9 +50,9 @@ const MinInt = -MaxInt - 1
 type PriceRule struct {
 	ID string //unique id of the price rule
 
-	CustomerPromoID string
+	PromoID string
 
-	CustomerActionType string
+	ActionType string
 
 	Type Type // one of Type, e.g promotion
 
