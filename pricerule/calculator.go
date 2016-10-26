@@ -146,6 +146,8 @@ func ApplyDiscounts(order *order.Order, voucherCodes []string, paymentMethod str
 
 		if ok {
 			switch priceRule.Action {
+			case ActionItemByAbsolute:
+				orderDiscounts = calculateDiscountsItemByAbsolute(order, &priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
 			case ActionItemByPercent:
 				orderDiscounts = calculateDiscountsItemByPercent(order, &priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
 			case ActionCartByAbsolute:
