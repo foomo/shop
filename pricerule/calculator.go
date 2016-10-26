@@ -19,6 +19,7 @@ import (
 // DiscountApplied -
 type DiscountApplied struct {
 	PriceRuleID          string
+	MappingID            int
 	VoucherID            string
 	VoucherCode          string
 	DiscountAmount       float64

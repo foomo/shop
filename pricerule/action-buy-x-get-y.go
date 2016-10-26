@@ -46,6 +46,7 @@ func calculateDiscountsBuyXGetY(orderVo *order.Order, priceRuleVoucherPair *Rule
 				//apply the discount here
 				discountApplied := &DiscountApplied{}
 				discountApplied.PriceRuleID = priceRuleVoucherPair.Rule.ID
+				discountApplied.MappingID = priceRuleVoucherPair.Rule.MappingID
 				discountApplied.CalculationBasePrice = orderDiscounts[positionByPrice.ItemID].CurrentItemPrice
 				discountApplied.Price = orderDiscounts[positionByPrice.ItemID].InitialItemPrice
 

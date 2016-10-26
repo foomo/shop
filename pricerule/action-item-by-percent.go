@@ -15,6 +15,7 @@ func calculateDiscountsItemByPercent(order *order.Order, priceRuleVoucherPair *R
 			//apply the discount here
 			discountApplied := &DiscountApplied{}
 			discountApplied.PriceRuleID = priceRuleVoucherPair.Rule.ID
+			discountApplied.MappingID = priceRuleVoucherPair.Rule.MappingID
 			if priceRuleVoucherPair.Voucher != nil {
 				discountApplied.VoucherID = priceRuleVoucherPair.Voucher.ID
 				discountApplied.VoucherCode = priceRuleVoucherPair.Voucher.VoucherCode

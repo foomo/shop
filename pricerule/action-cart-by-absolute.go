@@ -35,6 +35,7 @@ func calculateDiscountsCartByAbsolute(order *order.Order, priceRuleVoucherPair *
 					//apply the discount here
 					discountApplied := &DiscountApplied{}
 					discountApplied.PriceRuleID = priceRuleVoucherPair.Rule.ID
+					discountApplied.MappingID = priceRuleVoucherPair.Rule.MappingID
 					discountApplied.CalculationBasePrice = orderDiscounts[position.ItemID].CurrentItemPrice
 					discountApplied.Price = orderDiscounts[position.ItemID].InitialItemPrice
 					if priceRuleVoucherPair.Voucher != nil {

@@ -25,7 +25,8 @@ const (
 type Voucher struct {
 	ID          string //voucher ID
 	VoucherCode string
-	PriceRuleID string      // ID of the price rule
+	PriceRuleID string // ID of the price rule
+	MappingID   int
 	VoucherType VoucherType //VoucherType.. personalized or anonymous
 	CustomerID  string      // the customer if applicable
 
@@ -51,6 +52,7 @@ func NewVoucher(ID string, voucherCode string, priceRule *PriceRule, customerID 
 	voucher := new(Voucher)
 	voucher.ID = ID
 	voucher.PriceRuleID = priceRule.ID
+	voucher.MappingID = priceRule.MappingID
 	voucher.VoucherCode = voucherCode
 	if len(customerID) > 0 {
 		voucher.VoucherType = VoucherTypePersonalized
