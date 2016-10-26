@@ -239,7 +239,7 @@ func (order *Order) IsFrozenCustomer() bool {
 }
 
 // ReplacePosition replaces the itemId of a position, e.g. if article is desired with a different size or color. Quantity is preserved.
-func (order *Order) ReplacePosition(itemIdCurrent, itemIdNew string, price float64) error {
+func (order *Order) ReplacePosition(itemIdCurrent, itemIdNew string, crossPrice float64, price float64) error {
 	pos := order.GetPositionByItemId(itemIdCurrent)
 	if pos == nil {
 		err := fmt.Errorf("position with %q not found in order", itemIdCurrent)
@@ -261,6 +261,7 @@ func (order *Order) ReplacePosition(itemIdCurrent, itemIdNew string, price float
 
 	// Otherwise replace current position
 	pos.ItemID = itemIdNew
+	pos.CrossPrice = crossPrice
 	pos.Price = price
 
 	return order.Upsert()
