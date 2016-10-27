@@ -24,7 +24,9 @@ func calculateDiscountsItemByAbsolute(order *order.Order, priceRuleVoucherPair *
 			discountApplied.Price = orderDiscounts[position.ItemID].InitialItemPrice
 
 			//calculate the actual discount
-			discountApplied.DiscountAmount = roundToStep(discountApplied.CalculationBasePrice-(orderDiscounts[position.ItemID].Qantity*priceRuleVoucherPair.Rule.Amount), roundTo)
+			discountApplied.DiscountAmount = roundToStep((orderDiscounts[position.ItemID].Qantity * priceRuleVoucherPair.Rule.Amount), roundTo)
+			discountApplied.DiscountSingle = priceRuleVoucherPair.Rule.Amount
+			discountApplied.Quantity = orderDiscounts[position.ItemID].Qantity
 
 			//pointer assignment WTF !!!
 			orderDiscountsForPosition := orderDiscounts[position.ItemID]

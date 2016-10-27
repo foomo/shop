@@ -23,6 +23,8 @@ type DiscountApplied struct {
 	VoucherID            string
 	VoucherCode          string
 	DiscountAmount       float64
+	DiscountSingle       float64
+	Quantity             float64
 	Price                float64 //price without reductions
 	CalculationBasePrice float64 //price used for the calculation of the discount
 }
