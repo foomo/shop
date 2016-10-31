@@ -75,8 +75,8 @@ type Order struct {
 	PriceInfo        *OrderPriceInfo
 	Shipping         *shipping.ShippingProperties
 	LanguageCode     LanguageCode
-
-	Custom interface{} `bson:",omitempty"`
+	CustomProvider   OrderCustomProvider
+	Custom           interface{} `bson:",omitempty"`
 }
 
 type CustomerData struct {
@@ -103,7 +103,7 @@ type OrderPriceInfo struct {
 type OrderCustomProvider interface {
 	NewOrderCustom() interface{}
 	NewPositionCustom() interface{}
-	Fields() *bson.M
+	//Fields() *bson.M
 }
 
 // Position in an order
@@ -239,7 +239,7 @@ func (order *Order) IsFrozenCustomer() bool {
 }
 
 // ReplacePosition replaces the itemId of a position, e.g. if article is desired with a different size or color. Quantity is preserved.
-func (order *Order) ReplacePosition(itemIdCurrent, itemIdNew string, crossPrice float64, price float64) error {
+func (order *Order) ReplacePosition(itemIdCurrent, itemIdNew string, crossPrice float64, price float64, customProvider OrderCustomProvider) error {
 	pos := order.GetPositionByItemId(itemIdCurrent)
 	if pos == nil {
 		err := fmt.Errorf("position with %q not found in order", itemIdCurrent)
@@ -251,12 +251,12 @@ func (order *Order) ReplacePosition(itemIdCurrent, itemIdNew string, crossPrice 
 	posMatchNew := order.GetPositionByItemId(itemIdNew)
 	if posMatchNew != nil {
 		// Remove position for itemIdCurrent
-		err := order.SetPositionQuantity(itemIdCurrent, 0, -1, .1)
+		err := order.SetPositionQuantity(itemIdCurrent, 0, -1, .1, customProvider)
 		if err != nil {
 			return err
 		}
 		// And adjust quantity for already existing position for itemIdNew
-		return order.SetPositionQuantity(itemIdNew, currentQty+posMatchNew.Quantity, -1, -1)
+		return order.SetPositionQuantity(itemIdNew, currentQty+posMatchNew.Quantity, -1, -1, customProvider)
 	}
 
 	// Otherwise replace current position
@@ -268,30 +268,30 @@ func (order *Order) ReplacePosition(itemIdCurrent, itemIdNew string, crossPrice 
 }
 
 // Increase Quantity by one. Price is required, if item is not already part of order
-func (order *Order) IncPositionQuantity(itemID string, crossPrice float64, price float64) error {
+func (order *Order) IncPositionQuantity(itemID string, crossPrice float64, price float64, customProvider OrderCustomProvider) error {
 	pos := order.GetPositionByItemId(itemID)
 	quantity := 1.0
 	if pos != nil {
 		quantity = pos.Quantity + 1
 	}
-	return order.SetPositionQuantity(itemID, quantity, crossPrice, price)
+	return order.SetPositionQuantity(itemID, quantity, crossPrice, price, customProvider)
 }
 
-func (order *Order) AddToPositionQuantity(itemID string, addQty float64, crossPrice float64, price float64) error {
+func (order *Order) AddToPositionQuantity(itemID string, addQty float64, crossPrice float64, price float64, customProvider OrderCustomProvider) error {
 	pos := order.GetPositionByItemId(itemID)
 	quantity := 1.0
 	if pos != nil {
 		quantity = pos.Quantity + addQty
 	}
-	return order.SetPositionQuantity(itemID, quantity, crossPrice, price)
+	return order.SetPositionQuantity(itemID, quantity, crossPrice, price, customProvider)
 }
-func (order *Order) DecPositionQuantity(itemID string, crossPrice float64, price float64) error {
+func (order *Order) DecPositionQuantity(itemID string, crossPrice float64, price float64, customProvider OrderCustomProvider) error {
 	pos := order.GetPositionByItemId(itemID)
 	if pos == nil {
 		err := fmt.Errorf("position with %q not found in order", itemID)
 		return err
 	}
-	return order.SetPositionQuantity(itemID, pos.Quantity-1, crossPrice, price)
+	return order.SetPositionQuantity(itemID, pos.Quantity-1, crossPrice, price, customProvider)
 }
 
 // Add Position to Order.
@@ -306,7 +306,7 @@ func (order *Order) AddPosition(pos *Position) error {
 }
 
 // TODO maybe this is probably the wrong place to set the price
-func (order *Order) SetPositionQuantity(itemID string, quantity float64, crossPrice float64, price float64) error {
+func (order *Order) SetPositionQuantity(itemID string, quantity float64, crossPrice float64, price float64, customProvider OrderCustomProvider) error {
 	log.Println("SetPositionQuantity(", itemID, quantity, price, ")")
 	pos := order.GetPositionByItemId(itemID)
 	// If position for this itemID does not yet exist, create it.
@@ -317,7 +317,9 @@ func (order *Order) SetPositionQuantity(itemID string, quantity float64, crossPr
 				// TODO initial state is not yet set
 				ItemID:   itemID,
 				Quantity: quantity,
+				Custom:   customProvider.NewPositionCustom(),
 			}
+
 			// -1 is used by methods which only change the quantity and not the price
 			if crossPrice != -1 {
 				newPos.CrossPrice = crossPrice

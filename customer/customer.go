@@ -77,7 +77,6 @@ type Localization struct {
 type CustomerCustomProvider interface {
 	NewCustomerCustom() interface{}
 	NewAddressCustom() interface{}
-	Fields() *bson.M
 }
 
 //------------------------------------------------------------------

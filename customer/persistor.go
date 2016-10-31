@@ -125,10 +125,7 @@ func Find(query *bson.M, customProvider CustomerCustomProvider) (iter func() (cu
 		log.Println(err)
 	}
 	q := p.GetCollection().Find(query)
-	fields := customProvider.Fields()
-	if fields != nil {
-		q.Select(fields)
-	}
+
 	_, err = q.Count()
 	if err != nil {
 		return
