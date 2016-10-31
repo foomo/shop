@@ -386,8 +386,11 @@ func (p *Position) IsRefund() bool {
 }
 
 // GetAmount returns the Price Sum of the position
-func (p *Position) GetAmount() float64 {
+func (p *Position) GetPriceTotal() float64 {
 	return p.Price * p.Quantity
+}
+func (p *Position) GetCrossPriceTotal() float64 {
+	return p.CrossPrice * p.Quantity
 }
 
 func (position *Position) GetState() *state.State {
