@@ -117,6 +117,7 @@ type Position struct {
 	Price        float64
 	CrossPrice   float64
 	IsATPApplied bool
+	IsShipping   bool
 	Refund       bool
 	Custom       interface{}
 }
