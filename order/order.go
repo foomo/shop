@@ -76,6 +76,7 @@ type Order struct {
 	Shipping         *shipping.ShippingProperties
 	LanguageCode     LanguageCode
 	CustomProvider   OrderCustomProvider
+	Coupons          []string    // for Globus, these are most probably the EANs
 	Custom           interface{} `bson:",omitempty"`
 }
 
