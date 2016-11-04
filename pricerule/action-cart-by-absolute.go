@@ -45,6 +45,8 @@ func calculateDiscountsCartByAbsolute(order *order.Order, priceRuleVoucherPair *
 
 					//calculate the actual discount
 					discountApplied.DiscountAmount = discountAmount
+					discountApplied.DiscountSingle = discountAmount
+					discountApplied.Quantity = orderDiscounts[position.ItemID].Qantity
 
 					//pointer assignment WTF !!!
 					orderDiscountsForPosition := orderDiscounts[position.ItemID]
