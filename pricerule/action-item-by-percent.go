@@ -25,6 +25,8 @@ func calculateDiscountsItemByPercent(order *order.Order, priceRuleVoucherPair *R
 
 			//calculate the actual discount
 			discountApplied.DiscountAmount = roundToStep(priceRuleVoucherPair.Rule.Amount/100*discountApplied.CalculationBasePrice*orderDiscounts[position.ItemID].Qantity, roundTo)
+			discountApplied.DiscountSingle = roundToStep(priceRuleVoucherPair.Rule.Amount/100*discountApplied.CalculationBasePrice, roundTo)
+			discountApplied.Quantity = orderDiscounts[position.ItemID].Qantity
 
 			//pointer assignment WTF !!!
 			orderDiscountsForPosition := orderDiscounts[position.ItemID]
