@@ -18,7 +18,6 @@ var NoDropList = map[string]bool{
 	"mock_trx_cashreport_test": true,
 	"orders_many":              true,
 	"status_updates_many":      true,
-	"tlog_transactions":        true,
 }
 
 func GetTestUtilsDir() string {
