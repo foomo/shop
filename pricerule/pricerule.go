@@ -50,7 +50,7 @@ const MinInt = -MaxInt - 1
 type PriceRule struct {
 	ID string //unique id of the price rule
 
-	MappingID int // used to retrieve PromoID and ActionType from Mappings // @todo maybe move to Custom as it's not generic
+	MappingID string // used to retrieve PromoID and ActionType from Mappings // @todo maybe move to Custom as it's not generic
 
 	Type Type // one of Type, e.g promotion
 

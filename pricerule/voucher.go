@@ -26,7 +26,7 @@ type Voucher struct {
 	ID          string //voucher ID
 	VoucherCode string
 	PriceRuleID string // ID of the price rule
-	MappingID   int
+	MappingID   string
 	VoucherType VoucherType //VoucherType.. personalized or anonymous
 	CustomerID  string      // the customer if applicable
 
