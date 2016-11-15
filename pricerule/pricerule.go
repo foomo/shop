@@ -137,6 +137,8 @@ type ScaledAmountLevel struct {
 func NewPriceRule(ID string) *PriceRule {
 	priceRule := new(PriceRule)
 	priceRule.ID = ID
+	priceRule.Name = map[string]string{}
+	priceRule.Description = map[string]string{}
 	priceRule.Action = ActionItemByPercent
 	priceRule.Amount = 0
 	priceRule.MinOrderAmount = 0
