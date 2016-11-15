@@ -18,6 +18,12 @@ var NoDropList = map[string]bool{
 	"mock_trx_cashreport_test": true,
 	"orders_many":              true,
 	"status_updates_many":      true,
+	// The following are all filled by promotions.Initialiue in main Project
+	"promo_customer_group":        true,
+	"promo_crm":                   true,
+	"promo_sap_pricetype_mapping": true,
+	"promo_prokey_mapping":        true,
+	"promo_actiontype_mapping":    true,
 }
 
 func GetTestUtilsDir() string {
