@@ -162,9 +162,10 @@ func ApplyDiscounts(order *order.Order, voucherCodes []string, paymentMethod str
 			case ActionScaled:
 				orderDiscounts = calculateScaledDiscounts(order, priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
 			}
+			log.Println(":-) Applied " + priceRule.ID)
 			timeTrack(nowOne, priceRule.ID)
 		} else {
-			log.Println("-> Not applied " + priceRule.ID + " ----> " + string(priceRuleFailReason))
+			log.Println(":-/ Not applied " + priceRule.ID + " ----> " + string(priceRuleFailReason))
 		}
 	}
 	timeTrack(nowAll, "All rules together")
