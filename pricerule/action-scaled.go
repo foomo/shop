@@ -3,7 +3,7 @@ package pricerule
 import "github.com/foomo/shop/order"
 
 // CalculateScaledDiscounts -
-func calculateScaledDiscounts(order *order.Order, priceRuleVoucherPair *RuleVoucherPair, orderDiscounts OrderDiscounts, productGroupIDsPerPosition map[string][]string, groupIDsForCustomer []string, roundTo float64) OrderDiscounts {
+func calculateScaledDiscounts(order *order.Order, priceRuleVoucherPair RuleVoucherPair, orderDiscounts OrderDiscounts, productGroupIDsPerPosition map[string][]string, groupIDsForCustomer []string, roundTo float64) OrderDiscounts {
 	if priceRuleVoucherPair.Rule.Action != ActionScaled {
 		panic("CalculateScaledDiscounts called with pricerule of action " + priceRuleVoucherPair.Rule.Action)
 	}
@@ -19,13 +19,13 @@ func calculateScaledDiscounts(order *order.Order, priceRuleVoucherPair *RuleVouc
 				scaledPriceRule.Action = ActionCartByPercent
 				tempRuleVoucherPair := RuleVoucherPair{Rule: &scaledPriceRule, Voucher: priceRuleVoucherPair.Voucher}
 
-				return calculateDiscountsCartByPercentage(order, &tempRuleVoucherPair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
+				return calculateDiscountsCartByPercentage(order, tempRuleVoucherPair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
 			}
 
 			scaledPriceRule.Action = ActionCartByAbsolute
 			tempRuleVoucherPair := RuleVoucherPair{Rule: &scaledPriceRule, Voucher: priceRuleVoucherPair.Voucher}
 
-			return calculateDiscountsCartByAbsolute(order, &tempRuleVoucherPair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
+			return calculateDiscountsCartByAbsolute(order, tempRuleVoucherPair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
 		}
 	}
 	return orderDiscounts

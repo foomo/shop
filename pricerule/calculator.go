@@ -86,7 +86,9 @@ func ApplyDiscounts(order *order.Order, voucherCodes []string, paymentMethod str
 	}
 
 	for _, promotionRule := range promotionPriceRules {
-		ruleVoucherPairs = append(ruleVoucherPairs, RuleVoucherPair{Rule: &promotionRule, Voucher: nil})
+		rule := &PriceRule{}
+		*rule = promotionRule
+		ruleVoucherPairs = append(ruleVoucherPairs, RuleVoucherPair{Rule: rule, Voucher: nil})
 	}
 
 	//find applicable pricerules of type TypeVoucher for
@@ -142,24 +144,23 @@ func ApplyDiscounts(order *order.Order, voucherCodes []string, paymentMethod str
 
 	for _, priceRulePair := range ruleVoucherPairs {
 		priceRule := priceRulePair.Rule
-
 		ok, priceRuleFailReason := validatePriceRuleForOrder(*priceRule, order, productGroupIDsPerPosition, groupIDsForCustomer)
 		nowOne := time.Now()
 
 		if ok {
 			switch priceRule.Action {
 			case ActionItemByAbsolute:
-				orderDiscounts = calculateDiscountsItemByAbsolute(order, &priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
+				orderDiscounts = calculateDiscountsItemByAbsolute(order, priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
 			case ActionItemByPercent:
-				orderDiscounts = calculateDiscountsItemByPercent(order, &priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
+				orderDiscounts = calculateDiscountsItemByPercent(order, priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
 			case ActionCartByAbsolute:
-				orderDiscounts = calculateDiscountsCartByAbsolute(order, &priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
+				orderDiscounts = calculateDiscountsCartByAbsolute(order, priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
 			case ActionCartByPercent:
-				orderDiscounts = calculateDiscountsCartByPercentage(order, &priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
+				orderDiscounts = calculateDiscountsCartByPercentage(order, priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
 			case ActionBuyXGetY:
-				orderDiscounts = calculateDiscountsBuyXGetY(order, &priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
+				orderDiscounts = calculateDiscountsBuyXGetY(order, priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
 			case ActionScaled:
-				orderDiscounts = calculateScaledDiscounts(order, &priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
+				orderDiscounts = calculateScaledDiscounts(order, priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
 			}
 			timeTrack(nowOne, priceRule.ID)
 		} else {

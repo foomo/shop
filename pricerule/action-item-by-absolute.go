@@ -3,7 +3,7 @@ package pricerule
 import "github.com/foomo/shop/order"
 
 // CalculateDiscountsItemByPercent -
-func calculateDiscountsItemByAbsolute(order *order.Order, priceRuleVoucherPair *RuleVoucherPair, orderDiscounts OrderDiscounts, productGroupIDsPerPosition map[string][]string, groupIDsForCustomer []string, roundTo float64) OrderDiscounts {
+func calculateDiscountsItemByAbsolute(order *order.Order, priceRuleVoucherPair RuleVoucherPair, orderDiscounts OrderDiscounts, productGroupIDsPerPosition map[string][]string, groupIDsForCustomer []string, roundTo float64) OrderDiscounts {
 
 	if priceRuleVoucherPair.Rule.Action != ActionItemByAbsolute {
 		panic("CalculateDiscountsItemByPercent called with pricerule of action " + priceRuleVoucherPair.Rule.Action)
