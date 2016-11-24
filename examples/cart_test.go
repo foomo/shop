@@ -31,7 +31,7 @@ func ExampleOrderCustom_createCart() {
 	})
 
 	// set qty
-	if o.SetPositionQuantity(positionIDA, 3.01, MOCK_PRICE) != nil {
+	if o.SetPositionQuantity(positionIDA, 3.01, MOCK_PRICE, MOCK_PRICE, nil) != nil {
 		panic("could not set qty")
 	}
 
@@ -45,7 +45,7 @@ func ExampleOrderCustom_createCart() {
 		},
 	})
 
-	o.SetPositionQuantity(positionIDB, 0, MOCK_PRICE)
+	o.SetPositionQuantity(positionIDB, 0, MOCK_PRICE, MOCK_PRICE, nil)
 
 	fmt.Println(
 		"responsible smurf:",
