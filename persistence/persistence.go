@@ -3,7 +3,6 @@ package persistence
 import (
 	"errors"
 	"fmt"
-	"log"
 	"net/url"
 
 	"gopkg.in/mgo.v2"
@@ -27,7 +26,6 @@ type Persistor struct {
 
 // NewPersistor constructor
 func NewPersistor(mongoURL string, collection string) (p *Persistor, err error) {
-	log.Println("creating new persistor with db:", mongoURL, "and collection:", collection)
 	parsedURL, err := url.Parse(mongoURL)
 	if err != nil {
 		return nil, err
