@@ -307,6 +307,15 @@ func (order *Order) AddPosition(pos *Position) error {
 	return order.Upsert()
 }
 
+func (order *Order) SetPositionIsShipping(itemID string, isShipping bool) error {
+	pos := order.GetPositionByItemId(itemID)
+	if pos == nil {
+		return errors.New("Could not find position with itemID:" + itemID)
+	}
+	pos.IsShipping = isShipping
+	return order.Upsert()
+}
+
 // TODO maybe this is probably the wrong place to set the price
 func (order *Order) SetPositionQuantity(itemID string, quantity float64, crossPrice float64, price float64, customProvider OrderCustomProvider) error {
 	log.Println("SetPositionQuantity(", itemID, quantity, price, ")")
