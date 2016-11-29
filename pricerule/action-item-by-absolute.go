@@ -11,32 +11,31 @@ func calculateDiscountsItemByAbsolute(order *order.Order, priceRuleVoucherPair R
 	for _, position := range order.Positions {
 		ok, _ := validatePriceRuleForPosition(*priceRuleVoucherPair.Rule, order, position, productGroupIDsPerPosition, groupIDsForCustomer)
 
-		if !orderDiscounts[position.ItemID].StopApplyingDiscounts && ok {
+		orderDiscountsForPosition := orderDiscounts[position.ItemID]
+		if !orderDiscounts[position.ItemID].StopApplyingDiscounts && ok && !previouslyAppliedExclusionInPlace(priceRuleVoucherPair.Rule, orderDiscountsForPosition) {
 			//apply the discount here
-			discountApplied := &DiscountApplied{}
-			discountApplied.PriceRuleID = priceRuleVoucherPair.Rule.ID
-			discountApplied.MappingID = priceRuleVoucherPair.Rule.MappingID
-			if priceRuleVoucherPair.Voucher != nil {
-				discountApplied.VoucherID = priceRuleVoucherPair.Voucher.ID
-				discountApplied.VoucherCode = priceRuleVoucherPair.Voucher.VoucherCode
-			}
-			discountApplied.CalculationBasePrice = orderDiscounts[position.ItemID].CurrentItemPrice
-			discountApplied.Price = orderDiscounts[position.ItemID].InitialItemPrice
+			discountApplied := getInitializedDiscountApplied(priceRuleVoucherPair, orderDiscounts, position.ItemID)
 
 			//calculate the actual discount
-			discountApplied.DiscountAmount = roundToStep((orderDiscounts[position.ItemID].Qantity * priceRuleVoucherPair.Rule.Amount), roundTo)
+			discountApplied.DiscountAmount = roundToStep((orderDiscounts[position.ItemID].Quantity * priceRuleVoucherPair.Rule.Amount), roundTo)
 			discountApplied.DiscountSingle = priceRuleVoucherPair.Rule.Amount
-			discountApplied.Quantity = orderDiscounts[position.ItemID].Qantity
+			discountApplied.Quantity = orderDiscounts[position.ItemID].Quantity
 
 			//pointer assignment WTF !!!
 			orderDiscountsForPosition := orderDiscounts[position.ItemID]
-			orderDiscountsForPosition.TotalDiscountAmount += discountApplied.DiscountAmount
-			orderDiscountsForPosition.AppliedDiscounts = append(orderDiscountsForPosition.AppliedDiscounts, *discountApplied)
-			if priceRuleVoucherPair.Rule.Exclusive {
-				orderDiscountsForPosition.StopApplyingDiscounts = true
-			}
+			orderDiscountsForPosition = calculateCurrentPriceAndApplicableDiscountsEnforceRules(*discountApplied, position.ItemID, orderDiscountsForPosition, orderDiscounts, *priceRuleVoucherPair.Rule, roundTo)
 			orderDiscounts[position.ItemID] = orderDiscountsForPosition
 		}
 	}
 	return orderDiscounts
+}
+
+func previouslyAppliedExclusionInPlace(rule *PriceRule, orderDiscountsForPosition DiscountCalculationData) bool {
+	previouslyAppliedExclusion := false
+	if rule.Type == TypePromotionCustomer || rule.Type == TypePromotionProduct {
+		if orderDiscountsForPosition.CustomerPromotionApplied || orderDiscountsForPosition.ProductPromotionApplied {
+			previouslyAppliedExclusion = true
+		}
+	}
+	return previouslyAppliedExclusion
 }

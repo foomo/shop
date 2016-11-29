@@ -9,7 +9,9 @@ func calculateDiscountsCartByPercentage(order *order.Order, priceRuleVoucherPair
 		panic("CalculateDiscountsCartByPercentage called with pricerule of action " + priceRuleVoucherPair.Rule.Action)
 	}
 
+	//get the total - for vouchers it is lowered by previous discounts
 	orderTotal := getOrderTotalForPriceRule(priceRuleVoucherPair.Rule, order, productGroupIDsPerPosition, groupIDsForCustomer)
+
 	//the discount amount calculation
 	totalDiscountAmount := roundToStep(orderTotal*priceRuleVoucherPair.Rule.Amount/100.0, roundTo)
 

@@ -12,9 +12,11 @@ import (
 // ~ CONSTANTS
 //------------------------------------------------------------------
 const (
-	TypePromotion             Type = "promotion"
-	TypeVoucher               Type = "voucher"
-	TypePaymentMethodDiscount Type = "payment_method_discount"
+	TypePromotionCustomer     Type = "promotion_customer"      // if applied
+	TypePromotionProduct      Type = "promotion_product"       //only one per product can be applied
+	TypePromotionOrder        Type = "promotion_order"         // multiple can be applied
+	TypeVoucher               Type = "voucher"                 // rule associated to a voucher
+	TypePaymentMethodDiscount Type = "payment_method_discount" // rule associated to a payment method
 
 	ActionItemByPercent ActionType = "item_by_percent"
 	ActionCartByPercent ActionType = "cart_by_percent"
@@ -23,8 +25,7 @@ const (
 	ActionItemByAbsolute ActionType = "item_by_absolute"
 
 	ActionBuyXGetY ActionType = "buy_x_get_y"
-
-	ActionScaled ActionType = "scaled"
+	ActionScaled   ActionType = "scaled"
 
 	XYCheapestFree      XYWhichType = "xy-cheapest-free"
 	XYMostExpensiveFree XYWhichType = "xy-most-expensive-free"
@@ -153,7 +154,6 @@ func NewPriceRule(ID string) *PriceRule {
 	priceRule.ValidFrom = time.Date(1971, time.January, 1, 0, 0, 0, 0, time.UTC)
 	priceRule.ValidTo = time.Date(9999, time.January, 1, 0, 0, 0, 0, time.UTC) // far in the future
 	priceRule.WhichXYFree = XYCheapestFree
-
 	return priceRule
 }
 
@@ -262,9 +262,9 @@ func GetValidPriceRulesForPaymentMethod(paymentMethod string) ([]PriceRule, erro
 
 // GetValidPriceRulesForPromotions - find rule for payment
 // check ValidFrom, ValidTo
-func GetValidPriceRulesForPromotions() ([]PriceRule, error) {
+func GetValidPriceRulesForPromotions(priceRuleTypes []Type) ([]PriceRule, error) {
 	p := GetPersistorForObject(new(PriceRule))
-	query := bson.M{"type": TypePromotion, "validfrom": bson.M{"$lte": time.Now()}, "validto": bson.M{"$gte": time.Now()}}
+	query := bson.M{"type": bson.M{"$in": priceRuleTypes}, "validfrom": bson.M{"$lte": time.Now()}, "validto": bson.M{"$gte": time.Now()}}
 
 	var result []PriceRule
 
@@ -273,7 +273,6 @@ func GetValidPriceRulesForPromotions() ([]PriceRule, error) {
 		// handle error
 		return nil, err
 	}
-
 	return result, nil
 }
 

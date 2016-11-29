@@ -7,7 +7,6 @@ import (
 	"strconv"
 
 	"github.com/foomo/shop/order"
-	"github.com/foomo/shop/utils"
 )
 
 // CalculateDiscountsCartByAbsolute -
@@ -15,6 +14,7 @@ func calculateDiscountsCartByAbsolute(order *order.Order, priceRuleVoucherPair R
 	if priceRuleVoucherPair.Rule.Action != ActionCartByAbsolute {
 		panic("CalculateDiscountsCartByAbsolute called with pricerule of action " + priceRuleVoucherPair.Rule.Action)
 	}
+
 	//collect item values = price * qty for applicable items
 	amounts := getAmountsOfApplicablePositions(priceRuleVoucherPair.Rule, order, productGroupIDsPerPosition, groupIDsForCustomer)
 
@@ -34,33 +34,22 @@ func calculateDiscountsCartByAbsolute(order *order.Order, priceRuleVoucherPair R
 		// if we have the distributed amount
 		if discountAmount, ok := distribution[position.ItemID]; ok {
 			// and rule can still be applied
-			if !orderDiscounts[position.ItemID].StopApplyingDiscounts && ok {
+			orderDiscountsForPosition := orderDiscounts[position.ItemID]
+
+			if !orderDiscounts[position.ItemID].StopApplyingDiscounts && ok && !previouslyAppliedExclusionInPlace(priceRuleVoucherPair.Rule, orderDiscountsForPosition) {
 				if !orderDiscounts[position.ItemID].StopApplyingDiscounts {
 					//apply the discount here
-					discountApplied := &DiscountApplied{}
-					discountApplied.PriceRuleID = priceRuleVoucherPair.Rule.ID
-					discountApplied.MappingID = priceRuleVoucherPair.Rule.MappingID
-					discountApplied.CalculationBasePrice = orderDiscounts[position.ItemID].CurrentItemPrice
-					discountApplied.Price = orderDiscounts[position.ItemID].InitialItemPrice
-					if priceRuleVoucherPair.Voucher != nil {
-						discountApplied.VoucherID = priceRuleVoucherPair.Voucher.ID
-						discountApplied.VoucherCode = priceRuleVoucherPair.Voucher.VoucherCode
-					}
+					discountApplied := getInitializedDiscountApplied(priceRuleVoucherPair, orderDiscounts, position.ItemID)
 
 					//calculate the actual discount
 					discountApplied.DiscountAmount = discountAmount
-					discountApplied.DiscountSingle = discountAmount
-					discountApplied.Quantity = orderDiscounts[position.ItemID].Qantity
+					discountApplied.DiscountSingle = discountAmount / orderDiscounts[position.ItemID].Quantity
+					discountApplied.Quantity = orderDiscounts[position.ItemID].Quantity
 
 					//pointer assignment WTF !!!
 					orderDiscountsForPosition := orderDiscounts[position.ItemID]
-					orderDiscountsForPosition.TotalDiscountAmount += discountApplied.DiscountAmount
-					orderDiscountsForPosition.AppliedDiscounts = append(orderDiscountsForPosition.AppliedDiscounts, *discountApplied)
-					orderDiscountsForPosition.CurrentItemPrice = utils.Round(discountApplied.CalculationBasePrice-discountAmount, 2)
+					orderDiscountsForPosition = calculateCurrentPriceAndApplicableDiscountsEnforceRules(*discountApplied, position.ItemID, orderDiscountsForPosition, orderDiscounts, *priceRuleVoucherPair.Rule, roundTo)
 
-					if priceRuleVoucherPair.Rule.Exclusive {
-						orderDiscountsForPosition.StopApplyingDiscounts = true
-					}
 					orderDiscounts[position.ItemID] = orderDiscountsForPosition
 				}
 			}

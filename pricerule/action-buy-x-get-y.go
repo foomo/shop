@@ -40,38 +40,30 @@ func calculateDiscountsBuyXGetY(orderVo *order.Order, priceRuleVoucherPair RuleV
 	if freeQty > 0 {
 		var productsFree int
 		for _, positionByPrice := range sortedPositions {
-
 			if productsFree < freeQty {
+				orderDiscountsForPosition := orderDiscounts[positionByPrice.ItemID]
 
 				//apply the discount here
-				discountApplied := &DiscountApplied{}
-				discountApplied.PriceRuleID = priceRuleVoucherPair.Rule.ID
-				discountApplied.MappingID = priceRuleVoucherPair.Rule.MappingID
-				discountApplied.CalculationBasePrice = orderDiscounts[positionByPrice.ItemID].CurrentItemPrice
-				discountApplied.Price = orderDiscounts[positionByPrice.ItemID].InitialItemPrice
+				discountApplied := getInitializedDiscountApplied(priceRuleVoucherPair, orderDiscounts, positionByPrice.ItemID)
 
 				for qty := 0; qty < int(positionByPrice.Quantity); qty++ {
 					//calculate the actual discount
+
+					//calculate the actual discount
 					discountApplied.DiscountAmount += positionByPrice.Price
+					discountApplied.DiscountSingle += positionByPrice.Price
+					discountApplied.Quantity = orderDiscounts[positionByPrice.ItemID].Quantity
+
 					productsFree++
 					if productsFree >= freeQty {
 						break
 					}
 				}
 
-				if priceRuleVoucherPair.Voucher != nil {
-					discountApplied.VoucherID = priceRuleVoucherPair.Voucher.ID
-					discountApplied.VoucherCode = priceRuleVoucherPair.Voucher.VoucherCode
-				}
-
 				//add it to the ret obj
 				//pointer assignment WTF !!!
-				orderDiscountsForPosition := orderDiscounts[positionByPrice.ItemID]
-				orderDiscountsForPosition.TotalDiscountAmount += discountApplied.DiscountAmount
-				orderDiscountsForPosition.AppliedDiscounts = append(orderDiscountsForPosition.AppliedDiscounts, *discountApplied)
-				if priceRuleVoucherPair.Rule.Exclusive {
-					orderDiscountsForPosition.StopApplyingDiscounts = true
-				}
+
+				orderDiscountsForPosition = calculateCurrentPriceAndApplicableDiscountsEnforceRules(*discountApplied, positionByPrice.ItemID, orderDiscountsForPosition, orderDiscounts, *priceRuleVoucherPair.Rule, roundTo)
 				orderDiscounts[positionByPrice.ItemID] = orderDiscountsForPosition
 
 			}
