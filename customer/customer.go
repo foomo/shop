@@ -98,7 +98,7 @@ func NewCustomer(email, password string, customProvider CustomerCustomProvider) 
 	if email == "" {
 		return nil, errors.New(shop_error.ErrorRequiredFieldMissing)
 	}
-	var err error
+	//var err error
 	// We only create credentials if a customer is available.
 	// A guest customer gets a new entry in the customer db for each order!
 	// if !isGuest {
