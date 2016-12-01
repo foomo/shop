@@ -15,14 +15,17 @@ const (
 	GroupIDNormal = "Products"
 	GroupIDShirts = "Shirts"
 
-	PriceRuleIDSale        = "PriceRuleSale"
-	PriceRuleIDSaleVoucher = "PriceRuleSaleVoucher"
-	PriceRuleIDPayment     = "PriceRulePayment"
+	PriceRuleIDSale         = "PriceRuleSale"
+	PriceRuleIDSaleProduct  = "PriceRuleSaleProduct"
+	PriceRuleIDSaleCustomer = "PriceRuleSaleCustomer"
+	PriceRuleIDSaleVoucher  = "PriceRuleSaleVoucher"
+	PriceRuleIDVoucher      = "PriceRuleVoucher"
+	PriceRuleIDPayment      = "PriceRulePayment"
 
-	VoucherID1   = "voucher-code-1"
+	VoucherID1   = "voucher1"
 	VoucherCode1 = "voucher-code-1"
 
-	VoucherID2   = "voucher-code-2"
+	VoucherID2   = "voucher2"
 	VoucherCode2 = "voucher-code-2"
 	// Products
 	ProductID1 = "product-1"
@@ -79,7 +82,6 @@ func Init(t *testing.T) {
 
 	createMockVouchers(t)
 	checkVouchersExists(t)
-
 }
 
 // Test groups creation
@@ -101,7 +103,7 @@ func testScaled(t *testing.T) {
 		"fr": PriceRuleIDSale,
 		"it": PriceRuleIDSale,
 	}
-	priceRule.Type = TypePromotion
+	priceRule.Type = TypePromotionOrder
 	priceRule.Description = priceRule.Name
 	priceRule.Action = ActionScaled
 
@@ -154,7 +156,7 @@ func testBuyXGetY(t *testing.T) {
 		"fr": PriceRuleIDSale,
 		"it": PriceRuleIDSale,
 	}
-	priceRule.Type = TypePromotion
+	priceRule.Type = TypePromotionOrder
 	priceRule.Description = priceRule.Name
 	priceRule.Action = ActionBuyXGetY
 	priceRule.X = 3
@@ -188,6 +190,231 @@ func testBuyXGetY(t *testing.T) {
 }
 
 // Test groups creation
+func testMaxOrder(t *testing.T) {
+	//remove all and add again
+	productsInGroups = make(map[string][]string)
+	productsInGroups[GroupIDSale] = []string{ProductID1, ProductID2, ProductID1SKU1, ProductID1SKU2, ProductID2SKU1, ProductID2SKU2}
+	productsInGroups[GroupIDNormal] = []string{ProductID4, ProductID5, ProductID4SKU1, ProductID4SKU2, ProductID5SKU1, ProductID5SKU2}
+	productsInGroups[GroupIDShirts] = []string{ProductID3, ProductID4, ProductID5, ProductID3SKU1, ProductID4SKU1, ProductID5SKU1, ProductID3SKU2, ProductID4SKU2, ProductID5SKU2}
+
+	RemoveAllGroups()
+	RemoveAllPriceRules()
+	RemoveAllVouchers()
+	checkGroupsNotExists(t)
+	createMockCustomerGroups(t)
+	createMockProductGroups(t)
+	checkGroupsExists(t)
+	orderVo, err := createMockOrder(t)
+	if err != nil {
+		panic(err)
+	}
+
+	// PRICERULES --------------------------------------------------------------------------------------
+	//Customer price rule
+
+	priceRule := NewPriceRule(PriceRuleIDSaleCustomer)
+	priceRule.Name = map[string]string{
+		"de": PriceRuleIDSale,
+		"fr": PriceRuleIDSale,
+		"it": PriceRuleIDSale,
+	}
+	priceRule.Type = TypePromotionCustomer
+	priceRule.Description = priceRule.Name
+	priceRule.Action = ActionCartByPercent
+	priceRule.Amount = 10.0
+	priceRule.Priority = 90
+	priceRule.IncludedProductGroupIDS = []string{GroupIDSale}
+	priceRule.IncludedCustomerGroupIDS = []string{CustomerGroupID1}
+	priceRule.MinOrderAmount = 100
+	priceRule.MinOrderAmountApplicableItemsOnly = true
+	err = priceRule.Upsert()
+	if err != nil {
+		panic(err)
+	}
+
+	// VOUCHERS ------------
+	priceRule = NewPriceRule(PriceRuleIDSaleVoucher)
+	priceRule.Name = map[string]string{
+		"de": PriceRuleIDSaleVoucher,
+		"fr": PriceRuleIDSaleVoucher,
+		"it": PriceRuleIDSaleVoucher,
+	}
+	priceRule.Type = TypeVoucher
+	priceRule.Description = priceRule.Name
+	priceRule.Action = ActionItemByPercent
+	priceRule.Amount = 20.0
+	priceRule.Priority = 800
+	priceRule.MinOrderAmount = 1000
+	priceRule.MinOrderAmountApplicableItemsOnly = false
+	priceRule.IncludedProductGroupIDS = []string{GroupIDSale}
+	priceRule.IncludedCustomerGroupIDS = []string{CustomerGroupID1}
+	err = priceRule.Upsert()
+	if err != nil {
+		panic(err)
+	}
+
+	priceRule, err = GetPriceRuleByID(PriceRuleIDSaleVoucher, nil)
+	if err != nil {
+		panic(err)
+	}
+	voucher := NewVoucher(VoucherID1, VoucherCode1, priceRule, "")
+
+	err = voucher.Upsert()
+	if err != nil {
+		panic(err)
+	}
+
+	// PRICERULES --------------------------------------------------------------------------------------
+	now := time.Now()
+	discountsVo, summary, err := ApplyDiscounts(orderVo, []string{}, PaymentMethodID1, 0.05)
+	timeTrack(now, "Apply multiple price rules")
+	defer removeOrder(orderVo)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("discounts")
+	spew.Dump(discountsVo)
+	spew.Dump(*summary)
+
+}
+
+// Test groups creation
+func testTwoStepWorkflow(t *testing.T) {
+	//remove all and add again
+	productsInGroups = make(map[string][]string)
+	productsInGroups[GroupIDSale] = []string{ProductID1, ProductID2, ProductID1SKU1, ProductID1SKU2, ProductID2SKU1, ProductID2SKU2}
+	productsInGroups[GroupIDNormal] = []string{ProductID4, ProductID5, ProductID4SKU1, ProductID4SKU2, ProductID5SKU1, ProductID5SKU2}
+	productsInGroups[GroupIDShirts] = []string{ProductID3, ProductID4, ProductID5, ProductID3SKU1, ProductID4SKU1, ProductID5SKU1, ProductID3SKU2, ProductID4SKU2, ProductID5SKU2}
+
+	RemoveAllGroups()
+	RemoveAllPriceRules()
+	RemoveAllVouchers()
+	checkGroupsNotExists(t)
+	createMockCustomerGroups(t)
+	createMockProductGroups(t)
+	checkGroupsExists(t)
+	orderVo, err := createMockOrder(t)
+	if err != nil {
+		panic(err)
+	}
+
+	// PRICERULES --------------------------------------------------------------------------------------
+	//Customer price rule
+
+	priceRule := NewPriceRule(PriceRuleIDSaleCustomer)
+	priceRule.Name = map[string]string{
+		"de": PriceRuleIDSale,
+		"fr": PriceRuleIDSale,
+		"it": PriceRuleIDSale,
+	}
+	priceRule.Type = TypePromotionCustomer
+	priceRule.Description = priceRule.Name
+	priceRule.Action = ActionCartByPercent
+	priceRule.Amount = 10.0
+	priceRule.Priority = 90
+	priceRule.IncludedProductGroupIDS = []string{GroupIDSale}
+	priceRule.IncludedCustomerGroupIDS = []string{CustomerGroupID1}
+	err = priceRule.Upsert()
+	if err != nil {
+		panic(err)
+	}
+
+	priceRule = NewPriceRule(PriceRuleIDSaleProduct)
+	priceRule.Name = map[string]string{
+		"de": PriceRuleIDSale,
+		"fr": PriceRuleIDSale,
+		"it": PriceRuleIDSale,
+	}
+	priceRule.Type = TypePromotionProduct
+	priceRule.Description = priceRule.Name
+	priceRule.Action = ActionCartByPercent
+	priceRule.Amount = 10.0
+	priceRule.Priority = 100
+	priceRule.IncludedProductGroupIDS = []string{GroupIDSale}
+	priceRule.IncludedCustomerGroupIDS = []string{CustomerGroupID1}
+	err = priceRule.Upsert()
+	if err != nil {
+		panic(err)
+	}
+
+	// VOUCHERS ------------``
+	priceRule = NewPriceRule(PriceRuleIDSaleVoucher)
+	priceRule.Name = map[string]string{
+		"de": PriceRuleIDSaleVoucher,
+		"fr": PriceRuleIDSaleVoucher,
+		"it": PriceRuleIDSaleVoucher,
+	}
+	priceRule.Type = TypeVoucher
+	priceRule.Description = priceRule.Name
+	priceRule.Action = ActionItemByPercent
+	priceRule.Amount = 20.0
+	priceRule.Priority = 800
+	priceRule.IncludedProductGroupIDS = []string{GroupIDSale}
+	priceRule.IncludedCustomerGroupIDS = []string{CustomerGroupID1}
+	err = priceRule.Upsert()
+	if err != nil {
+		panic(err)
+	}
+
+	priceRule, err = GetPriceRuleByID(PriceRuleIDSaleVoucher, nil)
+	if err != nil {
+		panic(err)
+	}
+	voucher := NewVoucher(VoucherID1, VoucherCode1, priceRule, "")
+
+	err = voucher.Upsert()
+	if err != nil {
+		panic(err)
+	}
+
+	// ------------
+
+	priceRule = NewPriceRule(PriceRuleIDVoucher)
+	priceRule.Name = map[string]string{
+		"de": PriceRuleIDVoucher,
+		"fr": PriceRuleIDVoucher,
+		"it": PriceRuleIDVoucher,
+	}
+	priceRule.Type = TypeVoucher
+	priceRule.Description = priceRule.Name
+	priceRule.Action = ActionItemByPercent
+	priceRule.Amount = 10.0
+	priceRule.Priority = 80
+	priceRule.IncludedProductGroupIDS = []string{}
+	priceRule.IncludedCustomerGroupIDS = []string{}
+	err = priceRule.Upsert()
+	if err != nil {
+		panic(err)
+	}
+
+	priceRule, err = GetPriceRuleByID(PriceRuleIDVoucher, nil)
+	if err != nil {
+		panic(err)
+	}
+	voucher = NewVoucher(VoucherID2, VoucherCode2, priceRule, CustomerID2)
+
+	err = voucher.Upsert()
+	if err != nil {
+		panic(err)
+	}
+
+	// PRICERULES --------------------------------------------------------------------------------------
+	now := time.Now()
+	discountsVo, summary, err := ApplyDiscounts(orderVo, []string{VoucherCode2, VoucherCode1}, PaymentMethodID1, 0.05)
+	timeTrack(now, "Apply multiple price rules")
+	defer removeOrder(orderVo)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("discounts")
+	spew.Dump(discountsVo)
+	spew.Dump(*summary)
+
+}
+
+// Test groups creation
 func testPricerulesWorkflow(t *testing.T) {
 	//remove all and add again
 	Init(t)
@@ -211,7 +438,7 @@ func testPricerulesWorkflow(t *testing.T) {
 }
 
 // Test checkout functionality
-func TestCheckoutWorkflow(t *testing.T) {
+func testCheckoutWorkflow(t *testing.T) {
 	//remove all and add again
 	Init(t)
 
@@ -306,7 +533,7 @@ func createMockPriceRules(t *testing.T) {
 		"fr": PriceRuleIDSale,
 		"it": PriceRuleIDSale,
 	}
-	priceRule.Type = TypePromotion
+	priceRule.Type = TypePromotionOrder
 
 	priceRule.Description = priceRule.Name
 
@@ -426,14 +653,14 @@ func createMockOrder(t *testing.T) (*order.Order, error) {
 	}
 	orderVo.CustomerData.CustomerId = CustomerID1
 	var i int
-	for _, positionID := range []string{ProductID1SKU1, ProductID1SKU2, ProductID3SKU2} {
+	for _, positionID := range []string{ProductID1SKU1, ProductID3SKU2} {
 		i++
 		positionVo := new(order.Position)
 
 		positionVo.ItemID = positionID
 		positionVo.Name = positionID
 		positionVo.Price = 100
-		positionVo.Quantity = 4
+		positionVo.Quantity = 1
 
 		err := orderVo.AddPosition(positionVo)
 		if err != nil {

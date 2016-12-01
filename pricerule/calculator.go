@@ -1,6 +1,7 @@
 package pricerule
 
 import (
+	"fmt"
 	"log"
 	"sort"
 	"time"
@@ -18,12 +19,15 @@ import (
 
 // DiscountApplied -
 type DiscountApplied struct {
-	PriceRuleID          string
-	MappingID            string
-	VoucherID            string
-	VoucherCode          string
-	DiscountAmount       float64
-	DiscountSingle       float64
+	PriceRuleID              string
+	MappingID                string
+	VoucherID                string
+	VoucherCode              string
+	DiscountAmount           float64
+	DiscountSingle           float64
+	DiscountAmountApplicable float64
+	DiscountSingleApplicable float64
+
 	Quantity             float64
 	Price                float64 //price without reductions
 	CalculationBasePrice float64 //price used for the calculation of the discount
@@ -31,13 +35,19 @@ type DiscountApplied struct {
 
 // DiscountCalculationData - of an item
 type DiscountCalculationData struct {
-	OrderItemID         string
-	AppliedDiscounts    []DiscountApplied
-	TotalDiscountAmount float64
+	OrderItemID                   string
+	AppliedDiscounts              []DiscountApplied
+	TotalDiscountAmount           float64 // how much the rules would give
+	TotalDiscountAmountApplicable float64 // how much the order value permits
 
-	InitialItemPrice float64
-	CurrentItemPrice float64
-	Qantity          float64
+	InitialItemPrice                float64
+	CurrentItemPrice                float64
+	VoucherCalculationBaseItemPrice float64
+
+	Quantity float64
+
+	CustomerPromotionApplied bool //has it previously been applied
+	ProductPromotionApplied  bool //has it previously been applied
 
 	StopApplyingDiscounts bool
 }
@@ -47,11 +57,13 @@ type OrderDiscounts map[string]DiscountCalculationData
 
 // OrderDiscountSummary -
 type OrderDiscountSummary struct {
-	AppliedPriceRuleIDs     []string
-	AppliedVoucherIDs       []string
-	AppliedVoucherCodes     []string
-	TotalDiscount           float64
-	TotalDiscountPercentage float64
+	AppliedPriceRuleIDs               []string
+	AppliedVoucherIDs                 []string
+	AppliedVoucherCodes               []string
+	TotalDiscount                     float64
+	TotalDiscountPercentage           float64
+	TotalDiscountApplicable           float64
+	TotalDiscountApplicablePercentage float64
 }
 
 // RuleVoucherPair -
@@ -79,7 +91,7 @@ func ApplyDiscounts(order *order.Order, voucherCodes []string, paymentMethod str
 	}
 
 	// find applicable pricerules - auto promotions
-	promotionPriceRules, err := GetValidPriceRulesForPromotions()
+	promotionPriceRules, err := GetValidPriceRulesForPromotions([]Type{TypePromotionCustomer, TypePromotionProduct, TypePromotionOrder})
 
 	if err != nil {
 		return nil, nil, err
@@ -89,36 +101,6 @@ func ApplyDiscounts(order *order.Order, voucherCodes []string, paymentMethod str
 		rule := &PriceRule{}
 		*rule = promotionRule
 		ruleVoucherPairs = append(ruleVoucherPairs, RuleVoucherPair{Rule: rule, Voucher: nil})
-	}
-
-	//find applicable pricerules of type TypeVoucher for
-
-	for _, voucherCode := range voucherCodes {
-		if len(voucherCode) > 0 {
-			voucherVo, voucherPriceRule, err := GetVoucherAndPriceRule(voucherCode)
-
-			if voucherVo == nil {
-				log.Println("voucher not found for code: " + voucherCode + " in " + "priceRule.ApplyDiscounts")
-			}
-			if err != nil {
-				log.Println(err)
-				log.Println("skupping voucher " + voucherCode)
-				continue
-			}
-
-			if !voucherVo.TimeRedeemed.IsZero() {
-				log.Println("voucher " + voucherCode + " already redeemed ... skipping")
-				continue
-			}
-
-			pair := RuleVoucherPair{
-				Rule:    voucherPriceRule,
-				Voucher: voucherVo,
-			}
-
-			ruleVoucherPairs = append(ruleVoucherPairs, pair)
-		}
-
 	}
 
 	// find applicable payment discounts
@@ -131,46 +113,66 @@ func ApplyDiscounts(order *order.Order, voucherCodes []string, paymentMethod str
 		for _, paymentRule := range paymentPriceRules {
 			ruleVoucherPairs = append(ruleVoucherPairs, RuleVoucherPair{Rule: &paymentRule, Voucher: nil})
 		}
-
 	}
 
 	orderDiscounts := NewOrderDiscounts(order)
-	summary := &OrderDiscountSummary{}
+	summary := &OrderDiscountSummary{
+		AppliedVoucherCodes: []string{},
+		AppliedVoucherIDs:   []string{},
+	}
 	timeTrack(now, "peparations took ")
 	nowAll := time.Now()
 
 	// ~ PRICERULE PAIR SORTING - BY PRIORITY - higher priority means it is applied first
 	sort.Sort(ByPriority(ruleVoucherPairs))
 
-	for _, priceRulePair := range ruleVoucherPairs {
-		priceRule := priceRulePair.Rule
-		ok, priceRuleFailReason := validatePriceRuleForOrder(*priceRule, order, productGroupIDsPerPosition, groupIDsForCustomer)
-		nowOne := time.Now()
+	//first loop where all promotion discounts are applied
 
-		if ok {
-			switch priceRule.Action {
-			case ActionItemByAbsolute:
-				orderDiscounts = calculateDiscountsItemByAbsolute(order, priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
-			case ActionItemByPercent:
-				orderDiscounts = calculateDiscountsItemByPercent(order, priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
-			case ActionCartByAbsolute:
-				orderDiscounts = calculateDiscountsCartByAbsolute(order, priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
-			case ActionCartByPercent:
-				orderDiscounts = calculateDiscountsCartByPercentage(order, priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
-			case ActionBuyXGetY:
-				orderDiscounts = calculateDiscountsBuyXGetY(order, priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
-			case ActionScaled:
-				orderDiscounts = calculateScaledDiscounts(order, priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
+	for _, priceRulePair := range ruleVoucherPairs {
+		//apply them
+		orderDiscounts = calculateRule(orderDiscounts, priceRulePair, order, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
+	}
+
+	//find the vouchers and voucher rules
+	//find applicable pricerules of type TypeVoucher for
+
+	if len(voucherCodes) > 0 {
+		var ruleVoucherPairsStep2 []RuleVoucherPair
+		for _, voucherCode := range voucherCodes {
+			if len(voucherCode) > 0 {
+				voucherVo, voucherPriceRule, err := GetVoucherAndPriceRule(voucherCode)
+				fmt.Println("**" + voucherPriceRule.ID)
+				if voucherVo == nil {
+					log.Println("voucher not found for code: " + voucherCode + " in " + "priceRule.ApplyDiscounts")
+				}
+				if err != nil {
+					log.Println(err)
+					log.Println("skupping voucher " + voucherCode)
+					continue
+				}
+
+				if !voucherVo.TimeRedeemed.IsZero() {
+					log.Println("voucher " + voucherCode + " already redeemed ... skipping")
+					continue
+				}
+
+				pair := RuleVoucherPair{
+					Rule:    voucherPriceRule,
+					Voucher: voucherVo,
+				}
+				ruleVoucherPairsStep2 = append(ruleVoucherPairsStep2, pair)
 			}
-			log.Println(":-) Applied " + priceRule.ID)
-			timeTrack(nowOne, priceRule.ID)
-		} else {
-			log.Println(":-/ Not applied " + priceRule.ID + " ----> " + string(priceRuleFailReason))
+		}
+		//apply them
+
+		for _, priceRulePair := range ruleVoucherPairsStep2 {
+			orderDiscounts = calculateRule(orderDiscounts, priceRulePair, order, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
 		}
 	}
 	timeTrack(nowAll, "All rules together")
 	for _, orderDiscount := range orderDiscounts {
 		summary.TotalDiscount += orderDiscount.TotalDiscountAmount
+		summary.TotalDiscountApplicable += orderDiscount.TotalDiscountAmountApplicable
 		for _, appliedDiscount := range orderDiscount.AppliedDiscounts {
 			summary.AppliedPriceRuleIDs = append(summary.AppliedPriceRuleIDs, appliedDiscount.PriceRuleID)
 			if len(appliedDiscount.VoucherCode) > 0 {
@@ -180,16 +182,50 @@ func ApplyDiscounts(order *order.Order, voucherCodes []string, paymentMethod str
 		}
 	}
 	summary.TotalDiscountPercentage = summary.TotalDiscount / getOrderTotal(order) * 100.0
+	summary.TotalDiscountApplicablePercentage = summary.TotalDiscountApplicable / getOrderTotal(order) * 100.0
+
 	summary.AppliedPriceRuleIDs = RemoveDuplicates(summary.AppliedPriceRuleIDs)
+	summary.AppliedVoucherIDs = RemoveDuplicates(summary.AppliedVoucherIDs)
+	summary.AppliedVoucherCodes = RemoveDuplicates(summary.AppliedVoucherCodes)
+
 	return orderDiscounts, summary, nil
 }
 
+func calculateRule(orderDiscounts OrderDiscounts, priceRulePair RuleVoucherPair, order *order.Order, productGroupIDsPerPosition map[string][]string, groupIDsForCustomer []string, roundTo float64) OrderDiscounts {
+	ok, priceRuleFailReason := validatePriceRuleForOrder(*priceRulePair.Rule, order, productGroupIDsPerPosition, groupIDsForCustomer)
+	nowOne := time.Now()
+
+	if ok {
+		switch priceRulePair.Rule.Action {
+		case ActionItemByAbsolute:
+			orderDiscounts = calculateDiscountsItemByAbsolute(order, priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
+		case ActionItemByPercent:
+			orderDiscounts = calculateDiscountsItemByPercent(order, priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
+		case ActionCartByAbsolute:
+			orderDiscounts = calculateDiscountsCartByAbsolute(order, priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
+		case ActionCartByPercent:
+			orderDiscounts = calculateDiscountsCartByPercentage(order, priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
+		case ActionBuyXGetY:
+			orderDiscounts = calculateDiscountsBuyXGetY(order, priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
+		case ActionScaled:
+			orderDiscounts = calculateScaledDiscounts(order, priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
+		}
+		log.Println(":-) Applied " + priceRulePair.Rule.ID)
+		timeTrack(nowOne, priceRulePair.Rule.ID)
+	} else {
+		log.Println(":-/ Not applied " + priceRulePair.Rule.ID + " ----> " + string(priceRuleFailReason))
+	}
+	return orderDiscounts
+}
+
 // find what is the order value of positions that belong to group
+// previouslyAppliedDiscounts is for qty 1
 func getOrderTotalForPriceRule(priceRule *PriceRule, order *order.Order, productGroupsIDsPerPosition map[string][]string, customerGroupIDs []string) float64 {
 	var total float64
 
 	for _, position := range order.Positions {
 		productGroupIDs := productGroupsIDsPerPosition[position.ItemID]
+
 		// rule has no customer or product group limitations
 		if len(priceRule.IncludedProductGroupIDS) == 0 &&
 			len(priceRule.ExcludedProductGroupIDS) == 0 &&
@@ -215,6 +251,7 @@ func getOrderTotal(order *order.Order) float64 {
 	for _, position := range order.Positions {
 		total += position.Price * position.Quantity
 	}
+	//fmt.Println("Order total  " + strconv.FormatFloat(total, 'f', 6, 64))
 	return total
 }
 
@@ -255,10 +292,12 @@ func NewOrderDiscounts(order *order.Order) OrderDiscounts {
 		itemDiscountCalculationData.OrderItemID = position.ItemID
 		itemDiscountCalculationData.CurrentItemPrice = position.Price
 		itemDiscountCalculationData.InitialItemPrice = position.Price
-		itemDiscountCalculationData.Qantity = position.Quantity
+		itemDiscountCalculationData.Quantity = position.Quantity
 		itemDiscountCalculationData.AppliedDiscounts = []DiscountApplied{}
 		itemDiscountCalculationData.TotalDiscountAmount = 0.0
+		itemDiscountCalculationData.TotalDiscountAmountApplicable = 0.0
 		itemDiscountCalculationData.StopApplyingDiscounts = false
+		itemDiscountCalculationData.VoucherCalculationBaseItemPrice = position.Price
 		orderDiscounts[position.ItemID] = itemDiscountCalculationData
 	}
 	return orderDiscounts

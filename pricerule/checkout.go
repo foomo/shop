@@ -192,15 +192,23 @@ func redeemVoucherByCode(voucherCode string, customerID string) error {
 // Returns false, ValidationPreviouslyAppliedRuleBlock if a previous rule blocks application
 func checkPreviouslyAppliedRules(voucherPriceRule *PriceRule, voucher *Voucher, order *order.Order, groupIDsForCustomer []string, productGroupIDsPerPosition map[string][]string) (ok bool, reason TypeRuleValidationMsg) {
 	// find applicable pricerules - auto promotions
-	promotionPriceRules, err := GetValidPriceRulesForPromotions()
-
+	promotionPriceRules, err := GetValidPriceRulesForPromotions([]Type{TypePromotionOrder, TypePromotionCustomer, TypePromotionProduct})
 	if err != nil {
 		panic(err)
 	}
 
 	var ruleVoucherPairs []RuleVoucherPair
+	previousMutualExclusionRule := false
 	for _, promotionRule := range promotionPriceRules {
-		ruleVoucherPairs = append(ruleVoucherPairs, RuleVoucherPair{Rule: &promotionRule, Voucher: nil})
+		//only add the customer and product promotion if an excluding one has not been applied yet
+		if promotionRule.Type == TypePromotionCustomer || promotionRule.Type == TypePromotionProduct {
+			if previousMutualExclusionRule == false {
+				ruleVoucherPairs = append(ruleVoucherPairs, RuleVoucherPair{Rule: &promotionRule, Voucher: nil})
+				previousMutualExclusionRule = true
+			}
+		} else {
+			ruleVoucherPairs = append(ruleVoucherPairs, RuleVoucherPair{Rule: &promotionRule, Voucher: nil})
+		}
 	}
 
 	ruleVoucherPairs = append(ruleVoucherPairs, RuleVoucherPair{Rule: voucherPriceRule, Voucher: voucher})
