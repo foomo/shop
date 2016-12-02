@@ -194,7 +194,7 @@ func ApplyDiscounts(order *order.Order, voucherCodes []string, paymentMethod str
 						DiscountAmount: appliedDiscount.DiscountAmountApplicable,
 					}
 				} else {
-					voucherDiscounts.DiscountAmount += appliedDiscount.DiscountAmount
+					voucherDiscounts.DiscountAmount += appliedDiscount.DiscountAmountApplicable
 				}
 			}
 		}
