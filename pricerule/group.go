@@ -124,6 +124,7 @@ func (group *Group) Upsert() error {
 			CreatedAt:      group.CreatedAt,
 			LastModifiedAt: group.LastModifiedAt,
 			Custom:         group.Custom,
+			Type:           group.Type,
 		}
 
 		_, err = p.GetCollection().Upsert(bson.M{"id": group.ID}, emptyCopy)
