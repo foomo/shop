@@ -55,6 +55,12 @@ type DiscountCalculationData struct {
 // OrderDiscounts - applied discounts per positionId
 type OrderDiscounts map[string]DiscountCalculationData
 
+type VoucherDiscount struct {
+	Code           string
+	ID             string
+	DiscountAmount float64
+}
+
 // OrderDiscountSummary -
 type OrderDiscountSummary struct {
 	AppliedPriceRuleIDs               []string
@@ -64,6 +70,7 @@ type OrderDiscountSummary struct {
 	TotalDiscountPercentage           float64
 	TotalDiscountApplicable           float64
 	TotalDiscountApplicablePercentage float64
+	VoucherDiscounts                  map[string]VoucherDiscount
 }
 
 // RuleVoucherPair -
@@ -119,6 +126,7 @@ func ApplyDiscounts(order *order.Order, voucherCodes []string, paymentMethod str
 	summary := &OrderDiscountSummary{
 		AppliedVoucherCodes: []string{},
 		AppliedVoucherIDs:   []string{},
+		VoucherDiscounts:    map[string]VoucherDiscount{},
 	}
 	timeTrack(now, "peparations took ")
 	nowAll := time.Now()
@@ -178,6 +186,16 @@ func ApplyDiscounts(order *order.Order, voucherCodes []string, paymentMethod str
 			if len(appliedDiscount.VoucherCode) > 0 {
 				summary.AppliedVoucherCodes = append(summary.AppliedVoucherCodes, appliedDiscount.VoucherCode)
 				summary.AppliedVoucherIDs = append(summary.AppliedVoucherIDs, appliedDiscount.VoucherID)
+				voucherDiscounts, ok := summary.VoucherDiscounts[appliedDiscount.VoucherCode]
+				if !ok {
+					summary.VoucherDiscounts[appliedDiscount.VoucherCode] = VoucherDiscount{
+						Code:           appliedDiscount.VoucherCode,
+						ID:             appliedDiscount.VoucherCode,
+						DiscountAmount: appliedDiscount.DiscountAmountApplicable,
+					}
+				} else {
+					voucherDiscounts.DiscountAmount += appliedDiscount.DiscountAmount
+				}
 			}
 		}
 	}
