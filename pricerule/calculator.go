@@ -117,7 +117,10 @@ func ApplyDiscounts(order *order.Order, voucherCodes []string, paymentMethod str
 			return nil, nil, err
 		}
 		for _, paymentRule := range paymentPriceRules {
-			ruleVoucherPairs = append(ruleVoucherPairs, RuleVoucherPair{Rule: &paymentRule, Voucher: nil})
+
+			rule := &PriceRule{}
+			*rule = paymentRule
+			ruleVoucherPairs = append(ruleVoucherPairs, RuleVoucherPair{Rule: rule, Voucher: nil})
 		}
 	}
 
@@ -136,8 +139,10 @@ func ApplyDiscounts(order *order.Order, voucherCodes []string, paymentMethod str
 	//first loop where all promotion discounts are applied
 
 	for _, priceRulePair := range ruleVoucherPairs {
+		pair := RuleVoucherPair{}
+		pair = priceRulePair
 		//apply them
-		orderDiscounts = calculateRule(orderDiscounts, priceRulePair, order, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
+		orderDiscounts = calculateRule(orderDiscounts, pair, order, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
 	}
 
 	//find the vouchers and voucher rules
@@ -184,6 +189,8 @@ func ApplyDiscounts(order *order.Order, voucherCodes []string, paymentMethod str
 			if len(appliedDiscount.VoucherCode) > 0 {
 				summary.AppliedVoucherCodes = append(summary.AppliedVoucherCodes, appliedDiscount.VoucherCode)
 				summary.AppliedVoucherIDs = append(summary.AppliedVoucherIDs, appliedDiscount.VoucherID)
+				log.Println("#### voucherCode: ", appliedDiscount.VoucherCode)
+				log.Println("#### voucherID: ", appliedDiscount.VoucherID)
 				voucherDiscounts, ok := summary.VoucherDiscounts[appliedDiscount.VoucherCode]
 				if !ok {
 					summary.VoucherDiscounts[appliedDiscount.VoucherCode] = VoucherDiscount{
