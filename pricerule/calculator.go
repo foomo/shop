@@ -1,7 +1,6 @@
 package pricerule
 
 import (
-	"fmt"
 	"log"
 	"sort"
 	"time"
@@ -149,7 +148,6 @@ func ApplyDiscounts(order *order.Order, voucherCodes []string, paymentMethod str
 		for _, voucherCode := range voucherCodes {
 			if len(voucherCode) > 0 {
 				voucherVo, voucherPriceRule, err := GetVoucherAndPriceRule(voucherCode)
-				fmt.Println("**" + voucherPriceRule.ID)
 				if voucherVo == nil {
 					log.Println("voucher not found for code: " + voucherCode + " in " + "priceRule.ApplyDiscounts")
 				}
