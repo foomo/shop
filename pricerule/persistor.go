@@ -8,7 +8,7 @@ import (
 
 	"github.com/foomo/shop/configuration"
 	"github.com/foomo/shop/persistence"
-	"github.com/foomo/shop/utils"
+	"github.com/foomo/shop/shop_error"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -178,7 +178,7 @@ func findOneObj(obj interface{}, find *bson.M, selection *bson.M, sort string, c
 	}
 
 	if obj == nil {
-		return nil, errors.New("No result for " + utils.ToJSON(find))
+		return nil, errors.New(string(shop_error.ErrorNotFound))
 	}
 	return obj, nil
 }
