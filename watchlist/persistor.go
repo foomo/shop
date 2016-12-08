@@ -170,13 +170,13 @@ func findOne(customerID, sessionID, email string) (*CustomerWatchLists, error) {
 		find = &bson.M{"email": email}
 	}
 
-	CustomerWatchLists := &CustomerWatchLists{}
-	err := p.GetCollection().Find(find).One(CustomerWatchLists)
+	customerWatchLists := &CustomerWatchLists{}
+	err := p.GetCollection().Find(find).One(customerWatchLists)
 	if err != nil {
 		return nil, err
 	}
 
-	return CustomerWatchLists, nil
+	return customerWatchLists, nil
 }
 func findOneByQuery(query *bson.M) (*CustomerWatchLists, error) {
 	if query == nil {
@@ -184,11 +184,11 @@ func findOneByQuery(query *bson.M) (*CustomerWatchLists, error) {
 	}
 	p := GetWatchListPersistor()
 
-	CustomerWatchLists := &CustomerWatchLists{}
-	err := p.GetCollection().Find(query).One(CustomerWatchLists)
+	customerWatchLists := &CustomerWatchLists{}
+	err := p.GetCollection().Find(query).One(customerWatchLists)
 	if err != nil {
 		return nil, err
 	}
 
-	return CustomerWatchLists, nil
+	return customerWatchLists, nil
 }
