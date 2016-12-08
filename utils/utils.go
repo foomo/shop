@@ -19,6 +19,21 @@ func TimeIsWithinLifeTime(date time.Time, start time.Time, end time.Time) bool {
 	}
 	return false
 }
+func TimeIsWithinLifeTimeYYYY_MM_DD(date time.Time, start string, end string) (bool, error) {
+	startTime, err := GetTimeFromYYY_MM_DD(start)
+	if err != nil {
+		return false, err
+	}
+	endTime, err := GetTimeFromYYY_MM_DD(end)
+	if err != nil {
+		return false, err
+	}
+
+	if date.Equal(startTime) || date.Equal(endTime) || (date.After(startTime) && date.Before(endTime)) {
+		return true, nil
+	}
+	return false, nil
+}
 
 // Returns string in format YYYYMMDD
 func GetDateYYYYMMDD() string {
