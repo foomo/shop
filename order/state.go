@@ -7,6 +7,7 @@ const (
 	OrderStatusInvalid   string = "orderStatusInvalid"
 	OrderStatusCart      string = "orderStatusCart"
 	OrderStatusConfirmed string = "orderStatusConfirmed"
+	OrderStatusShipped   string = "orderStatusShipped"
 	OrderStatusComplete  string = "orderStatusComplete"
 	OrderStatusCanceled  string = "orderStatusCanceled"
 )
@@ -14,7 +15,8 @@ const (
 var transitions = map[string][]string{
 	OrderStatusInvalid:   []string{state.WILDCARD},
 	OrderStatusCart:      []string{OrderStatusConfirmed, OrderStatusInvalid},
-	OrderStatusConfirmed: []string{OrderStatusComplete, OrderStatusInvalid},
+	OrderStatusConfirmed: []string{OrderStatusShipped, OrderStatusInvalid},
+	OrderStatusShipped:   []string{OrderStatusComplete, OrderStatusInvalid},
 	OrderStatusComplete:  []string{},
 }
 
@@ -36,6 +38,12 @@ var blueprints = map[string]state.BluePrint{
 		Type:        StateType,
 		Key:         OrderStatusConfirmed,
 		Description: "Order has been confirmed and is being processed.",
+		Initial:     false,
+	},
+	OrderStatusShipped: state.BluePrint{
+		Type:        StateType,
+		Key:         OrderStatusShipped,
+		Description: "Order has been shipped.",
 		Initial:     false,
 	},
 	OrderStatusComplete: state.BluePrint{
