@@ -171,6 +171,19 @@ func PriceRuleAlreadyExistsInDB(ID string) (bool, error) {
 	return ObjectOfTypeAlreadyExistsInDB(ID, new(PriceRule))
 }
 
+func (pricerule *PriceRule) Insert() error {
+	exists, err := PriceRuleAlreadyExistsInDB(pricerule.ID)
+	if err != nil {
+		return err
+	}
+	if exists {
+		log.Println("Did not insert Pricerule with id ", pricerule.ID, " ==> duplicate")
+		return nil
+	}
+	return pricerule.Upsert()
+
+}
+
 // Upsert - upsers a PriceRule
 // note that if you programmatically manipulate the CreatedAt time, this methd will upsert it
 func (pricerule *PriceRule) Upsert() error {
