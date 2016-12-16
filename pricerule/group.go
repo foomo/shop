@@ -133,7 +133,7 @@ func (group *Group) Upsert() error {
 		}
 
 		//make sure there are no duplicateas - $addToSet
-		err = p.GetCollection().Update(bson.M{"id": group.ID}, bson.M{"$addToSet": bson.M{"itemids": group.ItemIDs}})
+		err = p.GetCollection().Update(bson.M{"id": group.ID}, bson.M{"$addToSet": bson.M{"itemids": bson.M{"$each": group.ItemIDs}}})
 		if err != nil {
 			return err
 		}
