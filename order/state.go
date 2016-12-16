@@ -4,12 +4,12 @@ import "github.com/foomo/shop/state"
 
 const (
 	StateType            string = "OrderStatus"
-	OrderStatusInvalid   string = "orderStatusInvalid"
-	OrderStatusCart      string = "orderStatusCart"
-	OrderStatusConfirmed string = "orderStatusConfirmed"
-	OrderStatusShipped   string = "orderStatusShipped"
-	OrderStatusComplete  string = "orderStatusComplete"
-	OrderStatusCanceled  string = "orderStatusCanceled"
+	OrderStatusInvalid   string = "OrderStatusInvalid"
+	OrderStatusCart      string = "OrderStatusCart"
+	OrderStatusConfirmed string = "OrderStatusConfirmed"
+	OrderStatusShipped   string = "OrderStatusShipped"
+	OrderStatusComplete  string = "OrderStatusComplete"
+	OrderStatusCanceled  string = "OrderStatusCanceled"
 )
 
 var transitions = map[string][]string{
