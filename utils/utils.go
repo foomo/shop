@@ -8,10 +8,45 @@ import (
 	"os"
 	"reflect"
 	"runtime"
+	"strconv"
 	"time"
 
 	"github.com/skratchdot/open-golang/open"
 )
+
+// GetTimeForDay returns the time for 0:00 for the given date
+func GetTimeForDay(date time.Time) (time.Time, error) {
+	year, month, day := date.Date()
+	pad := func(s string) string {
+		if len(s) < 2 {
+			return "0" + s
+		}
+		return s
+	}
+	// get time for same day 0:00
+	sameDay, err := GetTimeFromYYYYMMDD(strconv.Itoa(year) + pad(strconv.Itoa(int(month))) + pad(strconv.Itoa(day)))
+	if err != nil {
+		return time.Time{}, err
+	}
+	return sameDay, nil
+
+}
+
+func TimeIsOnSameDay(date time.Time, refDate time.Time) (bool, error) {
+	// get time for reference date 0:00
+	sameDay, err := GetTimeForDay(refDate)
+	if err != nil {
+		return false, err
+	}
+	// get time for next day 0:00
+	nextDay := sameDay.Add(time.Hour * 24)
+
+	if (date.Equal(sameDay) || date.After(sameDay)) && date.Before(nextDay) {
+		return true, nil
+	}
+
+	return false, nil
+}
 
 func TimeIsWithinLifeTime(date time.Time, start time.Time, end time.Time) bool {
 	if date.Equal(start) || date.Equal(end) || (date.After(start) && date.Before(end)) {
