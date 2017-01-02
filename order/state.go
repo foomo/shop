@@ -3,21 +3,23 @@ package order
 import "github.com/foomo/shop/state"
 
 const (
-	StateType            string = "OrderStatus"
-	OrderStatusInvalid   string = "OrderStatusInvalid"
-	OrderStatusCart      string = "OrderStatusCart"
-	OrderStatusConfirmed string = "OrderStatusConfirmed"
-	OrderStatusShipped   string = "OrderStatusShipped"
-	OrderStatusComplete  string = "OrderStatusComplete"
-	OrderStatusCanceled  string = "OrderStatusCanceled"
+	StateType              string = "OrderStatus"
+	OrderStatusInvalid     string = "OrderStatusInvalid"
+	OrderStatusCart        string = "OrderStatusCart"
+	OrderStatusConfirmed   string = "OrderStatusConfirmed"
+	OrderStatusTransmitted string = "OrderStatusTransmitted"
+	OrderStatusShipped     string = "OrderStatusShipped"
+	OrderStatusComplete    string = "OrderStatusComplete"
+	OrderStatusCanceled    string = "OrderStatusCanceled"
 )
 
 var transitions = map[string][]string{
-	OrderStatusInvalid:   []string{state.WILDCARD},
-	OrderStatusCart:      []string{OrderStatusConfirmed, OrderStatusInvalid},
-	OrderStatusConfirmed: []string{OrderStatusShipped, OrderStatusInvalid, OrderStatusCanceled},
-	OrderStatusShipped:   []string{OrderStatusComplete, OrderStatusInvalid, OrderStatusCanceled},
-	OrderStatusComplete:  []string{},
+	OrderStatusInvalid:     []string{state.WILDCARD},
+	OrderStatusCart:        []string{OrderStatusConfirmed, OrderStatusInvalid},
+	OrderStatusConfirmed:   []string{OrderStatusTransmitted, OrderStatusInvalid, OrderStatusCanceled},
+	OrderStatusTransmitted: []string{OrderStatusShipped, OrderStatusInvalid, OrderStatusCanceled},
+	OrderStatusShipped:     []string{OrderStatusComplete, OrderStatusInvalid, OrderStatusCanceled},
+	OrderStatusComplete:    []string{},
 }
 
 // blueprints for possible states
@@ -37,7 +39,13 @@ var blueprints = map[string]state.BluePrint{
 	OrderStatusConfirmed: state.BluePrint{
 		Type:        StateType,
 		Key:         OrderStatusConfirmed,
-		Description: "Order has been confirmed and is being processed.",
+		Description: "Order has been confirmed by the Webshop.",
+		Initial:     false,
+	},
+	OrderStatusTransmitted: state.BluePrint{
+		Type:        StateType,
+		Key:         OrderStatusTransmitted,
+		Description: "Order has been transmitted to external system.",
 		Initial:     false,
 	},
 	OrderStatusShipped: state.BluePrint{
