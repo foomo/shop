@@ -1,10 +1,9 @@
 package configuration
 
-const (
+var (
 	MONGO_DB          string = "shop"
 	MONGO_DB_PRODUCTS string = "products"
-
-	LocalUnitTests = "dockerhost/" + MONGO_DB
+	LocalUnitTests           = "dockerhost/" + MONGO_DB
 
 	WithDocker = "mongo/" + MONGO_DB
 
