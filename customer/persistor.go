@@ -117,6 +117,10 @@ func AlreadyExistsInDB(customerID string) (bool, error) {
 	return count > 0, nil
 }
 
+func Count(query *bson.M, customProvider CustomerCustomProvider) (count int, err error) {
+	return GetCustomerPersistor().GetCollection().Find(query).Count()
+}
+
 // Find returns an iterator for all entries found matching on query.
 func Find(query *bson.M, customProvider CustomerCustomProvider) (iter func() (cust *Customer, err error), err error) {
 	p := GetCustomerPersistor()

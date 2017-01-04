@@ -37,6 +37,10 @@ func AlreadyExistsInDB(orderID string) (bool, error) {
 	return count > 0, nil
 }
 
+func Count(query *bson.M, customProvider OrderCustomProvider) (count int, err error) {
+	return GetOrderPersistor().GetCollection().Find(query).Count()
+}
+
 // Find returns an iterator for the entries matching on query
 func Find(query *bson.M, customProvider OrderCustomProvider) (iter func() (o *Order, err error), err error) {
 	p := GetOrderPersistor()
