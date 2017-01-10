@@ -201,7 +201,7 @@ func (order *Order) SetPositions(positions []*Position) error {
 // 	return order.Upsert()
 // }
 
-func (order *Order) SetCustomerId(id string) error {
+func (order *Order) SetCustomerIdAndType(id string, customerType string) error {
 	if order.IsFrozenCustomer() {
 		return errors.New("Error: CustomerId cannot be changed after customer freeze.")
 	}
@@ -209,6 +209,7 @@ func (order *Order) SetCustomerId(id string) error {
 		order.CustomerData = &CustomerData{}
 	}
 	order.CustomerData.CustomerId = id
+	order.CustomerData.CustomerType = customerType
 	return order.Upsert()
 }
 
