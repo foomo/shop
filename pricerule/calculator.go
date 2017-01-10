@@ -91,7 +91,7 @@ func ApplyDiscounts(order *order.Order, voucherCodes []string, paymentMethod str
 	productGroupIDsPerPosition := getProductGroupIDsPerPosition(order)
 
 	//find groups for customer
-	groupIDsForCustomer := GetGroupsIDSForItem(order.CustomerData.CustomerId, CustomerGroup)
+	groupIDsForCustomer := GetGroupsIDSForItem(order.CustomerData.CustomerType, CustomerGroup)
 	if len(groupIDsForCustomer) == 0 {
 		groupIDsForCustomer = []string{}
 	}
