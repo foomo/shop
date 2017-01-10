@@ -82,6 +82,7 @@ type Order struct {
 
 type CustomerData struct {
 	CustomerId      string
+	CustomerType    string // Private / Staff etc.
 	Email           string
 	BillingAddress  *address.Address
 	ShippingAddress *address.Address
