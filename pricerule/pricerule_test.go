@@ -3,6 +3,7 @@ package pricerule
 import (
 	"fmt"
 	"log"
+	"strconv"
 	"testing"
 	"time"
 
@@ -184,6 +185,60 @@ func testBuyXGetY(t *testing.T) {
 	}
 
 	fmt.Println("discounts for buy x get y")
+	spew.Dump(discountsVo)
+	spew.Dump(*summary)
+
+}
+
+// Test groups creation
+func testExclude(t *testing.T) {
+	//remove all and add again
+	productsInGroups = make(map[string][]string)
+	productsInGroups[GroupIDSale] = []string{ProductID1, ProductID2, ProductID1SKU1, ProductID1SKU2, ProductID2SKU1, ProductID2SKU2}
+	productsInGroups[GroupIDNormal] = []string{ProductID4, ProductID5, ProductID4SKU1, ProductID4SKU2, ProductID5SKU1, ProductID5SKU2}
+	productsInGroups[GroupIDShirts] = []string{ProductID3, ProductID4, ProductID5, ProductID3SKU1, ProductID4SKU1, ProductID5SKU1, ProductID3SKU2, ProductID4SKU2, ProductID5SKU2}
+
+	RemoveAllGroups()
+	RemoveAllPriceRules()
+	RemoveAllVouchers()
+	checkGroupsNotExists(t)
+	createMockCustomerGroups(t)
+	createMockProductGroups(t)
+	checkGroupsExists(t)
+	orderVo, err := createMockOrder(t)
+	if err != nil {
+		panic(err)
+	}
+
+	priceRule := NewPriceRule(PriceRuleIDSaleProduct)
+	priceRule.Name = map[string]string{
+		"de": PriceRuleIDSaleProduct,
+		"fr": PriceRuleIDSaleProduct,
+		"it": PriceRuleIDSaleProduct,
+	}
+	priceRule.Type = TypePromotionOrder
+	priceRule.Description = priceRule.Name
+	priceRule.Action = ActionCartByPercent
+	priceRule.Amount = 10.0
+	priceRule.Priority = 90
+	priceRule.IncludedProductGroupIDS = []string{}
+	priceRule.ExcludedProductGroupIDS = []string{GroupIDSale}
+	priceRule.IncludedCustomerGroupIDS = []string{}
+	priceRule.MinOrderAmount = 100
+	priceRule.MinOrderAmountApplicableItemsOnly = true
+	err = priceRule.Upsert()
+	if err != nil {
+		panic(err)
+	}
+
+	productGroupIDsPerPosition := getProductGroupIDsPerPosition(orderVo)
+	//spew.Dump(productGroupIDsPerPosition)
+	for _, position := range orderVo.Positions {
+		ok, _ := validatePriceRuleForPosition(*priceRule, orderVo, position, productGroupIDsPerPosition, []string{})
+		log.Println(position.ItemID + " " + priceRule.ID + " " + strconv.FormatBool(ok))
+	}
+
+	discountsVo, summary, err := ApplyDiscounts(orderVo, []string{}, "blah", 0.05)
 	spew.Dump(discountsVo)
 	spew.Dump(*summary)
 

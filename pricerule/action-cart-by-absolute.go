@@ -16,13 +16,17 @@ func calculateDiscountsCartByAbsolute(order *order.Order, priceRuleVoucherPair R
 	}
 
 	//collect item values = price * qty for applicable items
-	amounts := getAmountsOfApplicablePositions(priceRuleVoucherPair.Rule, order, productGroupIDsPerPosition, groupIDsForCustomer)
+	amountsMap := getAmountsOfApplicablePositions(priceRuleVoucherPair.Rule, order, productGroupIDsPerPosition, groupIDsForCustomer)
 
+	amounts := getMapValues(amountsMap)
+	//spew.Dump(amounts)
 	// the tricky part - stolen code from Florian - distribute the amount proportional to the price
 	distributedAmounts, err := Distribute(amounts, priceRuleVoucherPair.Rule.Amount)
 	distribution := map[string]float64{}
-	for i, distributedAmount := range distributedAmounts {
-		distribution[order.GetPositions()[i].ItemID] = distributedAmount
+
+	i := 0
+	for itemID := range amountsMap {
+		distribution[itemID] = distributedAmounts[i]
 	}
 
 	if err != nil {
@@ -30,12 +34,10 @@ func calculateDiscountsCartByAbsolute(order *order.Order, priceRuleVoucherPair R
 	}
 
 	for _, position := range order.Positions {
-
 		// if we have the distributed amount
 		if discountAmount, ok := distribution[position.ItemID]; ok {
 			// and rule can still be applied
 			orderDiscountsForPosition := orderDiscounts[position.ItemID]
-
 			if !orderDiscounts[position.ItemID].StopApplyingDiscounts && ok && !previouslyAppliedExclusionInPlace(priceRuleVoucherPair.Rule, orderDiscountsForPosition) {
 				if !orderDiscounts[position.ItemID].StopApplyingDiscounts {
 					//apply the discount here
@@ -56,6 +58,15 @@ func calculateDiscountsCartByAbsolute(order *order.Order, priceRuleVoucherPair R
 		}
 	}
 	return orderDiscounts
+}
+
+// Get values from map
+func getMapValues(mapVal map[string]float64) []float64 {
+	ret := []float64{}
+	for _, val := range mapVal {
+		ret = append(ret, val)
+	}
+	return ret
 }
 
 //------------------------------------------------------------------
@@ -193,15 +204,18 @@ func IteInt64(condition bool, thenDo int64, elseDo int64) int64 {
 }
 
 // get map of [positionID] => price*quantity for applicable positions
-func getAmountsOfApplicablePositions(priceRule *PriceRule, order *order.Order, productGroupIDsPerPosition map[string][]string, groupIDsForCustomer []string) []float64 {
+func getAmountsOfApplicablePositions(priceRule *PriceRule, order *order.Order, productGroupIDsPerPosition map[string][]string, groupIDsForCustomer []string) map[string]float64 {
 	//collect item values = price * qty for applicable items
-	amounts := []float64{}
+	//amounts := []float64{}
+	amountsMap := make(map[string]float64)
 
 	for _, position := range order.Positions {
 		ok, _ := validatePriceRuleForPosition(*priceRule, order, position, productGroupIDsPerPosition, groupIDsForCustomer)
 		if ok {
-			amounts = append(amounts, position.Price*position.Quantity)
+			//amounts = append(amounts, position.Price*position.Quantity)
+			amountsMap[position.ItemID] = position.Price * position.Quantity
 		}
 	}
-	return amounts
+	//return amounts, amountsMap
+	return amountsMap
 }
