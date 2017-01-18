@@ -111,7 +111,8 @@ func (cw *CustomerWatchLists) ListRemoveItem(listId string, Id string, quantity 
 			itemsTmp := []*WatchListItem{}
 			for _, item := range list.Items {
 				if item.Id == Id {
-					item.Quantity = item.Quantity - quantity
+					item.Quantity = 0 // this is a temporary fix, because we do not count the items at the moment
+					//item.Quantity = item.Quantity - quantity
 					if item.Quantity > 0 {
 						itemsTmp = append(itemsTmp, item)
 					}
