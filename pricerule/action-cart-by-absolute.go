@@ -1,10 +1,9 @@
 package pricerule
 
 import (
-	"errors"
 	"fmt"
+	"log"
 	"math"
-	"strconv"
 
 	"github.com/foomo/shop/order"
 )
@@ -84,9 +83,12 @@ func Distribute(amounts []float64, totalReduction float64) ([]float64, error) {
 	}
 
 	distribution := distributeI(amountsint64, int64(totalReduction*100))
-	err := check(distribution, totalReduction)
-	if err != nil {
-		return distribution, err
+	diff := check(distribution, totalReduction)
+	if diff > 0 {
+		distribution[len(distribution)-1] = distribution[len(distribution)-1] - diff
+	} else {
+		distribution[len(distribution)-1] = distribution[len(distribution)-1] + diff
+
 	}
 	return distribution, nil
 }
@@ -162,21 +164,20 @@ func adjustRoundingDifferences(totalReduction float64, reductions []int64) []flo
 	return reductionsF
 }
 
-func check(reductions []float64, totalReduction float64) error {
+func check(reductions []float64, totalReduction float64) float64 {
 	var sumReductions float64
-	errString := ""
+
 	for _, reduction := range reductions {
 		sumReductions += reduction
-	}
-	if errString != "" {
-		errString = "\n" + errString
 	}
 
 	sumReductions = roundToStep(sumReductions, 0.05) // this is necessary to get rid of tiny precision errors when added up floats
 	if sumReductions != totalReduction {
-		return errors.New("ERROR\n" + errString + "Total of distributed reduction is " + strconv.FormatFloat(sumReductions, 'f', 6, 64) + " but should be " + strconv.FormatFloat(totalReduction, 'f', 6, 64))
+		diff := sumReductions - totalReduction
+		log.Println("WARNING: Total of distributed reduction has to be corrected by ", diff)
+		return diff
 	}
-	return nil
+	return 0
 
 }
 
