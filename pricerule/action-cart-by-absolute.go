@@ -173,7 +173,7 @@ func check(reductions []float64, totalReduction float64) float64 {
 
 	sumReductions = roundToStep(sumReductions, 0.05) // this is necessary to get rid of tiny precision errors when added up floats
 	if sumReductions != totalReduction {
-		diff := sumReductions - totalReduction
+		diff := roundToStep(sumReductions-totalReduction, 0.05)
 		log.Println("WARNING: Total of distributed reduction has to be corrected by ", diff)
 		return diff
 	}
