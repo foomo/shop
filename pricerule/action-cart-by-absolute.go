@@ -25,10 +25,12 @@ func calculateDiscountsCartByAbsolute(order *order.Order, priceRuleVoucherPair R
 	distribution := map[string]float64{}
 
 	i := 0
-	for itemID := range amountsMap {
+	for itemID, _ := range amountsMap {
 		distribution[itemID] = distributedAmounts[i]
+		i++
 	}
-
+	fmt.Println("===> promo distribution")
+	fmt.Println(distribution)
 	if err != nil {
 		panic(err)
 	}

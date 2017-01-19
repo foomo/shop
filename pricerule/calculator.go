@@ -191,6 +191,7 @@ func ApplyDiscounts(order *order.Order, voucherCodes []string, paymentMethod str
 				summary.AppliedVoucherIDs = append(summary.AppliedVoucherIDs, appliedDiscount.VoucherID)
 				log.Println("#### voucherCode: ", appliedDiscount.VoucherCode)
 				log.Println("#### voucherID: ", appliedDiscount.VoucherID)
+
 				voucherDiscounts, ok := summary.VoucherDiscounts[appliedDiscount.VoucherCode]
 				if !ok {
 					summary.VoucherDiscounts[appliedDiscount.VoucherCode] = VoucherDiscount{
@@ -200,7 +201,9 @@ func ApplyDiscounts(order *order.Order, voucherCodes []string, paymentMethod str
 					}
 				} else {
 					voucherDiscounts.DiscountAmount += appliedDiscount.DiscountAmountApplicable
+					summary.VoucherDiscounts[appliedDiscount.VoucherCode] = voucherDiscounts
 				}
+
 			}
 		}
 	}
