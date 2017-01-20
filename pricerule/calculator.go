@@ -326,7 +326,7 @@ func NewOrderDiscounts(itemCollection *ItemCollection) OrderDiscounts {
 	itemCollDiscounts := make(OrderDiscounts)
 	for _, item := range itemCollection.Items {
 		itemDiscountCalculationData := *new(DiscountCalculationData)
-		itemDiscountCalculationData.OrderID = item.ID
+		itemDiscountCalculationData.OrderItemID = item.ID
 		itemDiscountCalculationData.CurrentItemPrice = item.Price
 		itemDiscountCalculationData.InitialItemPrice = item.Price
 		itemDiscountCalculationData.Quantity = item.Quantity
