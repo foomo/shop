@@ -121,7 +121,7 @@ func getPriceRulePersistorForType(persistorType string) *persistence.Persistor {
 	if globalPriceRulePersistors[persistorType] == nil {
 		p, err := persistence.NewPersistor(url, collection)
 		if err != nil || p == nil {
-			panic(errors.New("failed to create mongoDB itemCollection persistor: " + err.Error()))
+			panic(errors.New("failed to create mongoDB articleCollection persistor: " + err.Error()))
 		}
 		if len(globalPriceRulePersistors) == 0 {
 			globalPriceRulePersistors = make(map[string]*persistence.Persistor)

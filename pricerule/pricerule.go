@@ -14,7 +14,7 @@ import (
 const (
 	TypePromotionCustomer     Type = "promotion_customer"      // if applied
 	TypePromotionProduct      Type = "promotion_product"       //only one per product can be applied
-	TypePromotionOrder        Type = "promotion_itemColl"      // multiple can be applied
+	TypePromotionOrder        Type = "promotion_order"         // multiple can be applied
 	TypeVoucher               Type = "voucher"                 // rule associated to a voucher
 	TypePaymentMethodDiscount Type = "payment_method_discount" // rule associated to a payment method
 
@@ -59,7 +59,7 @@ type PriceRule struct {
 
 	Amount float64 //the value depending on action
 
-	Priority int // the itemCollection in which rule is applied
+	Priority int // the articleCollection in which rule is applied
 
 	ValidFrom time.Time // valid from timestamp
 

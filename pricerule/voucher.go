@@ -31,7 +31,7 @@ type Voucher struct {
 	CustomerID  string      // the customer if applicable
 
 	TimeApplied  time.Time //used in cart but can still be used until redeemed
-	TimeRedeemed time.Time //used on itemCollection - this is a redeem
+	TimeRedeemed time.Time //used on articleCollection - this is a redeem
 
 	CreatedAt      time.Time //created at
 	LastModifiedAt time.Time //updated at

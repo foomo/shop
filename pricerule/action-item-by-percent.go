@@ -1,34 +1,34 @@
 package pricerule
 
 // CalculateDiscountsItemByPercent -
-func calculateDiscountsItemByPercent(itemCollection *ItemCollection, priceRuleVoucherPair RuleVoucherPair, itemCollDiscounts OrderDiscounts, productGroupIDsPerItem map[string][]string, groupIDsForCustomer []string, roundTo float64) OrderDiscounts {
+func calculateDiscountsItemByPercent(articleCollection *ArticleCollection, priceRuleVoucherPair RuleVoucherPair, orderDiscounts OrderDiscounts, productGroupIDsPerPosition map[string][]string, groupIDsForCustomer []string, roundTo float64) OrderDiscounts {
 
 	if priceRuleVoucherPair.Rule.Action != ActionItemByPercent {
 		panic("CalculateDiscountsItemByPercent called with pricerule of action " + priceRuleVoucherPair.Rule.Action)
 	}
-	for _, item := range itemCollection.Items {
-		ok, _ := validatePriceRuleForItem(*priceRuleVoucherPair.Rule, itemCollection, item, productGroupIDsPerItem, groupIDsForCustomer)
+	for _, article := range articleCollection.Articles {
+		ok, _ := validatePriceRuleForPosition(*priceRuleVoucherPair.Rule, articleCollection, article, productGroupIDsPerPosition, groupIDsForCustomer)
 
-		itemCollDiscountsForItem := itemCollDiscounts[item.ID]
-		if !itemCollDiscounts[item.ID].StopApplyingDiscounts && ok && !previouslyAppliedExclusionInPlace(priceRuleVoucherPair.Rule, itemCollDiscountsForItem) {
+		orderDiscountsForPosition := orderDiscounts[article.ID]
+		if !orderDiscounts[article.ID].StopApplyingDiscounts && ok && !previouslyAppliedExclusionInPlace(priceRuleVoucherPair.Rule, orderDiscountsForPosition) {
 			//apply the discount here
-			discountApplied := getInitializedDiscountApplied(priceRuleVoucherPair, itemCollDiscounts, item.ID)
+			discountApplied := getInitializedDiscountApplied(priceRuleVoucherPair, orderDiscounts, article.ID)
 
 			//calculate the actual discount
-			discountApplied.DiscountAmount = roundToStep(priceRuleVoucherPair.Rule.Amount/100*discountApplied.CalculationBasePrice*itemCollDiscounts[item.ID].Quantity, roundTo)
+			discountApplied.DiscountAmount = roundToStep(priceRuleVoucherPair.Rule.Amount/100*discountApplied.CalculationBasePrice*orderDiscounts[article.ID].Quantity, roundTo)
 			discountApplied.DiscountSingle = roundToStep(priceRuleVoucherPair.Rule.Amount/100*discountApplied.CalculationBasePrice, roundTo)
-			discountApplied.Quantity = itemCollDiscounts[item.ID].Quantity
+			discountApplied.Quantity = orderDiscounts[article.ID].Quantity
 
-			itemCollDiscountsForItem := itemCollDiscounts[item.ID]
-			itemCollDiscountsForItem = calculateCurrentPriceAndApplicableDiscountsEnforceRules(*discountApplied, item.ID, itemCollDiscountsForItem, itemCollDiscounts, *priceRuleVoucherPair.Rule, roundTo)
+			orderDiscountsForPosition := orderDiscounts[article.ID]
+			orderDiscountsForPosition = calculateCurrentPriceAndApplicableDiscountsEnforceRules(*discountApplied, article.ID, orderDiscountsForPosition, orderDiscounts, *priceRuleVoucherPair.Rule, roundTo)
 
-			itemCollDiscounts[item.ID] = itemCollDiscountsForItem
+			orderDiscounts[article.ID] = orderDiscountsForPosition
 		}
 	}
-	return itemCollDiscounts
+	return orderDiscounts
 }
 
-func getInitializedDiscountApplied(priceRuleVoucherPair RuleVoucherPair, itemCollDiscounts OrderDiscounts, itemID string) *DiscountApplied {
+func getInitializedDiscountApplied(priceRuleVoucherPair RuleVoucherPair, orderDiscounts OrderDiscounts, itemID string) *DiscountApplied {
 	discountApplied := &DiscountApplied{}
 	discountApplied.PriceRuleID = priceRuleVoucherPair.Rule.ID
 	discountApplied.MappingID = priceRuleVoucherPair.Rule.MappingID
@@ -37,45 +37,45 @@ func getInitializedDiscountApplied(priceRuleVoucherPair RuleVoucherPair, itemCol
 		discountApplied.VoucherCode = priceRuleVoucherPair.Voucher.VoucherCode
 	}
 	if priceRuleVoucherPair.Rule.Type != TypeVoucher {
-		discountApplied.CalculationBasePrice = itemCollDiscounts[itemID].InitialItemPrice
+		discountApplied.CalculationBasePrice = orderDiscounts[itemID].InitialItemPrice
 	} else {
-		discountApplied.CalculationBasePrice = itemCollDiscounts[itemID].VoucherCalculationBaseItemPrice
+		discountApplied.CalculationBasePrice = orderDiscounts[itemID].VoucherCalculationBaseItemPrice
 	}
-	discountApplied.Price = itemCollDiscounts[itemID].InitialItemPrice
+	discountApplied.Price = orderDiscounts[itemID].InitialItemPrice
 	return discountApplied
 }
 
-func calculateCurrentPriceAndApplicableDiscountsEnforceRules(discountApplied DiscountApplied, itemID string, itemCollDiscountsForItem DiscountCalculationData, itemCollDiscounts OrderDiscounts, rule PriceRule, roundTo float64) DiscountCalculationData {
+func calculateCurrentPriceAndApplicableDiscountsEnforceRules(discountApplied DiscountApplied, itemID string, orderDiscountsForPosition DiscountCalculationData, orderDiscounts OrderDiscounts, rule PriceRule, roundTo float64) DiscountCalculationData {
 	// make sure the discount is not more that can be actually given ... discount < price
-	if itemCollDiscountsForItem.CurrentItemPrice < discountApplied.DiscountSingle {
-		discountApplied.DiscountSingleApplicable = roundToStep(itemCollDiscountsForItem.CurrentItemPrice, roundTo)
-		discountApplied.DiscountAmountApplicable = discountApplied.DiscountSingleApplicable * itemCollDiscounts[itemID].Quantity
+	if orderDiscountsForPosition.CurrentItemPrice < discountApplied.DiscountSingle {
+		discountApplied.DiscountSingleApplicable = roundToStep(orderDiscountsForPosition.CurrentItemPrice, roundTo)
+		discountApplied.DiscountAmountApplicable = discountApplied.DiscountSingleApplicable * orderDiscounts[itemID].Quantity
 
 	} else {
 		discountApplied.DiscountSingleApplicable = discountApplied.DiscountSingle
 		discountApplied.DiscountAmountApplicable = discountApplied.DiscountAmount
 	}
 
-	itemCollDiscountsForItem.CurrentItemPrice = itemCollDiscountsForItem.CurrentItemPrice - discountApplied.DiscountSingleApplicable
-	itemCollDiscountsForItem.TotalDiscountAmount += discountApplied.DiscountAmount
-	itemCollDiscountsForItem.TotalDiscountAmountApplicable += discountApplied.DiscountAmountApplicable
+	orderDiscountsForPosition.CurrentItemPrice = orderDiscountsForPosition.CurrentItemPrice - discountApplied.DiscountSingleApplicable
+	orderDiscountsForPosition.TotalDiscountAmount += discountApplied.DiscountAmount
+	orderDiscountsForPosition.TotalDiscountAmountApplicable += discountApplied.DiscountAmountApplicable
 
 	//store the reduced price so that it will be used for the vouchers calculation
 	if rule.Type != TypeVoucher {
-		itemCollDiscountsForItem.VoucherCalculationBaseItemPrice = itemCollDiscountsForItem.CurrentItemPrice
+		orderDiscountsForPosition.VoucherCalculationBaseItemPrice = orderDiscountsForPosition.CurrentItemPrice
 	}
 
 	if rule.Exclusive {
-		itemCollDiscountsForItem.StopApplyingDiscounts = true
+		orderDiscountsForPosition.StopApplyingDiscounts = true
 	}
 	//mark the type applied - see method previouslyAppliedExclusionInPlace
 	if rule.Type == TypePromotionCustomer {
-		itemCollDiscountsForItem.CustomerPromotionApplied = true
+		orderDiscountsForPosition.CustomerPromotionApplied = true
 	}
 	if rule.Type == TypePromotionProduct {
-		itemCollDiscountsForItem.ProductPromotionApplied = true
+		orderDiscountsForPosition.ProductPromotionApplied = true
 	}
-	itemCollDiscountsForItem.AppliedDiscounts = append(itemCollDiscountsForItem.AppliedDiscounts, discountApplied)
+	orderDiscountsForPosition.AppliedDiscounts = append(orderDiscountsForPosition.AppliedDiscounts, discountApplied)
 
-	return itemCollDiscountsForItem
+	return orderDiscountsForPosition
 }

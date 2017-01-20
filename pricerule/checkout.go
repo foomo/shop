@@ -10,8 +10,8 @@ import (
 // ~ PUBLIC TYPES
 //------------------------------------------------------------------
 const (
-	ValidationPriceRuleMinimumAmount           TypeRuleValidationMsg = "minimum_itemColl_amount_not_reached"            // if sum of ALL applicable prices*qtys < threshold
-	ValidationPriceRuleMinimumApplicableAmount TypeRuleValidationMsg = "minimum_itemColl_applicable_amount_not_reached" // if sum of applicable prices*qtys < threshold
+	ValidationPriceRuleMinimumAmount           TypeRuleValidationMsg = "minimum_order_amount_not_reached"            // if sum of ALL applicable prices*qtys < threshold
+	ValidationPriceRuleMinimumApplicableAmount TypeRuleValidationMsg = "minimum_order_applicable_amount_not_reached" // if sum of applicable prices*qtys < threshold
 
 	ValidationPriceRuleIncludeProductGroupsNotMatching  TypeRuleValidationMsg = "include_product_groups_not_matching"
 	ValidationPriceRuleExcludeProductGroupsNotMatching  TypeRuleValidationMsg = "exclude_product_groups_not_matching"
@@ -37,7 +37,7 @@ const (
 //------------------------------------------------------------------
 
 // ValidateVoucher - validates a voucher code and returns o = true or a validation message when ok = false
-// if itemCollection is not provided it will only check non-itemCollection related conditions
+// if articleCollection is not provided it will only check non-articleCollection related conditions
 // if customerID == "" we assume not-logged in or guest
 //
 // validationMessage is
@@ -48,28 +48,28 @@ const (
 //
 // - ValidationVoucherPersonalized - voucher personalized, but customer unknown (guest) or customer ids not matching
 //
-// - ValidationVoucherAlreadyUsed - PERSONALIZED voucher redeemed - (used on a placed/finalized itemCollection)
+// - ValidationVoucherAlreadyUsed - PERSONALIZED voucher redeemed - (used on a placed/finalized articleCollection)
 //
 // - ValidationPriceRuleMaxUsages - priceRule.MaxUses <= priceRule.UsageHistory.TotalUsages
 //
 // - ValidationPriceRuleMaxUsagesPerCustomer - priceRule.MaxUsesPerCustomer <= customerUsages
 //
-// - ValidationPriceRuleMinimumAmount - minimum itemCollection amount not met
+// - ValidationPriceRuleMinimumAmount - minimum articleCollection amount not met
 //
-// - ValidationPriceRuleIncludeProductGroupsNotMatching - if no matching products on itemCollection - itemCollection can only be applied to certain product groups ...
+// - ValidationPriceRuleIncludeProductGroupsNotMatching - if no matching products on articleCollection - articleCollection can only be applied to certain product groups ...
 //
-// - ValidationPriceRuleExcludeProductGroupsNotMatching - if all the itemCollection items are included in the excluded product groups list - for example rule only for non-salwe items, but all items are sale ones
+// - ValidationPriceRuleExcludeProductGroupsNotMatching - if all the articleCollection items are included in the excluded product groups list - for example rule only for non-salwe items, but all items are sale ones
 //
 // - ValidationPriceRuleIncludeCustomerGroupsNotMatching - not the right customer group - for example rule only for employees
 //
 // - ValidationPriceRuleExcludeCustomerGroupsNotMatching - can not be applied for customers in the group ... for example rule not for employees
 //
 // - ValidationPreviouslyAppliedRuleBlock - a previously applied rule (with priority number higher) has a property set to true ... no further rules can be applied
-func ValidateVoucher(voucherCode string, itemCollection *ItemCollection) (ok bool, validationMessage TypeRuleValidationMsg) {
+func ValidateVoucher(voucherCode string, articleCollection *ArticleCollection) (ok bool, validationMessage TypeRuleValidationMsg) {
 	//check if voucher is for customer or generic/guest
 	//get voucher
 
-	customerID := itemCollection.CustomerID
+	customerID := articleCollection.CustomerID
 	voucher, voucherPriceRule, err := GetVoucherAndPriceRule(voucherCode)
 
 	//check if exists
@@ -94,36 +94,36 @@ func ValidateVoucher(voucherCode string, itemCollection *ItemCollection) (ok boo
 	// PriceRule
 	//--------------------------------------------------------------
 	//find groups for customer
-	groupIDsForCustomer := GetGroupsIDSForItem(itemCollection.CustomerID, CustomerGroup)
+	groupIDsForCustomer := GetGroupsIDSForItem(articleCollection.CustomerID, CustomerGroup)
 	if len(groupIDsForCustomer) == 0 {
 		groupIDsForCustomer = []string{}
 	}
-	//find the groupIds for itemCollection items
-	productGroupIDsPerItem := getProductGroupIDsPerItem(itemCollection)
-	ok, priceRuleFailReason := validatePriceRuleForOrder(*voucherPriceRule, itemCollection, productGroupIDsPerItem, groupIDsForCustomer)
+	//find the groupIds for articleCollection items
+	productGroupIDsPerPosition := getProductGroupIDsPerPosition(articleCollection)
+	ok, priceRuleFailReason := validatePriceRuleForOrder(*voucherPriceRule, articleCollection, productGroupIDsPerPosition, groupIDsForCustomer)
 	if !ok {
 		return false, priceRuleFailReason
 	}
 
-	ok, priceRuleFailReason = checkPreviouslyAppliedRules(voucherPriceRule, voucher, itemCollection, groupIDsForCustomer, productGroupIDsPerItem)
+	ok, priceRuleFailReason = checkPreviouslyAppliedRules(voucherPriceRule, voucher, articleCollection, groupIDsForCustomer, productGroupIDsPerPosition)
 	if !ok {
 		return false, priceRuleFailReason
 	}
 	return true, ValidationPriceRuleOK
 }
 
-// CommitDiscounts is called when and itemCollection is finalized - it redeems all personalized vouchers
+// CommitDiscounts is called when and articleCollection is finalized - it redeems all personalized vouchers
 // and updates the pricerule/voucher usage history
 // IT IS IRREVERSIBLE!!!
 //
 // alternatively use CommitOrderDiscounts
-func CommitDiscounts(itemCollDiscounts *OrderDiscounts, customerID string) error {
+func CommitDiscounts(orderDiscounts *OrderDiscounts, customerID string) error {
 	var appliedRuleIDs []string
 	var appliedVoucherRuleIDs []string
 	var appliedVoucherCodes []string
 
-	for _, itemCollDiscount := range *itemCollDiscounts {
-		for _, appliedDiscount := range itemCollDiscount.AppliedDiscounts {
+	for _, orderDiscount := range *orderDiscounts {
+		for _, appliedDiscount := range orderDiscount.AppliedDiscounts {
 			//if voucher - we need to redeem vouchers so we keep the separately
 			if len(appliedDiscount.VoucherCode) > 0 {
 				appliedVoucherCodes = append(appliedVoucherCodes, appliedDiscount.VoucherCode)
@@ -162,17 +162,17 @@ func CommitDiscounts(itemCollDiscounts *OrderDiscounts, customerID string) error
 	return nil
 }
 
-// CommitOrderDiscounts is called when and itemCollection is finalized - it redeems all personalized vouchers
+// CommitOrderDiscounts is called when and articleCollection is finalized - it redeems all personalized vouchers
 // and updates the pricerule/voucher usage history
 // IT IS IRREVERSIBLE!!!
 //
 // alternatively use CommitDiscounts
-func CommitOrderDiscounts(customerID string, itemCollection *ItemCollection, voucherCodes []string, paymentMethod string, roundTo float64) error {
-	itemCollDiscounts, _, err := ApplyDiscounts(itemCollection, voucherCodes, paymentMethod, roundTo)
+func CommitOrderDiscounts(customerID string, articleCollection *ArticleCollection, voucherCodes []string, paymentMethod string, roundTo float64) error {
+	orderDiscounts, _, err := ApplyDiscounts(articleCollection, voucherCodes, paymentMethod, roundTo)
 	if err != nil {
 		return err
 	}
-	return CommitDiscounts(&itemCollDiscounts, customerID)
+	return CommitDiscounts(&orderDiscounts, customerID)
 }
 
 //------------------------------------------------------------------
@@ -189,7 +189,7 @@ func redeemVoucherByCode(voucherCode string, customerID string) error {
 }
 
 // Returns false, ValidationPreviouslyAppliedRuleBlock if a previous rule blocks application
-func checkPreviouslyAppliedRules(voucherPriceRule *PriceRule, voucher *Voucher, itemCollection *ItemCollection, groupIDsForCustomer []string, productGroupIDsPerItem map[string][]string) (ok bool, reason TypeRuleValidationMsg) {
+func checkPreviouslyAppliedRules(voucherPriceRule *PriceRule, voucher *Voucher, articleCollection *ArticleCollection, groupIDsForCustomer []string, productGroupIDsPerPosition map[string][]string) (ok bool, reason TypeRuleValidationMsg) {
 	// find applicable pricerules - auto promotions
 	promotionPriceRules, err := GetValidPriceRulesForPromotions([]Type{TypePromotionOrder, TypePromotionCustomer, TypePromotionProduct})
 	if err != nil {
@@ -219,8 +219,8 @@ func checkPreviouslyAppliedRules(voucherPriceRule *PriceRule, voucher *Voucher, 
 			if ruleVoucherPair.Voucher.VoucherCode == voucher.VoucherCode {
 				found = true
 			}
-			for _, item := range itemCollection.Items {
-				applicable, _ := validatePriceRuleForItem(*ruleVoucherPair.Rule, itemCollection, item, productGroupIDsPerItem, groupIDsForCustomer)
+			for _, article := range articleCollection.Articles {
+				applicable, _ := validatePriceRuleForPosition(*ruleVoucherPair.Rule, articleCollection, article, productGroupIDsPerPosition, groupIDsForCustomer)
 				if applicable && ruleVoucherPair.Rule.Exclusive == true {
 					if found == false {
 						return false, ValidationPreviouslyAppliedRuleBlock

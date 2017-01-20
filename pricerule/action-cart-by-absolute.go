@@ -7,13 +7,13 @@ import (
 )
 
 // CalculateDiscountsCartByAbsolute -
-func calculateDiscountsCartByAbsolute(itemCollection *ItemCollection, priceRuleVoucherPair RuleVoucherPair, itemCollDiscounts OrderDiscounts, productGroupIDsPerItem map[string][]string, groupIDsForCustomer []string, roundTo float64) OrderDiscounts {
+func calculateDiscountsCartByAbsolute(articleCollection *ArticleCollection, priceRuleVoucherPair RuleVoucherPair, orderDiscounts OrderDiscounts, productGroupIDsPerPosition map[string][]string, groupIDsForCustomer []string, roundTo float64) OrderDiscounts {
 	if priceRuleVoucherPair.Rule.Action != ActionCartByAbsolute {
 		panic("CalculateDiscountsCartByAbsolute called with pricerule of action " + priceRuleVoucherPair.Rule.Action)
 	}
 
 	//collect item values = price * qty for applicable items
-	amountsMap := getAmountsOfApplicableItems(priceRuleVoucherPair.Rule, itemCollection, productGroupIDsPerItem, groupIDsForCustomer)
+	amountsMap := getAmountsOfApplicablePositions(priceRuleVoucherPair.Rule, articleCollection, productGroupIDsPerPosition, groupIDsForCustomer)
 
 	amounts := getMapValues(amountsMap)
 	//spew.Dump(amounts)
@@ -32,31 +32,31 @@ func calculateDiscountsCartByAbsolute(itemCollection *ItemCollection, priceRuleV
 		panic(err)
 	}
 
-	for _, item := range itemCollection.Items {
+	for _, article := range articleCollection.Articles {
 		// if we have the distributed amount
-		if discountAmount, ok := distribution[item.ID]; ok {
+		if discountAmount, ok := distribution[article.ID]; ok {
 			// and rule can still be applied
-			itemCollDiscountsForItem := itemCollDiscounts[item.ID]
-			if !itemCollDiscounts[item.ID].StopApplyingDiscounts && ok && !previouslyAppliedExclusionInPlace(priceRuleVoucherPair.Rule, itemCollDiscountsForItem) {
-				if !itemCollDiscounts[item.ID].StopApplyingDiscounts {
+			orderDiscountsForPosition := orderDiscounts[article.ID]
+			if !orderDiscounts[article.ID].StopApplyingDiscounts && ok && !previouslyAppliedExclusionInPlace(priceRuleVoucherPair.Rule, orderDiscountsForPosition) {
+				if !orderDiscounts[article.ID].StopApplyingDiscounts {
 					//apply the discount here
-					discountApplied := getInitializedDiscountApplied(priceRuleVoucherPair, itemCollDiscounts, item.ID)
+					discountApplied := getInitializedDiscountApplied(priceRuleVoucherPair, orderDiscounts, article.ID)
 
 					//calculate the actual discount
 					discountApplied.DiscountAmount = discountAmount
-					discountApplied.DiscountSingle = discountAmount / itemCollDiscounts[item.ID].Quantity
-					discountApplied.Quantity = itemCollDiscounts[item.ID].Quantity
+					discountApplied.DiscountSingle = discountAmount / orderDiscounts[article.ID].Quantity
+					discountApplied.Quantity = orderDiscounts[article.ID].Quantity
 
 					//pointer assignment WTF !!!
-					itemCollDiscountsForItem := itemCollDiscounts[item.ID]
-					itemCollDiscountsForItem = calculateCurrentPriceAndApplicableDiscountsEnforceRules(*discountApplied, item.ID, itemCollDiscountsForItem, itemCollDiscounts, *priceRuleVoucherPair.Rule, roundTo)
+					orderDiscountsForPosition := orderDiscounts[article.ID]
+					orderDiscountsForPosition = calculateCurrentPriceAndApplicableDiscountsEnforceRules(*discountApplied, article.ID, orderDiscountsForPosition, orderDiscounts, *priceRuleVoucherPair.Rule, roundTo)
 
-					itemCollDiscounts[item.ID] = itemCollDiscountsForItem
+					orderDiscounts[article.ID] = orderDiscountsForPosition
 				}
 			}
 		}
 	}
-	return itemCollDiscounts
+	return orderDiscounts
 }
 
 // Get values from map
@@ -151,7 +151,7 @@ func adjustRoundingDifferences(totalReduction float64, reductions []int64) []flo
 		lastReductionAdjusted := lastReduction + reductionsDiff
 		reductions[len(reductions)-1] = int64(lastReductionAdjusted)
 
-		// TODO: this should be logged in the itemCollection history
+		// TODO: this should be logged in the articleCollection history
 		fmt.Println("Found potential rounding error (expected ", totalReduction, " but found ", actualTotalReduction, "), last partial reduction is set to ", lastReduction, " (from ", lastReductionAdjusted, ")")
 	}
 
@@ -204,17 +204,17 @@ func IteInt64(condition bool, thenDo int64, elseDo int64) int64 {
 	return elseDo
 }
 
-// get map of [itemID] => price*quantity for applicable items
-func getAmountsOfApplicableItems(priceRule *PriceRule, itemCollection *ItemCollection, productGroupIDsPerItem map[string][]string, groupIDsForCustomer []string) map[string]float64 {
+// get map of [positionID] => price*quantity for applicable positions
+func getAmountsOfApplicablePositions(priceRule *PriceRule, articleCollection *ArticleCollection, productGroupIDsPerPosition map[string][]string, groupIDsForCustomer []string) map[string]float64 {
 	//collect item values = price * qty for applicable items
 	//amounts := []float64{}
 	amountsMap := make(map[string]float64)
 
-	for _, item := range itemCollection.Items {
-		ok, _ := validatePriceRuleForItem(*priceRule, itemCollection, item, productGroupIDsPerItem, groupIDsForCustomer)
+	for _, article := range articleCollection.Articles {
+		ok, _ := validatePriceRuleForPosition(*priceRule, articleCollection, article, productGroupIDsPerPosition, groupIDsForCustomer)
 		if ok {
-			//amounts = append(amounts, item.Price*item.Quantity)
-			amountsMap[item.ID] = item.Price * item.Quantity
+			//amounts = append(amounts, article.Price*article.Quantity)
+			amountsMap[article.ID] = article.Price * article.Quantity
 		}
 	}
 	//return amounts, amountsMap
