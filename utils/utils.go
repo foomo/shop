@@ -15,6 +15,7 @@ import (
 )
 
 // GetTimeForDay returns the time for 0:00 for the given date
+// GetTimeForDay returns the time for 0:00 for the given date
 func GetTimeForDay(date time.Time) (time.Time, error) {
 	year, month, day := date.Date()
 	pad := func(s string) string {
@@ -28,6 +29,10 @@ func GetTimeForDay(date time.Time) (time.Time, error) {
 	if err != nil {
 		return time.Time{}, err
 	}
+
+	cet, _ := time.LoadLocation("Europe/Zurich")
+	sameDay = sameDay.In(cet).Add(time.Hour * -1)
+
 	return sameDay, nil
 
 }
