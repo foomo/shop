@@ -3,33 +3,31 @@ package pricerule
 import (
 	"math"
 	"sort"
-
-	"github.com/foomo/shop/order"
 )
 
 // CalculateDiscountsBuyXGetY -
-func calculateDiscountsBuyXGetY(orderVo *order.Order, priceRuleVoucherPair RuleVoucherPair, orderDiscounts OrderDiscounts, productGroupIDsPerPosition map[string][]string, groupIDsForCustomer []string, roundTo float64) OrderDiscounts {
+func calculateDiscountsBuyXGetY(itemCollVo *ItemCollection, priceRuleVoucherPair RuleVoucherPair, itemCollDiscounts OrderDiscounts, productGroupIDsPerItem map[string][]string, groupIDsForCustomer []string, roundTo float64) OrderDiscounts {
 	if priceRuleVoucherPair.Rule.Action != ActionBuyXGetY {
 		panic("CalculateDiscountsBuyXGetY called with pricerule of action " + priceRuleVoucherPair.Rule.Action)
 	}
 
-	//count matching first and order by price
+	//count matching first and itemCollection by price
 	var totalQty float64
-	//clone! we do not want to manipiulate cart/order item order
-	var sortedPositions []order.Position
-	for _, positionVoPtr := range orderVo.Positions {
-		sortedPositions = append(sortedPositions, *positionVoPtr)
+	//clone! we do not want to manipiulate cart/itemCollection item itemCollection
+	var sortedItems []Item
+	for _, itemVoPtr := range itemCollVo.Items {
+		sortedItems = append(sortedItems, *itemVoPtr)
 	}
 	if priceRuleVoucherPair.Rule.WhichXYFree == XYCheapestFree {
-		sort.Sort(ByPriceAscending(sortedPositions))
+		sort.Sort(ByPriceAscending(sortedItems))
 	} else {
-		sort.Sort(ByPriceDescending(sortedPositions))
+		sort.Sort(ByPriceDescending(sortedItems))
 	}
 
-	for _, position := range orderVo.Positions {
-		ok, _ := validatePriceRuleForPosition(*priceRuleVoucherPair.Rule, orderVo, position, productGroupIDsPerPosition, groupIDsForCustomer)
+	for _, item := range itemCollVo.Items {
+		ok, _ := validatePriceRuleForItem(*priceRuleVoucherPair.Rule, itemCollVo, item, productGroupIDsPerItem, groupIDsForCustomer)
 		if ok {
-			totalQty += position.Quantity
+			totalQty += item.Quantity
 		}
 	}
 
@@ -39,20 +37,20 @@ func calculateDiscountsBuyXGetY(orderVo *order.Order, priceRuleVoucherPair RuleV
 
 	if freeQty > 0 {
 		var productsFree int
-		for _, positionByPrice := range sortedPositions {
+		for _, itemByPrice := range sortedItems {
 			if productsFree < freeQty {
-				orderDiscountsForPosition := orderDiscounts[positionByPrice.ItemID]
+				itemCollDiscountsForItem := itemCollDiscounts[itemByPrice.ID]
 
 				//apply the discount here
-				discountApplied := getInitializedDiscountApplied(priceRuleVoucherPair, orderDiscounts, positionByPrice.ItemID)
+				discountApplied := getInitializedDiscountApplied(priceRuleVoucherPair, itemCollDiscounts, itemByPrice.ID)
 
-				for qty := 0; qty < int(positionByPrice.Quantity); qty++ {
+				for qty := 0; qty < int(itemByPrice.Quantity); qty++ {
 					//calculate the actual discount
 
 					//calculate the actual discount
-					discountApplied.DiscountAmount += positionByPrice.Price
-					discountApplied.DiscountSingle += positionByPrice.Price
-					discountApplied.Quantity = orderDiscounts[positionByPrice.ItemID].Quantity
+					discountApplied.DiscountAmount += itemByPrice.Price
+					discountApplied.DiscountSingle += itemByPrice.Price
+					discountApplied.Quantity = itemCollDiscounts[itemByPrice.ID].Quantity
 
 					productsFree++
 					if productsFree >= freeQty {
@@ -63,8 +61,8 @@ func calculateDiscountsBuyXGetY(orderVo *order.Order, priceRuleVoucherPair RuleV
 				//add it to the ret obj
 				//pointer assignment WTF !!!
 
-				orderDiscountsForPosition = calculateCurrentPriceAndApplicableDiscountsEnforceRules(*discountApplied, positionByPrice.ItemID, orderDiscountsForPosition, orderDiscounts, *priceRuleVoucherPair.Rule, roundTo)
-				orderDiscounts[positionByPrice.ItemID] = orderDiscountsForPosition
+				itemCollDiscountsForItem = calculateCurrentPriceAndApplicableDiscountsEnforceRules(*discountApplied, itemByPrice.ID, itemCollDiscountsForItem, itemCollDiscounts, *priceRuleVoucherPair.Rule, roundTo)
+				itemCollDiscounts[itemByPrice.ID] = itemCollDiscountsForItem
 
 			}
 			if productsFree >= freeQty {
@@ -74,20 +72,20 @@ func calculateDiscountsBuyXGetY(orderVo *order.Order, priceRuleVoucherPair RuleV
 
 	}
 
-	return orderDiscounts
+	return itemCollDiscounts
 }
 
-// ByPriceAscending implements sort.Interface for []order.Position based on
+// ByPriceAscending implements sort.Interface for []itemCollection.Item based on
 // the Price field.
-type ByPriceAscending []order.Position
+type ByPriceAscending []Item
 
 func (a ByPriceAscending) Len() int           { return len(a) }
 func (a ByPriceAscending) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByPriceAscending) Less(i, j int) bool { return a[i].Price < a[j].Price }
 
-// ByPriceDescending implements sort.Interface for []order.Position based on
+// ByPriceDescending implements sort.Interface for []itemCollection.Item based on
 // the Price field.
-type ByPriceDescending []order.Position
+type ByPriceDescending []Item
 
 func (a ByPriceDescending) Len() int           { return len(a) }
 func (a ByPriceDescending) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }

@@ -28,7 +28,7 @@ type Group struct {
 	BsonID         bson.ObjectId `bson:"_id,omitempty"`
 	ID             string        //group id - referenced by PriceRule (s)
 	Name           string        //group name
-	ItemIDs        []string      //list of product IDs or customer IDs in assigned to the group
+	IDs            []string      //list of product IDs or customer IDs in assigned to the group
 	CreatedAt      time.Time
 	LastModifiedAt time.Time
 	Custom         interface{} `bson:",omitempty"` //make it extensible if needed
@@ -59,13 +59,13 @@ func LoadGroup(ID string, customProvider PriceRuleCustomProvider) (*Group, error
 
 // RemoveAllProductIds - clear all product IDs
 func (group *Group) RemoveAllProductIds() bool {
-	group.ItemIDs = []string{}
+	group.IDs = []string{}
 	return true
 }
 
-// AddGroupItemIDsAndPersist - appends removes duplicates and persists
-func (group *Group) AddGroupItemIDsAndPersist(itemIDs []string) bool {
-	group.AddGroupItemIDs(itemIDs)
+// AddGroupIDsAndPersist - appends removes duplicates and persists
+func (group *Group) AddGroupIDsAndPersist(itemIDs []string) bool {
+	group.AddGroupIDs(itemIDs)
 
 	//addtoset
 	p := GetPersistorForObject(group) //GetGroupPersistor()
@@ -77,10 +77,10 @@ func (group *Group) AddGroupItemIDsAndPersist(itemIDs []string) bool {
 	return true
 }
 
-// AddGroupItemIDs - appends removes duplicates and persists
-func (group *Group) AddGroupItemIDs(itemIDs []string) bool {
-	var ids = append(group.ItemIDs, itemIDs...)
-	group.ItemIDs = RemoveDuplicates(ids)
+// AddGroupIDs - appends removes duplicates and persists
+func (group *Group) AddGroupIDs(itemIDs []string) bool {
+	var ids = append(group.IDs, itemIDs...)
+	group.IDs = RemoveDuplicates(ids)
 	return true
 }
 
@@ -133,7 +133,7 @@ func (group *Group) Upsert() error {
 		}
 
 		//make sure there are no duplicateas - $addToSet
-		err = p.GetCollection().Update(bson.M{"id": group.ID}, bson.M{"$addToSet": bson.M{"itemids": bson.M{"$each": group.ItemIDs}}})
+		err = p.GetCollection().Update(bson.M{"id": group.ID}, bson.M{"$addToSet": bson.M{"itemids": bson.M{"$each": group.IDs}}})
 		if err != nil {
 			return err
 		}

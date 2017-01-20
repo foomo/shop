@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/foomo/shop/order"
 )
 
 const (
@@ -86,7 +85,7 @@ func Init(t *testing.T) {
 }
 
 // Test groups creation
-func testScaled(t *testing.T) {
+func TestScaled(t *testing.T) {
 	//Init
 	RemoveAllGroups()
 	RemoveAllPriceRules()
@@ -118,23 +117,23 @@ func testScaled(t *testing.T) {
 	priceRule.IncludedCustomerGroupIDS = []string{}
 
 	//insert as well
-	group.AddGroupItemIDs([]string{ProductID1SKU1})
+	group.AddGroupIDs([]string{ProductID1SKU1})
 
 	err := group.Upsert()
 	if err != nil {
 		log.Println(err)
 	}
 
-	//create order
-	orderVo, err := createMockOrderScaled(t)
+	//create itemCollection
+	itemCollVo, err := createMockOrderScaled(t)
 	if err != nil {
 		panic(err)
 	}
 
 	now := time.Now()
-	discountsVo, summary, err := ApplyDiscounts(orderVo, []string{""}, "", 0.05)
+	discountsVo, summary, err := ApplyDiscounts(itemCollVo, []string{""}, "", 0.05)
 	timeTrack(now, "Apply scaled voucher")
-	defer removeOrder(orderVo)
+	// defer removeOrder(itemCollVo)
 	if err != nil {
 		panic(err)
 	}
@@ -145,7 +144,7 @@ func testScaled(t *testing.T) {
 }
 
 // Test groups creation
-func testBuyXGetY(t *testing.T) {
+func TestBuyXGetY(t *testing.T) {
 	//Init
 	RemoveAllGroups()
 	RemoveAllPriceRules()
@@ -172,14 +171,14 @@ func testBuyXGetY(t *testing.T) {
 		panic(err)
 	}
 
-	//create order
-	orderVo, err := createMockOrderXY(t)
+	//create itemCollection
+	itemCollVo, err := createMockOrderXY(t)
 	if err != nil {
 		panic(err)
 	}
 
-	discountsVo, summary, err := ApplyDiscounts(orderVo, []string{""}, "", 0.05)
-	defer removeOrder(orderVo)
+	discountsVo, summary, err := ApplyDiscounts(itemCollVo, []string{""}, "", 0.05)
+	// defer removeOrder(itemCollVo)
 	if err != nil {
 		panic(err)
 	}
@@ -191,7 +190,7 @@ func testBuyXGetY(t *testing.T) {
 }
 
 // Test groups creation
-func testExclude(t *testing.T) {
+func TestExclude(t *testing.T) {
 	//remove all and add again
 	productsInGroups = make(map[string][]string)
 	productsInGroups[GroupIDSale] = []string{ProductID1, ProductID2, ProductID1SKU1, ProductID1SKU2, ProductID2SKU1, ProductID2SKU2}
@@ -205,7 +204,7 @@ func testExclude(t *testing.T) {
 	createMockCustomerGroups(t)
 	createMockProductGroups(t)
 	checkGroupsExists(t)
-	orderVo, err := createMockOrder(t)
+	itemCollVo, err := createMockOrder(t)
 	if err != nil {
 		panic(err)
 	}
@@ -231,21 +230,21 @@ func testExclude(t *testing.T) {
 		panic(err)
 	}
 
-	productGroupIDsPerPosition := getProductGroupIDsPerPosition(orderVo)
-	//spew.Dump(productGroupIDsPerPosition)
-	for _, position := range orderVo.Positions {
-		ok, _ := validatePriceRuleForPosition(*priceRule, orderVo, position, productGroupIDsPerPosition, []string{})
-		log.Println(position.ItemID + " " + priceRule.ID + " " + strconv.FormatBool(ok))
+	productGroupIDsPerItem := getProductGroupIDsPerItem(itemCollVo)
+	//spew.Dump(productGroupIDsPerItem)
+	for _, item := range itemCollVo.Items {
+		ok, _ := validatePriceRuleForItem(*priceRule, itemCollVo, item, productGroupIDsPerItem, []string{})
+		log.Println(item.ID + " " + priceRule.ID + " " + strconv.FormatBool(ok))
 	}
 
-	discountsVo, summary, err := ApplyDiscounts(orderVo, []string{}, "blah", 0.05)
+	discountsVo, summary, err := ApplyDiscounts(itemCollVo, []string{}, "blah", 0.05)
 	spew.Dump(discountsVo)
 	spew.Dump(*summary)
 
 }
 
 // Test groups creation
-func testMaxOrder(t *testing.T) {
+func TestMaxOrder(t *testing.T) {
 	//remove all and add again
 	productsInGroups = make(map[string][]string)
 	productsInGroups[GroupIDSale] = []string{ProductID1, ProductID2, ProductID1SKU1, ProductID1SKU2, ProductID2SKU1, ProductID2SKU2}
@@ -259,7 +258,7 @@ func testMaxOrder(t *testing.T) {
 	createMockCustomerGroups(t)
 	createMockProductGroups(t)
 	checkGroupsExists(t)
-	orderVo, err := createMockOrder(t)
+	itemCollVo, err := createMockOrder(t)
 	if err != nil {
 		panic(err)
 	}
@@ -321,9 +320,9 @@ func testMaxOrder(t *testing.T) {
 
 	// PRICERULES --------------------------------------------------------------------------------------
 	now := time.Now()
-	discountsVo, summary, err := ApplyDiscounts(orderVo, []string{}, PaymentMethodID1, 0.05)
+	discountsVo, summary, err := ApplyDiscounts(itemCollVo, []string{}, PaymentMethodID1, 0.05)
 	timeTrack(now, "Apply multiple price rules")
-	defer removeOrder(orderVo)
+	// defer removeOrder(itemCollVo)
 	if err != nil {
 		panic(err)
 	}
@@ -335,7 +334,7 @@ func testMaxOrder(t *testing.T) {
 }
 
 // Test groups creation
-func testTwoStepWorkflow(t *testing.T) {
+func TestTwoStepWorkflow(t *testing.T) {
 	//remove all and add again
 	productsInGroups = make(map[string][]string)
 	productsInGroups[GroupIDSale] = []string{ProductID1, ProductID2, ProductID1SKU1, ProductID1SKU2, ProductID2SKU1, ProductID2SKU2}
@@ -349,7 +348,7 @@ func testTwoStepWorkflow(t *testing.T) {
 	createMockCustomerGroups(t)
 	createMockProductGroups(t)
 	checkGroupsExists(t)
-	orderVo, err := createMockOrder(t)
+	itemCollVo, err := createMockOrder(t)
 	if err != nil {
 		panic(err)
 	}
@@ -456,9 +455,9 @@ func testTwoStepWorkflow(t *testing.T) {
 
 	// PRICERULES --------------------------------------------------------------------------------------
 	now := time.Now()
-	discountsVo, summary, err := ApplyDiscounts(orderVo, []string{VoucherCode2, VoucherCode1}, PaymentMethodID1, 0.05)
+	discountsVo, summary, err := ApplyDiscounts(itemCollVo, []string{VoucherCode2, VoucherCode1}, PaymentMethodID1, 0.05)
 	timeTrack(now, "Apply multiple price rules")
-	defer removeOrder(orderVo)
+	// defer removeOrder(itemCollVo)
 	if err != nil {
 		panic(err)
 	}
@@ -470,18 +469,18 @@ func testTwoStepWorkflow(t *testing.T) {
 }
 
 // Test groups creation
-func testPricerulesWorkflow(t *testing.T) {
+func TestPricerulesWorkflow(t *testing.T) {
 	//remove all and add again
 	Init(t)
 
-	orderVo, err := createMockOrder(t)
+	itemCollVo, err := createMockOrder(t)
 	if err != nil {
 		panic(err)
 	}
 	now := time.Now()
-	discountsVo, summary, err := ApplyDiscounts(orderVo, []string{VoucherCode1}, PaymentMethodID1, 0.05)
+	discountsVo, summary, err := ApplyDiscounts(itemCollVo, []string{VoucherCode1}, PaymentMethodID1, 0.05)
 	timeTrack(now, "Apply multiple price rules")
-	defer removeOrder(orderVo)
+	// defer removeOrder(itemCollVo)
 	if err != nil {
 		panic(err)
 	}
@@ -493,32 +492,32 @@ func testPricerulesWorkflow(t *testing.T) {
 }
 
 // Test checkout functionality
-func testCheckoutWorkflow(t *testing.T) {
+func TestCheckoutWorkflow(t *testing.T) {
 	//remove all and add again
 	Init(t)
 
-	orderVo, err := createMockOrder(t)
+	itemCollVo, err := createMockOrder(t)
 	if err != nil {
 		panic(err)
 	}
 	now := time.Now()
-	discountsVo, _, err := ApplyDiscounts(orderVo, []string{VoucherCode1}, PaymentMethodID1, 0.05)
+	discountsVo, _, err := ApplyDiscounts(itemCollVo, []string{VoucherCode1}, PaymentMethodID1, 0.05)
 	timeTrack(now, "Apply multiple price rules")
-	defer removeOrder(orderVo)
+	// defer removeOrder(itemCollVo)
 	if err != nil {
 		panic(err)
 	}
 
 	now = time.Now()
-	ok, reason := ValidateVoucher(VoucherCode1, orderVo)
+	ok, reason := ValidateVoucher(VoucherCode1, itemCollVo)
 	if !ok {
 		log.Println("VOUCHER INVALID" + VoucherCode1 + reason)
 	}
 	timeTrack(now, "Validated voucher")
 
 	now = time.Now()
-	err = CommitDiscounts(&discountsVo, orderVo.CustomerData.CustomerId)
-	err = CommitDiscounts(&discountsVo, orderVo.CustomerData.CustomerId)
+	err = CommitDiscounts(&discountsVo, itemCollVo.CustomerID)
+	err = CommitDiscounts(&discountsVo, itemCollVo.CustomerID)
 	if err != nil {
 		log.Println("Already redeemed")
 	}
@@ -551,7 +550,7 @@ func createMockProductGroups(t *testing.T) {
 		group.Type = ProductGroup
 		group.ID = groupID
 		group.Name = groupID
-		group.AddGroupItemIDs(productsInGroups[groupID])
+		group.AddGroupIDs(productsInGroups[groupID])
 		err := group.Upsert()
 		if err != nil {
 			t.Fatal("Could not upsert product group " + groupID)
@@ -565,14 +564,14 @@ func createMockCustomerGroups(t *testing.T) {
 		group.Type = CustomerGroup
 		group.ID = groupID
 		group.Name = groupID
-		group.AddGroupItemIDs([]string{CustomerID1})
+		group.AddGroupIDs([]string{CustomerID1})
 		err := group.Upsert()
 
 		if err != nil {
 			log.Println(err)
 			t.Fatal("Could not upsert customer group " + groupID)
 		}
-		group.AddGroupItemIDsAndPersist([]string{CustomerID2})
+		group.AddGroupIDsAndPersist([]string{CustomerID2})
 	}
 }
 
@@ -701,78 +700,63 @@ func checkVouchersExists(t *testing.T) {
 	}
 }
 
-func createMockOrder(t *testing.T) (*order.Order, error) {
-	orderVo, err := order.NewOrder(nil)
-	if err != nil {
-		panic(err)
-	}
-	orderVo.CustomerData.CustomerId = CustomerID1
+func createMockOrder(t *testing.T) (*ItemCollection, error) {
+	itemCollVo := &ItemCollection{}
+
+	itemCollVo.CustomerID = CustomerID1
 	var i int
-	for _, positionID := range []string{ProductID1SKU1, ProductID3SKU2} {
+	for _, itemID := range []string{ProductID1SKU1, ProductID3SKU2} {
 		i++
-		positionVo := new(order.Position)
+		itemVo := &Item{}
 
-		positionVo.ItemID = positionID
-		positionVo.Name = positionID
-		positionVo.Price = 100
-		positionVo.Quantity = 1
+		itemVo.ID = itemID
 
-		err := orderVo.AddPosition(positionVo)
-		if err != nil {
-			panic(err)
-		}
+		itemVo.Price = 100
+		itemVo.Quantity = 1
+
+		itemCollVo.Items = append(itemCollVo.Items, itemVo)
+
 	}
-	return orderVo, nil
+	return itemCollVo, nil
 }
 
-func createMockOrderScaled(t *testing.T) (*order.Order, error) {
-	orderVo, err := order.NewOrder(nil)
-	if err != nil {
-		panic(err)
-	}
-	orderVo.CustomerData.CustomerId = CustomerID1
+func createMockOrderScaled(t *testing.T) (*ItemCollection, error) {
+	itemCollVo := &ItemCollection{}
+
+	itemCollVo.CustomerID = CustomerID1
 	var i int
-	for _, positionID := range []string{ProductID1SKU1, ProductID1SKU2, ProductID3SKU2} {
+	for _, itemID := range []string{ProductID1SKU1, ProductID1SKU2, ProductID3SKU2} {
 		i++
-		positionVo := new(order.Position)
+		itemVo := &Item{}
 
-		positionVo.ItemID = positionID
-		positionVo.Name = positionID
-		positionVo.Price = 100 * float64(i)
-		positionVo.Quantity = float64(i * 2)
+		itemVo.ID = itemID
 
-		err := orderVo.AddPosition(positionVo)
-		if err != nil {
-			panic(err)
-		}
+		itemVo.Price = 100 * float64(i)
+		itemVo.Quantity = float64(i * 2)
+
+		itemCollVo.Items = append(itemCollVo.Items, itemVo)
 	}
-	return orderVo, nil
+	return itemCollVo, nil
 }
 
-func createMockOrderXY(t *testing.T) (*order.Order, error) {
-	orderVo, err := order.NewOrder(nil)
-	if err != nil {
-		panic(err)
-	}
-	orderVo.CustomerData.CustomerId = CustomerID1
+func createMockOrderXY(t *testing.T) (*ItemCollection, error) {
+	itemCollVo := &ItemCollection{}
+
+	itemCollVo.CustomerID = CustomerID1
 	var i int
-	for _, positionID := range []string{ProductID1SKU1, ProductID1SKU2, ProductID3SKU2} {
+	for _, itemID := range []string{ProductID1SKU1, ProductID1SKU2, ProductID3SKU2} {
 		i++
-		positionVo := new(order.Position)
+		itemVo := &Item{}
 
-		positionVo.ItemID = positionID
-		positionVo.Name = positionID
-		positionVo.Price = 100 * float64(i)
-		positionVo.Quantity = float64(1)
+		itemVo.ID = itemID
+		itemVo.Price = 100 * float64(i)
+		itemVo.Quantity = float64(1)
 
-		err := orderVo.AddPosition(positionVo)
-		if err != nil {
-			panic(err)
-		}
+		itemCollVo.Items = append(itemCollVo.Items, itemVo)
 	}
-	return orderVo, nil
+	return itemCollVo, nil
 }
 
-func removeOrder(order *order.Order) {
-	order.Delete()
-}
+// func removeOrder(itemCollection *ItemCollection) {
+// 	itemCollection.Delete()
+// }

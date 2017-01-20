@@ -1,39 +1,37 @@
 package pricerule
 
-import "github.com/foomo/shop/order"
-
 // CalculateDiscountsItemByPercent -
-func calculateDiscountsItemByAbsolute(order *order.Order, priceRuleVoucherPair RuleVoucherPair, orderDiscounts OrderDiscounts, productGroupIDsPerPosition map[string][]string, groupIDsForCustomer []string, roundTo float64) OrderDiscounts {
+func calculateDiscountsItemByAbsolute(itemCollection *ItemCollection, priceRuleVoucherPair RuleVoucherPair, itemCollDiscounts OrderDiscounts, productGroupIDsPerItem map[string][]string, groupIDsForCustomer []string, roundTo float64) OrderDiscounts {
 
 	if priceRuleVoucherPair.Rule.Action != ActionItemByAbsolute {
 		panic("CalculateDiscountsItemByPercent called with pricerule of action " + priceRuleVoucherPair.Rule.Action)
 	}
-	for _, position := range order.Positions {
-		ok, _ := validatePriceRuleForPosition(*priceRuleVoucherPair.Rule, order, position, productGroupIDsPerPosition, groupIDsForCustomer)
+	for _, item := range itemCollection.Items {
+		ok, _ := validatePriceRuleForItem(*priceRuleVoucherPair.Rule, itemCollection, item, productGroupIDsPerItem, groupIDsForCustomer)
 
-		orderDiscountsForPosition := orderDiscounts[position.ItemID]
-		if !orderDiscounts[position.ItemID].StopApplyingDiscounts && ok && !previouslyAppliedExclusionInPlace(priceRuleVoucherPair.Rule, orderDiscountsForPosition) {
+		itemCollDiscountsForItem := itemCollDiscounts[item.ID]
+		if !itemCollDiscounts[item.ID].StopApplyingDiscounts && ok && !previouslyAppliedExclusionInPlace(priceRuleVoucherPair.Rule, itemCollDiscountsForItem) {
 			//apply the discount here
-			discountApplied := getInitializedDiscountApplied(priceRuleVoucherPair, orderDiscounts, position.ItemID)
+			discountApplied := getInitializedDiscountApplied(priceRuleVoucherPair, itemCollDiscounts, item.ID)
 
 			//calculate the actual discount
-			discountApplied.DiscountAmount = roundToStep((orderDiscounts[position.ItemID].Quantity * priceRuleVoucherPair.Rule.Amount), roundTo)
+			discountApplied.DiscountAmount = roundToStep((itemCollDiscounts[item.ID].Quantity * priceRuleVoucherPair.Rule.Amount), roundTo)
 			discountApplied.DiscountSingle = priceRuleVoucherPair.Rule.Amount
-			discountApplied.Quantity = orderDiscounts[position.ItemID].Quantity
+			discountApplied.Quantity = itemCollDiscounts[item.ID].Quantity
 
 			//pointer assignment WTF !!!
-			orderDiscountsForPosition := orderDiscounts[position.ItemID]
-			orderDiscountsForPosition = calculateCurrentPriceAndApplicableDiscountsEnforceRules(*discountApplied, position.ItemID, orderDiscountsForPosition, orderDiscounts, *priceRuleVoucherPair.Rule, roundTo)
-			orderDiscounts[position.ItemID] = orderDiscountsForPosition
+			itemCollDiscountsForItem := itemCollDiscounts[item.ID]
+			itemCollDiscountsForItem = calculateCurrentPriceAndApplicableDiscountsEnforceRules(*discountApplied, item.ID, itemCollDiscountsForItem, itemCollDiscounts, *priceRuleVoucherPair.Rule, roundTo)
+			itemCollDiscounts[item.ID] = itemCollDiscountsForItem
 		}
 	}
-	return orderDiscounts
+	return itemCollDiscounts
 }
 
-func previouslyAppliedExclusionInPlace(rule *PriceRule, orderDiscountsForPosition DiscountCalculationData) bool {
+func previouslyAppliedExclusionInPlace(rule *PriceRule, itemCollDiscountsForItem DiscountCalculationData) bool {
 	previouslyAppliedExclusion := false
 	if rule.Type == TypePromotionCustomer || rule.Type == TypePromotionProduct {
-		if orderDiscountsForPosition.CustomerPromotionApplied || orderDiscountsForPosition.ProductPromotionApplied {
+		if itemCollDiscountsForItem.CustomerPromotionApplied || itemCollDiscountsForItem.ProductPromotionApplied {
 			previouslyAppliedExclusion = true
 		}
 	}
