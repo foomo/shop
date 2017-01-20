@@ -65,7 +65,7 @@ func (group *Group) RemoveAllProductIds() bool {
 
 // AddGroupIDsAndPersist - appends removes duplicates and persists
 func (group *Group) AddGroupIDsAndPersist(itemIDs []string) bool {
-	group.AddGroupIDs(itemIDs)
+	group.AddGroupItemIDs(itemIDs)
 
 	//addtoset
 	p := GetPersistorForObject(group) //GetGroupPersistor()
@@ -77,8 +77,8 @@ func (group *Group) AddGroupIDsAndPersist(itemIDs []string) bool {
 	return true
 }
 
-// AddGroupIDs - appends removes duplicates and persists
-func (group *Group) AddGroupIDs(itemIDs []string) bool {
+// AddGroupItemIDs - appends removes duplicates and persists
+func (group *Group) AddGroupItemIDs(itemIDs []string) bool {
 	var ids = append(group.IDs, itemIDs...)
 	group.IDs = RemoveDuplicates(ids)
 	return true

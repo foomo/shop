@@ -45,7 +45,7 @@ type DiscountApplied struct {
 
 // DiscountCalculationData - of an item
 type DiscountCalculationData struct {
-	OrderID                       string
+	OrderItemID                   string
 	AppliedDiscounts              []DiscountApplied
 	TotalDiscountAmount           float64 // how much the rules would give
 	TotalDiscountAmountApplicable float64 // how much the itemCollection value permits

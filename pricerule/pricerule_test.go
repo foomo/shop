@@ -117,7 +117,7 @@ func TestScaled(t *testing.T) {
 	priceRule.IncludedCustomerGroupIDS = []string{}
 
 	//insert as well
-	group.AddGroupIDs([]string{ProductID1SKU1})
+	group.AddGroupItemIDs([]string{ProductID1SKU1})
 
 	err := group.Upsert()
 	if err != nil {
@@ -550,7 +550,7 @@ func createMockProductGroups(t *testing.T) {
 		group.Type = ProductGroup
 		group.ID = groupID
 		group.Name = groupID
-		group.AddGroupIDs(productsInGroups[groupID])
+		group.AddGroupItemIDs(productsInGroups[groupID])
 		err := group.Upsert()
 		if err != nil {
 			t.Fatal("Could not upsert product group " + groupID)
@@ -564,7 +564,7 @@ func createMockCustomerGroups(t *testing.T) {
 		group.Type = CustomerGroup
 		group.ID = groupID
 		group.Name = groupID
-		group.AddGroupIDs([]string{CustomerID1})
+		group.AddGroupItemIDs([]string{CustomerID1})
 		err := group.Upsert()
 
 		if err != nil {
