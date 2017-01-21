@@ -14,6 +14,11 @@ import (
 	"github.com/skratchdot/open-golang/open"
 )
 
+// Returns string in format HHMMSS
+func GetTimeHHMMSS() string {
+	return time.Now().Format("150405")
+}
+
 // GetTimeForDay returns the time for 0:00 for the given date
 // GetTimeForDay returns the time for 0:00 for the given date
 func GetTimeForDay(date time.Time) (time.Time, error) {
