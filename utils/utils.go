@@ -14,9 +14,8 @@ import (
 	"github.com/skratchdot/open-golang/open"
 )
 
-// Returns string in format HHMMSS
-func GetTimeHHMMSS() string {
-	return time.Now().Format("150405")
+func GetTimeHHMMSS(t time.Time) string {
+	return t.Format("150405")
 }
 
 var CET, _ = time.LoadLocation("Europe/Zurich")
