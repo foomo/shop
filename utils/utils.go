@@ -19,6 +19,8 @@ func GetTimeHHMMSS() string {
 	return time.Now().Format("150405")
 }
 
+var CET, _ = time.LoadLocation("Europe/Zurich")
+
 // GetTimeForDay returns the time for 0:00 for the given date
 // GetTimeForDay returns the time for 0:00 for the given date
 func GetTimeForDay(date time.Time) (time.Time, error) {
@@ -35,8 +37,7 @@ func GetTimeForDay(date time.Time) (time.Time, error) {
 		return time.Time{}, err
 	}
 
-	cet, _ := time.LoadLocation("Europe/Zurich")
-	sameDay = sameDay.In(cet).Add(time.Hour * -1)
+	sameDay = sameDay
 
 	return sameDay, nil
 
@@ -102,10 +103,18 @@ func GetFormattedTimeShort(t time.Time) string {
 }
 
 func GetTimeFromYYYYMMDD(date string) (time.Time, error) {
-	return time.Parse("20060102", date)
+	t, err := time.Parse("20060102", date)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return t.In(CET).Add(-time.Hour), nil
 }
 func GetTimeFromYYY_MM_DD(date string) (time.Time, error) {
-	return time.Parse("2006-01-02", date)
+	t, err := time.Parse("2006-01-02", date)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return t.In(CET).Add(-time.Hour), nil
 }
 
 func TimeNow() time.Time {
