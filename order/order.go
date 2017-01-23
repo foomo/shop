@@ -70,6 +70,7 @@ type Order struct {
 	ConfirmedAt      time.Time // not yet used
 	LastModifiedAt   time.Time
 	CompletedAt      time.Time
+	ATPAt            time.Time
 	Positions        []*Position
 	Payment          *payment.Payment
 	PriceInfo        *OrderPriceInfo
