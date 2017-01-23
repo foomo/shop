@@ -271,10 +271,10 @@ func getOrderTotalForPriceRule(priceRule *PriceRule, articleCollection *ArticleC
 			total += article.Price * article.Quantity
 		} else {
 			//only sum up if limitations are matched
-			if areAllRuleGroupsIncludedInPositionGroups(priceRule.IncludedProductGroupIDS, productGroupIDs) &&
-				areAllRuleGroupsNotPresentInPositionGroups(priceRule.ExcludedProductGroupIDS, productGroupIDs) &&
-				areAllRuleGroupsIncludedInPositionGroups(priceRule.IncludedCustomerGroupIDS, customerGroupIDs) &&
-				areAllRuleGroupsNotPresentInPositionGroups(priceRule.ExcludedCustomerGroupIDS, customerGroupIDs) {
+			if IsOneProductOrCustomerGroupInIncludedGroups(priceRule.IncludedProductGroupIDS, productGroupIDs) &&
+				IsNoProductOrGroupInExcludeGroups(priceRule.ExcludedProductGroupIDS, productGroupIDs) &&
+				IsOneProductOrCustomerGroupInIncludedGroups(priceRule.IncludedCustomerGroupIDS, customerGroupIDs) &&
+				IsNoProductOrGroupInExcludeGroups(priceRule.ExcludedCustomerGroupIDS, customerGroupIDs) {
 				total += article.Price * article.Quantity
 			}
 		}
@@ -288,24 +288,32 @@ func getOrderTotal(articleCollection *ArticleCollection) float64 {
 	for _, article := range articleCollection.Articles {
 		total += article.Price * article.Quantity
 	}
-	//fmt.Println("Order total  " + strconv.FormatFloat(total, 'f', 6, 64))
 	return total
 }
 
 // check if all rule group IDs are included
-func areAllRuleGroupsIncludedInPositionGroups(ruleIncludeGroups []string, productAndCustomerGroups []string) bool {
-	for _, ruleGroupID := range ruleIncludeGroups {
-		if isValueInList(ruleGroupID, productAndCustomerGroups) == false {
-			return false
+func IsOneProductOrCustomerGroupInIncludedGroups(ruleIncludeGroups []string, productAndCustomerGroups []string) bool {
+	if len(ruleIncludeGroups) == 0 {
+		return true
+	}
+	for _, p := range productAndCustomerGroups {
+		if isValueInList(p, ruleIncludeGroups) {
+
+			return true
 		}
 	}
-	return true
+	return false
+
 }
 
 // check if all rule group IDs are included
-func areAllRuleGroupsNotPresentInPositionGroups(ruleExcludeGroups []string, productAndCustomerGroups []string) bool {
-	for _, ruleGroupID := range ruleExcludeGroups {
-		if isValueInList(ruleGroupID, productAndCustomerGroups) == true {
+func IsNoProductOrGroupInExcludeGroups(ruleExcludeGroups []string, productAndCustomerGroups []string) bool {
+
+	if len(ruleExcludeGroups) == 0 {
+		return true
+	}
+	for _, p := range productAndCustomerGroups {
+		if isValueInList(p, ruleExcludeGroups) {
 			return false
 		}
 	}
@@ -386,17 +394,18 @@ func validatePriceRule(priceRule PriceRule, articleCollection *ArticleCollection
 			}
 		}
 
-		if areAllRuleGroupsIncludedInPositionGroups(priceRule.IncludedProductGroupIDS, productGroupIDsPerPosition[article.ID]) {
+		if IsOneProductOrCustomerGroupInIncludedGroups(priceRule.IncludedProductGroupIDS, productGroupIDsPerPosition[article.ID]) {
+
 			productGroupIncludeMatchOK = true
 		}
-		if areAllRuleGroupsNotPresentInPositionGroups(priceRule.ExcludedProductGroupIDS, productGroupIDsPerPosition[article.ID]) {
+		if IsNoProductOrGroupInExcludeGroups(priceRule.ExcludedProductGroupIDS, productGroupIDsPerPosition[article.ID]) {
 			productGroupExcludeMatchOK = true
 		}
-		if areAllRuleGroupsIncludedInPositionGroups(priceRule.IncludedCustomerGroupIDS, customerGroupIDs) {
+		if IsOneProductOrCustomerGroupInIncludedGroups(priceRule.IncludedCustomerGroupIDS, customerGroupIDs) {
 			customerGroupIncludeMatchOK = true
 		}
 
-		if areAllRuleGroupsNotPresentInPositionGroups(priceRule.ExcludedCustomerGroupIDS, customerGroupIDs) {
+		if IsNoProductOrGroupInExcludeGroups(priceRule.ExcludedCustomerGroupIDS, customerGroupIDs) {
 			customerGroupExcludeMatchOK = true
 		}
 	}
