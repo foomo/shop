@@ -138,7 +138,7 @@ func TestScaled(t *testing.T) {
 	}
 
 	now := time.Now()
-	discountsVo, summary, err := ApplyDiscounts(orderVo, []string{""}, "", 0.05)
+	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{""}, "", 0.05)
 	timeTrack(now, "Apply scaled voucher")
 	// defer removeOrder(orderVo)
 	if err != nil {
@@ -184,7 +184,7 @@ func TestBuyXGetY(t *testing.T) {
 		panic(err)
 	}
 
-	discountsVo, summary, err := ApplyDiscounts(orderVo, []string{""}, "", 0.05)
+	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{""}, "", 0.05)
 	// defer removeOrder(orderVo)
 	if err != nil {
 		panic(err)
@@ -244,7 +244,7 @@ func TestExclude(t *testing.T) {
 		log.Println(article.ID + " " + priceRule.ID + " " + strconv.FormatBool(ok))
 	}
 
-	discountsVo, summary, err := ApplyDiscounts(orderVo, []string{}, "blah", 0.05)
+	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{}, "blah", 0.05)
 	spew.Dump(discountsVo)
 	spew.Dump(*summary)
 
@@ -327,7 +327,7 @@ func TestMaxOrder(t *testing.T) {
 
 	// PRICERULES --------------------------------------------------------------------------------------
 	now := time.Now()
-	discountsVo, summary, err := ApplyDiscounts(orderVo, []string{}, PaymentMethodID1, 0.05)
+	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{}, PaymentMethodID1, 0.05)
 	timeTrack(now, "Apply multiple price rules")
 	// defer removeOrder(orderVo)
 	if err != nil {
@@ -462,7 +462,7 @@ func TestTwoStepWorkflow(t *testing.T) {
 
 	// PRICERULES --------------------------------------------------------------------------------------
 	now := time.Now()
-	discountsVo, summary, err := ApplyDiscounts(orderVo, []string{VoucherCode2, VoucherCode1}, PaymentMethodID1, 0.05)
+	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{VoucherCode2, VoucherCode1}, PaymentMethodID1, 0.05)
 	timeTrack(now, "Apply multiple price rules")
 	// defer removeOrder(orderVo)
 	if err != nil {
@@ -485,7 +485,7 @@ func TestPricerulesWorkflow(t *testing.T) {
 		panic(err)
 	}
 	now := time.Now()
-	discountsVo, summary, err := ApplyDiscounts(orderVo, []string{VoucherCode1}, PaymentMethodID1, 0.05)
+	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{VoucherCode1}, PaymentMethodID1, 0.05)
 	timeTrack(now, "Apply multiple price rules")
 	// defer removeOrder(orderVo)
 	if err != nil {
@@ -508,7 +508,7 @@ func TestCheckoutWorkflow(t *testing.T) {
 		panic(err)
 	}
 	now := time.Now()
-	discountsVo, _, err := ApplyDiscounts(orderVo, []string{VoucherCode1}, PaymentMethodID1, 0.05)
+	discountsVo, _, err := ApplyDiscounts(orderVo, nil, []string{VoucherCode1}, PaymentMethodID1, 0.05)
 	timeTrack(now, "Apply multiple price rules")
 	// defer removeOrder(orderVo)
 	if err != nil {

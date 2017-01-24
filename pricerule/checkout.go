@@ -168,7 +168,7 @@ func CommitDiscounts(orderDiscounts *OrderDiscounts, customerID string) error {
 //
 // alternatively use CommitDiscounts
 func CommitOrderDiscounts(customerID string, articleCollection *ArticleCollection, voucherCodes []string, paymentMethod string, roundTo float64) error {
-	orderDiscounts, _, err := ApplyDiscounts(articleCollection, voucherCodes, paymentMethod, roundTo, nil)
+	orderDiscounts, _, err := ApplyDiscounts(articleCollection, nil,voucherCodes, paymentMethod, roundTo, nil)
 	if err != nil {
 		return err
 	}

@@ -96,9 +96,10 @@ type RuleVoucherPair struct {
 //------------------------------------------------------------------
 
 // ApplyDiscounts applies all possible discounts on articleCollection ... if voucherCodes is "" the voucher is not applied
-func ApplyDiscounts(articleCollection *ArticleCollection, voucherCodes []string, paymentMethod string, roundTo float64, customProvider PriceRuleCustomProvider) (OrderDiscounts, *OrderDiscountSummary, error) {
+// This is not yet used. ApplyDiscounts should at some point be able to consider previousle calculated discounts
+func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts OrderDiscounts, voucherCodes []string, paymentMethod string, roundTo float64, customProvider PriceRuleCustomProvider) (OrderDiscounts, *OrderDiscountSummary, error) {
 	var ruleVoucherPairs []RuleVoucherPair
-
+	//fmt.Println("ApplyDiscounts with CustomerTye: ", articleCollection.CustomerType)
 	now := time.Now()
 	//find the groupIds for articleCollection items
 	productGroupIDsPerPosition := getProductGroupIDsPerPosition(articleCollection)
@@ -232,6 +233,7 @@ func ApplyDiscounts(articleCollection *ArticleCollection, voucherCodes []string,
 
 func calculateRule(orderDiscounts OrderDiscounts, priceRulePair RuleVoucherPair, articleCollection *ArticleCollection, productGroupIDsPerPosition map[string][]string, groupIDsForCustomer []string, roundTo float64) OrderDiscounts {
 	ok, priceRuleFailReason := validatePriceRuleForOrder(*priceRulePair.Rule, articleCollection, productGroupIDsPerPosition, groupIDsForCustomer)
+	//ok, _ := validatePriceRuleForOrder(*priceRulePair.Rule, articleCollection, productGroupIDsPerPosition, groupIDsForCustomer)
 	nowOne := time.Now()
 
 	if ok {
