@@ -213,7 +213,7 @@ func mapDecodeObj(obj interface{}, customProvider PriceRuleCustomProvider) (type
 		}
 		return typedObject, nil
 	case *PriceRule:
-		typedObject := obj.(*Voucher)
+		typedObject := obj.(*PriceRule)
 		objCustom := customProvider.NewPriceRuleCustom()
 		if objCustom != nil && typedObject.Custom != nil {
 			err = mapstructure.Decode(typedObject.Custom, objCustom)

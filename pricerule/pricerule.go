@@ -275,18 +275,41 @@ func GetValidPriceRulesForPaymentMethod(paymentMethod string) ([]PriceRule, erro
 
 // GetValidPriceRulesForPromotions - find rule for payment
 // check ValidFrom, ValidTo
-func GetValidPriceRulesForPromotions(priceRuleTypes []Type) ([]PriceRule, error) {
+func GetValidPriceRulesForPromotions(priceRuleTypes []Type, customProvider PriceRuleCustomProvider) ([]PriceRule, error) {
 	p := GetPersistorForObject(new(PriceRule))
 	query := bson.M{"type": bson.M{"$in": priceRuleTypes}, "validfrom": bson.M{"$lte": time.Now()}, "validto": bson.M{"$gte": time.Now()}}
 
-	var result []PriceRule
+	var result []*PriceRule
 
 	err := p.GetCollection().Find(query).Select(nil).Sort("priority").All(&result)
 	if err != nil {
 		// handle error
 		return nil, err
 	}
-	return result, nil
+
+	if customProvider == nil {
+		priceRulesMapped := []PriceRule{}
+		for _, r := range result {
+			priceRulesMapped = append(priceRulesMapped, *r)
+		}
+		return priceRulesMapped, nil
+	}
+
+	priceRulesMapped := []PriceRule{}
+	for _, r := range result {
+
+		if customProvider != nil {
+			var err error
+			typedObject, err := mapDecodeObj(r, customProvider)
+			if err != nil {
+				return nil, err
+			}
+			r = typedObject.(*PriceRule)
+			priceRulesMapped = append(priceRulesMapped, *r)
+		}
+	}
+
+	return priceRulesMapped, nil
 }
 
 //------------------------------------------------------------------

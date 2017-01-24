@@ -70,7 +70,7 @@ func ValidateVoucher(voucherCode string, articleCollection *ArticleCollection) (
 	//get voucher
 
 	customerID := articleCollection.CustomerID
-	voucher, voucherPriceRule, err := GetVoucherAndPriceRule(voucherCode)
+	voucher, voucherPriceRule, err := GetVoucherAndPriceRule(voucherCode, nil)
 
 	//check if exists
 	if err != nil || voucher.VoucherCode != voucherCode {
@@ -168,7 +168,7 @@ func CommitDiscounts(orderDiscounts *OrderDiscounts, customerID string) error {
 //
 // alternatively use CommitDiscounts
 func CommitOrderDiscounts(customerID string, articleCollection *ArticleCollection, voucherCodes []string, paymentMethod string, roundTo float64) error {
-	orderDiscounts, _, err := ApplyDiscounts(articleCollection, voucherCodes, paymentMethod, roundTo)
+	orderDiscounts, _, err := ApplyDiscounts(articleCollection, voucherCodes, paymentMethod, roundTo, nil)
 	if err != nil {
 		return err
 	}
@@ -191,7 +191,7 @@ func redeemVoucherByCode(voucherCode string, customerID string) error {
 // Returns false, ValidationPreviouslyAppliedRuleBlock if a previous rule blocks application
 func checkPreviouslyAppliedRules(voucherPriceRule *PriceRule, voucher *Voucher, articleCollection *ArticleCollection, groupIDsForCustomer []string, productGroupIDsPerPosition map[string][]string) (ok bool, reason TypeRuleValidationMsg) {
 	// find applicable pricerules - auto promotions
-	promotionPriceRules, err := GetValidPriceRulesForPromotions([]Type{TypePromotionOrder, TypePromotionCustomer, TypePromotionProduct})
+	promotionPriceRules, err := GetValidPriceRulesForPromotions([]Type{TypePromotionOrder, TypePromotionCustomer, TypePromotionProduct}, nil)
 	if err != nil {
 		panic(err)
 	}

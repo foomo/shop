@@ -52,7 +52,7 @@ func NewVoucher(ID string, voucherCode string, priceRule *PriceRule, customerID 
 	voucher := new(Voucher)
 	voucher.ID = ID
 	voucher.PriceRuleID = priceRule.ID
-	voucher.MappingID = priceRule.MappingID
+	//	voucher.MappingID = priceRule.MappingID
 	voucher.VoucherCode = voucherCode
 	if len(customerID) > 0 {
 		voucher.VoucherType = VoucherTypePersonalized
@@ -155,15 +155,15 @@ func RemoveAllVouchers() error {
 }
 
 // GetVoucherAndPriceRule -
-func GetVoucherAndPriceRule(voucherCode string) (*Voucher, *PriceRule, error) {
-	voucher, err := GetVoucherByCode(voucherCode, nil)
+func GetVoucherAndPriceRule(voucherCode string, customProvider PriceRuleCustomProvider) (*Voucher, *PriceRule, error) {
+	voucher, err := GetVoucherByCode(voucherCode, customProvider)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	if voucher != nil && len(voucher.PriceRuleID) > 0 {
 		//get the pricerule
-		priceRule, err := GetPriceRuleByID(voucher.PriceRuleID, nil)
+		priceRule, err := GetPriceRuleByID(voucher.PriceRuleID, customProvider)
 		if err != nil {
 			return voucher, nil, err
 		}

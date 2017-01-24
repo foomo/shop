@@ -41,6 +41,8 @@ type DiscountApplied struct {
 	Quantity             float64
 	Price                float64 //price without reductions
 	CalculationBasePrice float64 //price used for the calculation of the discount
+
+	Custom interface{}
 }
 
 // DiscountCalculationData - of an item
@@ -94,7 +96,7 @@ type RuleVoucherPair struct {
 //------------------------------------------------------------------
 
 // ApplyDiscounts applies all possible discounts on articleCollection ... if voucherCodes is "" the voucher is not applied
-func ApplyDiscounts(articleCollection *ArticleCollection, voucherCodes []string, paymentMethod string, roundTo float64) (OrderDiscounts, *OrderDiscountSummary, error) {
+func ApplyDiscounts(articleCollection *ArticleCollection, voucherCodes []string, paymentMethod string, roundTo float64, customProvider PriceRuleCustomProvider) (OrderDiscounts, *OrderDiscountSummary, error) {
 	var ruleVoucherPairs []RuleVoucherPair
 
 	now := time.Now()
@@ -108,7 +110,7 @@ func ApplyDiscounts(articleCollection *ArticleCollection, voucherCodes []string,
 	}
 
 	// find applicable pricerules - auto promotions
-	promotionPriceRules, err := GetValidPriceRulesForPromotions([]Type{TypePromotionCustomer, TypePromotionProduct, TypePromotionOrder})
+	promotionPriceRules, err := GetValidPriceRulesForPromotions([]Type{TypePromotionCustomer, TypePromotionProduct, TypePromotionOrder}, customProvider)
 
 	if err != nil {
 		return nil, nil, err
@@ -163,7 +165,7 @@ func ApplyDiscounts(articleCollection *ArticleCollection, voucherCodes []string,
 		var ruleVoucherPairsStep2 []RuleVoucherPair
 		for _, voucherCode := range voucherCodes {
 			if len(voucherCode) > 0 {
-				voucherVo, voucherPriceRule, err := GetVoucherAndPriceRule(voucherCode)
+				voucherVo, voucherPriceRule, err := GetVoucherAndPriceRule(voucherCode, customProvider)
 				if voucherVo == nil {
 					log.Println("voucher not found for code: " + voucherCode + " in " + "priceRule.ApplyDiscounts")
 				}
