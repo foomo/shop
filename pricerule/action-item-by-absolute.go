@@ -30,6 +30,11 @@ func calculateDiscountsItemByAbsolute(articleCollection *ArticleCollection, pric
 
 func previouslyAppliedExclusionInPlace(rule *PriceRule, orderDiscountsForPosition DiscountCalculationData) bool {
 	previouslyAppliedExclusion := false
+	// if rule.Type == TypePromotionProduct {
+	// 	if orderDiscountsForPosition.ProductPromotionApplied {
+	// 		previouslyAppliedExclusion = true
+	// 	}
+	// }
 	if rule.Type == TypePromotionCustomer || rule.Type == TypePromotionProduct {
 		if orderDiscountsForPosition.CustomerPromotionApplied || orderDiscountsForPosition.ProductPromotionApplied {
 			previouslyAppliedExclusion = true
