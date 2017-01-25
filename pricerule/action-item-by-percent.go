@@ -77,7 +77,9 @@ func calculateCurrentPriceAndApplicableDiscountsEnforceRules(discountApplied Dis
 	if rule.Type == TypePromotionProduct {
 		orderDiscountsForPosition.ProductPromotionApplied = true
 	}
-	orderDiscountsForPosition.AppliedDiscounts = append(orderDiscountsForPosition.AppliedDiscounts, discountApplied)
+	if discountApplied.DiscountAmount > 0 {
+		orderDiscountsForPosition.AppliedDiscounts = append(orderDiscountsForPosition.AppliedDiscounts, discountApplied)
+	}
 
 	return orderDiscountsForPosition
 }
