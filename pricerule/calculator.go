@@ -144,7 +144,7 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 		AppliedVoucherIDs:   []string{},
 		VoucherDiscounts:    map[string]VoucherDiscount{},
 	}
-	timeTrack(now, "peparations took ")
+	timeTrack(now, "preparations took ")
 	nowAll := time.Now()
 
 	// ~ PRICERULE PAIR SORTING - BY PRIORITY - higher priority means it is applied first
@@ -171,8 +171,7 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 					log.Println("voucher not found for code: " + voucherCode + " in " + "priceRule.ApplyDiscounts")
 				}
 				if err != nil {
-					log.Println(err)
-					log.Println("skupping voucher " + voucherCode)
+					log.Println("skipping voucher "+voucherCode, err)
 					continue
 				}
 
@@ -261,7 +260,7 @@ func calculateRule(orderDiscounts OrderDiscounts, priceRulePair RuleVoucherPair,
 
 // find what is the articleCollection value of positions that belong to group
 // previouslyAppliedDiscounts is for qty 1
-func getOrderTotalForPriceRule(priceRule *PriceRule, articleCollection *ArticleCollection, productGroupsIDsPerPosition map[string][]string, customerGroupIDs []string) float64 {
+func getOrderTotalForPriceRule(priceRule *PriceRule, articleCollection *ArticleCollection, productGroupsIDsPerPosition map[string][]string, customerGroupIDs []string, orderDiscounts OrderDiscounts) float64 {
 	var total float64
 
 	for _, article := range articleCollection.Articles {
@@ -279,7 +278,14 @@ func getOrderTotalForPriceRule(priceRule *PriceRule, articleCollection *ArticleC
 				IsNoProductOrGroupInExcludeGroups(priceRule.ExcludedProductGroupIDS, productGroupIDs) &&
 				IsOneProductOrCustomerGroupInIncludedGroups(priceRule.IncludedCustomerGroupIDS, customerGroupIDs) &&
 				IsNoProductOrGroupInExcludeGroups(priceRule.ExcludedCustomerGroupIDS, customerGroupIDs) {
-				total += article.Price * article.Quantity
+				sub := 0.0
+				if orderDiscounts != nil {
+					previouslyAppliedDiscounts, ok := orderDiscounts[article.ID]
+					if ok {
+						sub = previouslyAppliedDiscounts.TotalDiscountAmount
+					}
+				}
+				total += article.Price*article.Quantity - sub
 			}
 		}
 	}
@@ -376,7 +382,7 @@ func validatePriceRule(priceRule PriceRule, articleCollection *ArticleCollection
 
 	if priceRule.MinOrderAmount > 0.0 {
 		if priceRule.MinOrderAmountApplicableItemsOnly {
-			if priceRule.MinOrderAmount > getOrderTotalForPriceRule(&priceRule, articleCollection, productGroupIDsPerPosition, customerGroupIDs) {
+			if priceRule.MinOrderAmount > getOrderTotalForPriceRule(&priceRule, articleCollection, productGroupIDsPerPosition, customerGroupIDs, nil) {
 				return false, ValidationPriceRuleMinimumAmount
 			}
 		} else {
