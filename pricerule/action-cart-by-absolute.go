@@ -14,7 +14,6 @@ func calculateDiscountsCartByAbsolute(articleCollection *ArticleCollection, pric
 
 	//collect item values = price * qty for applicable items
 	amountsMap := getAmountsOfApplicablePositions(priceRuleVoucherPair.Rule, articleCollection, productGroupIDsPerPosition, groupIDsForCustomer)
-
 	amounts := getMapValues(amountsMap)
 	//spew.Dump(amounts)
 	// the tricky part - stolen code from Florian - distribute the amount proportional to the price
