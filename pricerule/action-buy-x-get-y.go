@@ -1,7 +1,6 @@
 package pricerule
 
 import (
-	"fmt"
 	"log"
 	"math"
 )
@@ -34,8 +33,6 @@ func calculateDiscountsBuyXGetY(articleCollection *ArticleCollection, priceRuleV
 				discountApplied := getInitializedDiscountApplied(priceRuleVoucherPair, orderDiscounts, article.ID)
 
 				for qty := 0; qty < int(article.Quantity/float64(priceRuleVoucherPair.Rule.Y)); qty++ {
-					//calculate the actual discount
-					fmt.Println("yay")
 					//calculate the actual discount
 					discountApplied.DiscountAmount += orderDiscounts[article.ID].CurrentItemPrice
 					//discountApplied.DiscountAmount += article.Price
