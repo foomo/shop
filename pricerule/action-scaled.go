@@ -5,7 +5,7 @@ func calculateScaledDiscounts(articleCollection *ArticleCollection, priceRuleVou
 	if priceRuleVoucherPair.Rule.Action != ActionScaled {
 		panic("CalculateScaledDiscounts called with pricerule of action " + priceRuleVoucherPair.Rule.Action)
 	}
-	orderTotal := getOrderTotalForPriceRule(priceRuleVoucherPair.Rule, articleCollection, productGroupIDsPerPosition, groupIDsForCustomer)
+	orderTotal := getOrderTotalForPriceRule(priceRuleVoucherPair.Rule, articleCollection, productGroupIDsPerPosition, groupIDsForCustomer,orderDiscounts)
 	//check if we have a matching scale
 	//note: the first matching is picked -> scales must not overlap
 	for _, scaledLevel := range priceRuleVoucherPair.Rule.ScaledAmounts {

@@ -2,14 +2,12 @@ package pricerule
 
 // CalculateDiscountsCartByPercentage -
 func calculateDiscountsCartByPercentage(articleCollection *ArticleCollection, priceRuleVoucherPair RuleVoucherPair, orderDiscounts OrderDiscounts, productGroupIDsPerPosition map[string][]string, groupIDsForCustomer []string, roundTo float64) OrderDiscounts {
-
 	if priceRuleVoucherPair.Rule.Action != ActionCartByPercent {
 		panic("CalculateDiscountsCartByPercentage called with pricerule of action " + priceRuleVoucherPair.Rule.Action)
 	}
 
 	//get the total - for vouchers it is lowered by previous discounts
-	orderTotal := getOrderTotalForPriceRule(priceRuleVoucherPair.Rule, articleCollection, productGroupIDsPerPosition, groupIDsForCustomer)
-
+	orderTotal := getOrderTotalForPriceRule(priceRuleVoucherPair.Rule, articleCollection, productGroupIDsPerPosition, groupIDsForCustomer, orderDiscounts)
 	//the discount amount calculation
 	totalDiscountAmount := roundToStep(orderTotal*priceRuleVoucherPair.Rule.Amount/100.0, roundTo)
 
