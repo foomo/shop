@@ -68,6 +68,10 @@ var blueprints = map[string]state.BluePrint{
 	},
 }
 
+func GetStates() map[string]state.BluePrint {
+	return blueprints
+}
+
 var DefaultStateMachine = &state.StateMachine{
 	InitialState: OrderStatusCart,
 	Transitions:  transitions,
