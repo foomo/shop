@@ -67,7 +67,7 @@ type Order struct {
 	CustomerData     *CustomerData
 	OrderType        OrderType
 	CreatedAt        time.Time
-	ConfirmedAt      time.Time // not yet used
+	ConfirmedAt      time.Time
 	LastModifiedAt   time.Time
 	CompletedAt      time.Time
 	ATPAt            time.Time
@@ -77,7 +77,7 @@ type Order struct {
 	Shipping         *shipping.ShippingProperties
 	LanguageCode     LanguageCode
 	CustomProvider   OrderCustomProvider
-	Coupons          []string    // for Globus, these are most probably the EANs
+	Coupons          []string
 	Custom           interface{} `bson:",omitempty"`
 }
 
