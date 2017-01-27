@@ -21,9 +21,11 @@ import (
 
 const (
 	CountryCodeGermany      CountryCode  = "DE"
+	CountryCodeFrance       CountryCode  = "FR"
 	CountryCodeSwitzerland  CountryCode  = "CH"
-	LanguageCodeGermany     LanguageCode = "DE"
-	LanguageCodeSwitzerland LanguageCode = "CH"
+	LanguageCodeFrance      LanguageCode = "fr"
+	LanguageCodeGermany     LanguageCode = "de"
+	LanguageCodeSwitzerland LanguageCode = "ch"
 )
 
 //------------------------------------------------------------------
