@@ -1,7 +1,7 @@
 package pricerule
 
 // CalculateDiscountsCartByPercentage -
-func calculateDiscountsCartByPercentage(articleCollection *ArticleCollection, priceRuleVoucherPair RuleVoucherPair, orderDiscounts OrderDiscounts, productGroupIDsPerPosition map[string][]string, groupIDsForCustomer []string, roundTo float64) OrderDiscounts {
+func calculateDiscountsCartByPercentage(articleCollection *ArticleCollection, priceRuleVoucherPair RuleVoucherPair, orderDiscounts OrderDiscounts, productGroupIDsPerPosition map[string][]string, groupIDsForCustomer []string, roundTo float64, isCatalogCalculation bool) OrderDiscounts {
 	if priceRuleVoucherPair.Rule.Action != ActionCartByPercent {
 		panic("CalculateDiscountsCartByPercentage called with pricerule of action " + priceRuleVoucherPair.Rule.Action)
 	}
@@ -17,5 +17,5 @@ func calculateDiscountsCartByPercentage(articleCollection *ArticleCollection, pr
 	tempPriceRule.Amount = totalDiscountAmount
 	tempPriceRuleVoucherPair := RuleVoucherPair{Rule: &tempPriceRule, Voucher: priceRuleVoucherPair.Voucher}
 
-	return calculateDiscountsCartByAbsolute(articleCollection, tempPriceRuleVoucherPair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
+	return calculateDiscountsCartByAbsolute(articleCollection, tempPriceRuleVoucherPair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo, isCatalogCalculation)
 }

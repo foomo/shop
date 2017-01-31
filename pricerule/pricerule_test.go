@@ -91,8 +91,37 @@ func Init(t *testing.T) {
 	checkVouchersExists(t)
 }
 
+func TestCache(t *testing.T) {
+	productsInGroups = make(map[string][]string)
+	productsInGroups[GroupIDSale] = []string{ProductID1, ProductID2, ProductID1SKU1, ProductID1SKU2, ProductID2SKU1, ProductID2SKU2}
+	productsInGroups[GroupIDNormal] = []string{ProductID4, ProductID5, ProductID4SKU1, ProductID4SKU2, ProductID5SKU1, ProductID5SKU2}
+	productsInGroups[GroupIDShirts] = []string{ProductID3, ProductID4, ProductID5, ProductID3SKU1, ProductID4SKU1, ProductID5SKU1, ProductID3SKU2, ProductID4SKU2, ProductID5SKU2}
+
+	RemoveAllGroups()
+	RemoveAllPriceRules()
+	RemoveAllVouchers()
+
+	cache.InitCache()
+	fmt.Println("cache at start")
+	spew.Dump(cache.GetGroupsCache())
+
+	for _, groupID := range []string{GroupIDSale, GroupIDNormal, GroupIDShirts} {
+		group := new(Group)
+		group.Type = ProductGroup
+		group.ID = groupID
+		group.Name = groupID
+		group.AddGroupItemIDs(productsInGroups[groupID])
+		err := group.Upsert()
+		if err != nil {
+			t.Fatal("Could not upsert product group " + groupID)
+		}
+	}
+	spew.Dump(cache.GetGroupsCache())
+
+}
+
 // Test groups creation
-func TestScaled(t *testing.T) {
+func testScaled(t *testing.T) {
 	//Init
 	RemoveAllGroups()
 	RemoveAllPriceRules()
@@ -138,7 +167,7 @@ func TestScaled(t *testing.T) {
 	}
 
 	now := time.Now()
-	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{""}, "", 0.05)
+	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{""}, "", 0.05, nil)
 	timeTrack(now, "Apply scaled voucher")
 	// defer removeOrder(orderVo)
 	if err != nil {
@@ -151,7 +180,7 @@ func TestScaled(t *testing.T) {
 }
 
 // Test groups creation
-func TestBuyXGetY(t *testing.T) {
+func testBuyXGetY(t *testing.T) {
 	//Init
 	RemoveAllGroups()
 	RemoveAllPriceRules()
@@ -184,7 +213,7 @@ func TestBuyXGetY(t *testing.T) {
 		panic(err)
 	}
 
-	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{""}, "", 0.05)
+	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{""}, "", 0.05, nil)
 	// defer removeOrder(orderVo)
 	if err != nil {
 		panic(err)
@@ -240,18 +269,18 @@ func TestExclude(t *testing.T) {
 	productGroupIDsPerPosition := getProductGroupIDsPerPosition(orderVo)
 	//spew.Dump(productGroupIDsPerPosition)
 	for _, article := range orderVo.Articles {
-		ok, _ := validatePriceRuleForPosition(*priceRule, orderVo, article, productGroupIDsPerPosition, []string{})
+		ok, _ := validatePriceRuleForPosition(*priceRule, orderVo, article, productGroupIDsPerPosition, []string{}, false)
 		log.Println(article.ID + " " + priceRule.ID + " " + strconv.FormatBool(ok))
 	}
 
-	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{}, "blah", 0.05)
+	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{}, "blah", 0.05, nil)
 	spew.Dump(discountsVo)
 	spew.Dump(*summary)
 
 }
 
 // Test groups creation
-func TestMaxOrder(t *testing.T) {
+func testMaxOrder(t *testing.T) {
 	//remove all and add again
 	productsInGroups = make(map[string][]string)
 	productsInGroups[GroupIDSale] = []string{ProductID1, ProductID2, ProductID1SKU1, ProductID1SKU2, ProductID2SKU1, ProductID2SKU2}
@@ -327,7 +356,7 @@ func TestMaxOrder(t *testing.T) {
 
 	// PRICERULES --------------------------------------------------------------------------------------
 	now := time.Now()
-	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{}, PaymentMethodID1, 0.05)
+	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{}, PaymentMethodID1, 0.05, nil)
 	timeTrack(now, "Apply multiple price rules")
 	// defer removeOrder(orderVo)
 	if err != nil {
@@ -341,7 +370,7 @@ func TestMaxOrder(t *testing.T) {
 }
 
 // Test groups creation
-func TestTwoStepWorkflow(t *testing.T) {
+func testTwoStepWorkflow(t *testing.T) {
 	//remove all and add again
 	productsInGroups = make(map[string][]string)
 	productsInGroups[GroupIDSale] = []string{ProductID1, ProductID2, ProductID1SKU1, ProductID1SKU2, ProductID2SKU1, ProductID2SKU2}
@@ -462,7 +491,7 @@ func TestTwoStepWorkflow(t *testing.T) {
 
 	// PRICERULES --------------------------------------------------------------------------------------
 	now := time.Now()
-	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{VoucherCode2, VoucherCode1}, PaymentMethodID1, 0.05)
+	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{VoucherCode2, VoucherCode1}, PaymentMethodID1, 0.05, nil)
 	timeTrack(now, "Apply multiple price rules")
 	// defer removeOrder(orderVo)
 	if err != nil {
@@ -476,7 +505,7 @@ func TestTwoStepWorkflow(t *testing.T) {
 }
 
 // Test groups creation
-func TestPricerulesWorkflow(t *testing.T) {
+func testPricerulesWorkflow(t *testing.T) {
 	//remove all and add again
 	Init(t)
 
@@ -485,7 +514,7 @@ func TestPricerulesWorkflow(t *testing.T) {
 		panic(err)
 	}
 	now := time.Now()
-	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{VoucherCode1}, PaymentMethodID1, 0.05)
+	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{VoucherCode1}, PaymentMethodID1, 0.05, nil)
 	timeTrack(now, "Apply multiple price rules")
 	// defer removeOrder(orderVo)
 	if err != nil {
@@ -499,7 +528,7 @@ func TestPricerulesWorkflow(t *testing.T) {
 }
 
 // Test checkout functionality
-func TestCheckoutWorkflow(t *testing.T) {
+func testCheckoutWorkflow(t *testing.T) {
 	//remove all and add again
 	Init(t)
 
@@ -508,7 +537,7 @@ func TestCheckoutWorkflow(t *testing.T) {
 		panic(err)
 	}
 	now := time.Now()
-	discountsVo, _, err := ApplyDiscounts(orderVo, nil, []string{VoucherCode1}, PaymentMethodID1, 0.05)
+	discountsVo, _, err := ApplyDiscounts(orderVo, nil, []string{VoucherCode1}, PaymentMethodID1, 0.05, nil)
 	timeTrack(now, "Apply multiple price rules")
 	// defer removeOrder(orderVo)
 	if err != nil {

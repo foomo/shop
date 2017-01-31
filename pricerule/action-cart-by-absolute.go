@@ -7,13 +7,13 @@ import (
 )
 
 // CalculateDiscountsCartByAbsolute -
-func calculateDiscountsCartByAbsolute(articleCollection *ArticleCollection, priceRuleVoucherPair RuleVoucherPair, orderDiscounts OrderDiscounts, productGroupIDsPerPosition map[string][]string, groupIDsForCustomer []string, roundTo float64) OrderDiscounts {
+func calculateDiscountsCartByAbsolute(articleCollection *ArticleCollection, priceRuleVoucherPair RuleVoucherPair, orderDiscounts OrderDiscounts, productGroupIDsPerPosition map[string][]string, groupIDsForCustomer []string, roundTo float64, isCatalogCalculation bool) OrderDiscounts {
 	if priceRuleVoucherPair.Rule.Action != ActionCartByAbsolute {
 		panic("CalculateDiscountsCartByAbsolute called with pricerule of action " + priceRuleVoucherPair.Rule.Action)
 	}
 
 	//collect item values = price * qty for applicable items
-	amountsMap := getAmountsOfApplicablePositions(priceRuleVoucherPair.Rule, articleCollection, productGroupIDsPerPosition, groupIDsForCustomer)
+	amountsMap := getAmountsOfApplicablePositions(priceRuleVoucherPair.Rule, articleCollection, productGroupIDsPerPosition, groupIDsForCustomer, isCatalogCalculation)
 	amounts := getMapValues(amountsMap)
 	//spew.Dump(amounts)
 	// the tricky part - stolen code from Florian - distribute the amount proportional to the price
@@ -204,13 +204,13 @@ func IteInt64(condition bool, thenDo int64, elseDo int64) int64 {
 }
 
 // get map of [positionID] => price*quantity for applicable positions
-func getAmountsOfApplicablePositions(priceRule *PriceRule, articleCollection *ArticleCollection, productGroupIDsPerPosition map[string][]string, groupIDsForCustomer []string) map[string]float64 {
+func getAmountsOfApplicablePositions(priceRule *PriceRule, articleCollection *ArticleCollection, productGroupIDsPerPosition map[string][]string, groupIDsForCustomer []string, isCatalogCalculation bool) map[string]float64 {
 	//collect item values = price * qty for applicable items
 	//amounts := []float64{}
 	amountsMap := make(map[string]float64)
 
 	for _, article := range articleCollection.Articles {
-		ok, _ := validatePriceRuleForPosition(*priceRule, articleCollection, article, productGroupIDsPerPosition, groupIDsForCustomer)
+		ok, _ := validatePriceRuleForPosition(*priceRule, articleCollection, article, productGroupIDsPerPosition, groupIDsForCustomer, isCatalogCalculation)
 		if ok {
 			//amounts = append(amounts, article.Price*article.Quantity)
 			amountsMap[article.ID] = article.Price * article.Quantity

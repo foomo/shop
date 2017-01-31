@@ -6,14 +6,14 @@ import (
 )
 
 // CalculateDiscountsBuyXGetY -
-func calculateDiscountsBuyXGetY(articleCollection *ArticleCollection, priceRuleVoucherPair RuleVoucherPair, orderDiscounts OrderDiscounts, productGroupIDsPerPosition map[string][]string, groupIDsForCustomer []string, roundTo float64) OrderDiscounts {
+func calculateDiscountsBuyXGetY(articleCollection *ArticleCollection, priceRuleVoucherPair RuleVoucherPair, orderDiscounts OrderDiscounts, productGroupIDsPerPosition map[string][]string, groupIDsForCustomer []string, roundTo float64, isCatalogCalculation bool) OrderDiscounts {
 	log.Println("=== calculateDiscountsBuyXGetY ...")
 	if priceRuleVoucherPair.Rule.Action != ActionBuyXGetY {
 		panic("CalculateDiscountsBuyXGetY called with pricerule of action " + priceRuleVoucherPair.Rule.Action)
 	}
 
 	for _, article := range articleCollection.Articles {
-		ok, _ := validatePriceRuleForPosition(*priceRuleVoucherPair.Rule, articleCollection, article, productGroupIDsPerPosition, groupIDsForCustomer)
+		ok, _ := validatePriceRuleForPosition(*priceRuleVoucherPair.Rule, articleCollection, article, productGroupIDsPerPosition, groupIDsForCustomer, isCatalogCalculation)
 
 		orderDiscountsForPosition := orderDiscounts[article.ID]
 		if !orderDiscounts[article.ID].StopApplyingDiscounts && ok && !previouslyAppliedExclusionInPlace(priceRuleVoucherPair.Rule, orderDiscountsForPosition) {

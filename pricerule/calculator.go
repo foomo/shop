@@ -91,6 +91,8 @@ type RuleVoucherPair struct {
 	Voucher *Voucher
 }
 
+var cache = NewCache()
+
 //------------------------------------------------------------------
 // ~ PUBLIC METHODS
 //------------------------------------------------------------------
@@ -110,6 +112,7 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 		groupIDsForCustomer = []string{}
 	}
 
+	timeTrack(now, "groups data took ")
 	// find applicable pricerules - auto promotions
 	promotionPriceRules, err := GetValidPriceRulesForPromotions([]Type{TypePromotionCustomer, TypePromotionProduct, TypePromotionOrder}, customProvider)
 
@@ -122,6 +125,8 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 		*rule = promotionRule
 		ruleVoucherPairs = append(ruleVoucherPairs, RuleVoucherPair{Rule: rule, Voucher: nil})
 	}
+
+	timeTrack(now, "loading pricerules took ")
 
 	// find applicable payment discounts
 	var paymentPriceRules []PriceRule
@@ -137,6 +142,7 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 			ruleVoucherPairs = append(ruleVoucherPairs, RuleVoucherPair{Rule: rule, Voucher: nil})
 		}
 	}
+	timeTrack(now, "loading pricerules took ")
 
 	orderDiscounts := NewOrderDiscounts(articleCollection)
 	summary := &OrderDiscountSummary{
@@ -156,7 +162,7 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 		pair := RuleVoucherPair{}
 		pair = priceRulePair
 		//apply them
-		orderDiscounts = calculateRule(orderDiscounts, pair, articleCollection, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
+		orderDiscounts = calculateRule(orderDiscounts, pair, articleCollection, productGroupIDsPerPosition, groupIDsForCustomer, roundTo, false)
 	}
 
 	//find the vouchers and voucher rules
@@ -190,7 +196,7 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 		//apply them
 
 		for _, priceRulePair := range ruleVoucherPairsStep2 {
-			orderDiscounts = calculateRule(orderDiscounts, priceRulePair, articleCollection, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
+			orderDiscounts = calculateRule(orderDiscounts, priceRulePair, articleCollection, productGroupIDsPerPosition, groupIDsForCustomer, roundTo, false)
 		}
 	}
 	timeTrack(nowAll, "All rules together")
@@ -230,25 +236,100 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 	return orderDiscounts, summary, nil
 }
 
-func calculateRule(orderDiscounts OrderDiscounts, priceRulePair RuleVoucherPair, articleCollection *ArticleCollection, productGroupIDsPerPosition map[string][]string, groupIDsForCustomer []string, roundTo float64) OrderDiscounts {
-	ok, priceRuleFailReason := validatePriceRuleForOrder(*priceRulePair.Rule, articleCollection, productGroupIDsPerPosition, groupIDsForCustomer)
+// ApplyDiscountsOnCatalog applies all possible discounts on articleCollection ... if voucherCodes is "" the voucher is not applied
+// This is not yet used. ApplyDiscounts should at some point be able to consider previousle calculated discounts
+func ApplyDiscountsOnCatalog(articleCollection *ArticleCollection, existingDiscounts OrderDiscounts, voucherCodes []string, paymentMethod string, roundTo float64, customProvider PriceRuleCustomProvider) (OrderDiscounts, *OrderDiscountSummary, error) {
+
+	var ruleVoucherPairs []RuleVoucherPair
+	now := time.Now()
+	/*err := cache.InitCache()
+
+	if err != nil {
+		return nil, nil, err
+	}*/
+	timeTrack(now, "cache loading took")
+	//find the groupIds for articleCollection items
+	productGroupIDsPerPosition := getProductGroupIDsPerPosition(articleCollection)
+	timeTrack(now, "loading of productGroupIDsPerPosition took")
+
+	//find groups for customer
+	groupIDsForCustomer := GetGroupsIDSForItem(articleCollection.CustomerType, CustomerGroup)
+	if len(groupIDsForCustomer) == 0 {
+		groupIDsForCustomer = []string{}
+	}
+	timeTrack(now, "loading of groupIDsForCustomer took")
+
+	// find applicable pricerules - auto promotions
+	promotionPriceRules, err := GetValidPriceRulesForPromotions([]Type{TypePromotionCustomer, TypePromotionProduct}, customProvider)
+
+	timeTrack(now, "loading pricerules took ")
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for _, promotionRule := range promotionPriceRules {
+		rule := &PriceRule{}
+		*rule = promotionRule
+		ruleVoucherPairs = append(ruleVoucherPairs, RuleVoucherPair{Rule: rule, Voucher: nil})
+	}
+
+	orderDiscounts := NewOrderDiscounts(articleCollection)
+	summary := &OrderDiscountSummary{
+		AppliedVoucherCodes: []string{},
+		AppliedVoucherIDs:   []string{},
+		VoucherDiscounts:    map[string]VoucherDiscount{},
+	}
+	timeTrack(now, "preparations took ")
+	nowAll := time.Now()
+
+	// ~ PRICERULE PAIR SORTING - BY PRIORITY - higher priority means it is applied first
+	sort.Sort(ByPriority(ruleVoucherPairs))
+
+	//first loop where all promotion discounts are applied
+
+	for _, priceRulePair := range ruleVoucherPairs {
+		pair := RuleVoucherPair{}
+		pair = priceRulePair
+		//apply them
+		orderDiscounts = calculateRule(orderDiscounts, pair, articleCollection, productGroupIDsPerPosition, groupIDsForCustomer, roundTo, true)
+	}
+
+	timeTrack(nowAll, "All rules together")
+	for _, orderDiscount := range orderDiscounts {
+		summary.TotalDiscount += orderDiscount.TotalDiscountAmount
+		summary.TotalDiscountApplicable += orderDiscount.TotalDiscountAmountApplicable
+		for _, appliedDiscount := range orderDiscount.AppliedDiscounts {
+			summary.AppliedPriceRuleIDs = append(summary.AppliedPriceRuleIDs, appliedDiscount.PriceRuleID)
+		}
+	}
+	summary.TotalDiscountPercentage = summary.TotalDiscount / getOrderTotal(articleCollection) * 100.0
+	summary.TotalDiscountApplicablePercentage = summary.TotalDiscountApplicable / getOrderTotal(articleCollection) * 100.0
+
+	summary.AppliedPriceRuleIDs = RemoveDuplicates(summary.AppliedPriceRuleIDs)
+	summary.AppliedVoucherIDs = []string{}
+	summary.AppliedVoucherCodes = []string{}
+	return orderDiscounts, summary, nil
+}
+
+func calculateRule(orderDiscounts OrderDiscounts, priceRulePair RuleVoucherPair, articleCollection *ArticleCollection, productGroupIDsPerPosition map[string][]string, groupIDsForCustomer []string, roundTo float64, isCatalogCalculation bool) OrderDiscounts {
+	ok, priceRuleFailReason := validatePriceRuleForOrder(*priceRulePair.Rule, articleCollection, productGroupIDsPerPosition, groupIDsForCustomer, isCatalogCalculation)
 	//ok, _ := validatePriceRuleForOrder(*priceRulePair.Rule, articleCollection, productGroupIDsPerPosition, groupIDsForCustomer)
 	nowOne := time.Now()
 
 	if ok {
 		switch priceRulePair.Rule.Action {
 		case ActionItemByAbsolute:
-			orderDiscounts = calculateDiscountsItemByAbsolute(articleCollection, priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
+			orderDiscounts = calculateDiscountsItemByAbsolute(articleCollection, priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo, isCatalogCalculation)
 		case ActionItemByPercent:
-			orderDiscounts = calculateDiscountsItemByPercent(articleCollection, priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
+			orderDiscounts = calculateDiscountsItemByPercent(articleCollection, priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo, isCatalogCalculation)
 		case ActionCartByAbsolute:
-			orderDiscounts = calculateDiscountsCartByAbsolute(articleCollection, priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
+			orderDiscounts = calculateDiscountsCartByAbsolute(articleCollection, priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo, isCatalogCalculation)
 		case ActionCartByPercent:
-			orderDiscounts = calculateDiscountsCartByPercentage(articleCollection, priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
+			orderDiscounts = calculateDiscountsCartByPercentage(articleCollection, priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo, isCatalogCalculation)
 		case ActionBuyXGetY:
-			orderDiscounts = calculateDiscountsBuyXGetY(articleCollection, priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
+			orderDiscounts = calculateDiscountsBuyXGetY(articleCollection, priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo, isCatalogCalculation)
 		case ActionScaled:
-			orderDiscounts = calculateScaledDiscounts(articleCollection, priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo)
+			orderDiscounts = calculateScaledDiscounts(articleCollection, priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo, isCatalogCalculation)
 		}
 		log.Println(":-) Applied " + priceRulePair.Rule.ID)
 		timeTrack(nowOne, priceRulePair.Rule.ID)
@@ -359,39 +440,40 @@ func NewOrderDiscounts(articleCollection *ArticleCollection) OrderDiscounts {
 }
 
 // ValidatePriceRuleForOrder -
-func validatePriceRuleForOrder(priceRule PriceRule, articleCollection *ArticleCollection, productGroupIDsPerPosition map[string][]string, customerGroupIDs []string) (ok bool, reason TypeRuleValidationMsg) {
-	return validatePriceRule(priceRule, articleCollection, nil, productGroupIDsPerPosition, customerGroupIDs)
+func validatePriceRuleForOrder(priceRule PriceRule, articleCollection *ArticleCollection, productGroupIDsPerPosition map[string][]string, customerGroupIDs []string, isCatalogCalculation bool) (ok bool, reason TypeRuleValidationMsg) {
+	return validatePriceRule(priceRule, articleCollection, nil, productGroupIDsPerPosition, customerGroupIDs, isCatalogCalculation)
 }
 
 // ValidatePriceRuleForPosition -
-func validatePriceRuleForPosition(priceRule PriceRule, articleCollection *ArticleCollection, article *Article, productGroupIDsPerPosition map[string][]string, customerGroupIDs []string) (ok bool, reason TypeRuleValidationMsg) {
-	return validatePriceRule(priceRule, articleCollection, article, productGroupIDsPerPosition, customerGroupIDs)
+func validatePriceRuleForPosition(priceRule PriceRule, articleCollection *ArticleCollection, article *Article, productGroupIDsPerPosition map[string][]string, customerGroupIDs []string, isCatalogCalculation bool) (ok bool, reason TypeRuleValidationMsg) {
+	return validatePriceRule(priceRule, articleCollection, article, productGroupIDsPerPosition, customerGroupIDs, isCatalogCalculation)
 }
 
 // validatePriceRule -
-func validatePriceRule(priceRule PriceRule, articleCollection *ArticleCollection, checkedPosition *Article, productGroupIDsPerPosition map[string][]string, customerGroupIDs []string) (ok bool, reason TypeRuleValidationMsg) {
-	if priceRule.MaxUses <= priceRule.UsageHistory.TotalUsages {
-		return false, ValidationPriceRuleMaxUsages
-	}
-	// if we have the use and the customer history usage ... check ...
-	if customerUsages, ok := priceRule.UsageHistory.UsagesPerCustomer[articleCollection.CustomerID]; ok && len(articleCollection.CustomerID) > 0 {
-		if priceRule.MaxUsesPerCustomer <= customerUsages {
-			return false, ValidationPriceRuleMaxUsagesPerCustomer
+func validatePriceRule(priceRule PriceRule, articleCollection *ArticleCollection, checkedPosition *Article, productGroupIDsPerPosition map[string][]string, customerGroupIDs []string, isCatalogCalculation bool) (ok bool, reason TypeRuleValidationMsg) {
+	if !isCatalogCalculation {
+		if priceRule.MaxUses <= priceRule.UsageHistory.TotalUsages {
+			return false, ValidationPriceRuleMaxUsages
 		}
-	}
-
-	if priceRule.MinOrderAmount > 0.0 {
-		if priceRule.MinOrderAmountApplicableItemsOnly {
-			if priceRule.MinOrderAmount > getOrderTotalForPriceRule(&priceRule, articleCollection, productGroupIDsPerPosition, customerGroupIDs, nil) {
-				return false, ValidationPriceRuleMinimumAmount
-			}
-		} else {
-			if priceRule.MinOrderAmount > getOrderTotal(articleCollection) {
-				return false, ValidationPriceRuleMinimumAmount
+		// if we have the use and the customer history usage ... check ...
+		if customerUsages, ok := priceRule.UsageHistory.UsagesPerCustomer[articleCollection.CustomerID]; ok && len(articleCollection.CustomerID) > 0 {
+			if priceRule.MaxUsesPerCustomer <= customerUsages {
+				return false, ValidationPriceRuleMaxUsagesPerCustomer
 			}
 		}
-	}
 
+		if priceRule.MinOrderAmount > 0.0 {
+			if priceRule.MinOrderAmountApplicableItemsOnly {
+				if priceRule.MinOrderAmount > getOrderTotalForPriceRule(&priceRule, articleCollection, productGroupIDsPerPosition, customerGroupIDs, nil) {
+					return false, ValidationPriceRuleMinimumAmount
+				}
+			} else {
+				if priceRule.MinOrderAmount > getOrderTotal(articleCollection) {
+					return false, ValidationPriceRuleMinimumAmount
+				}
+			}
+		}
+	}
 	var productGroupIncludeMatchOK = false
 	var productGroupExcludeMatchOK = false
 	var customerGroupIncludeMatchOK = false
@@ -441,9 +523,11 @@ func validatePriceRule(priceRule PriceRule, articleCollection *ArticleCollection
 // get map of [ItemID] -> [groupID1, groupID2]
 func getProductGroupIDsPerPosition(articleCollection *ArticleCollection) map[string][]string {
 	//product groups per article
+
 	productGroupsPerPosition := make(map[string][]string) //ItemID -> []GroupID
 	for _, positionVo := range articleCollection.Articles {
 		productGroupsPerPosition[positionVo.ID] = GetGroupsIDSForItem(positionVo.ID, ProductGroup)
+
 	}
 	return productGroupsPerPosition
 }

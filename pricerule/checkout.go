@@ -100,7 +100,7 @@ func ValidateVoucher(voucherCode string, articleCollection *ArticleCollection) (
 	}
 	//find the groupIds for articleCollection items
 	productGroupIDsPerPosition := getProductGroupIDsPerPosition(articleCollection)
-	ok, priceRuleFailReason := validatePriceRuleForOrder(*voucherPriceRule, articleCollection, productGroupIDsPerPosition, groupIDsForCustomer)
+	ok, priceRuleFailReason := validatePriceRuleForOrder(*voucherPriceRule, articleCollection, productGroupIDsPerPosition, groupIDsForCustomer, false)
 	if !ok {
 		return false, priceRuleFailReason
 	}
@@ -168,7 +168,7 @@ func CommitDiscounts(orderDiscounts *OrderDiscounts, customerID string) error {
 //
 // alternatively use CommitDiscounts
 func CommitOrderDiscounts(customerID string, articleCollection *ArticleCollection, voucherCodes []string, paymentMethod string, roundTo float64) error {
-	orderDiscounts, _, err := ApplyDiscounts(articleCollection, nil,voucherCodes, paymentMethod, roundTo, nil)
+	orderDiscounts, _, err := ApplyDiscounts(articleCollection, nil, voucherCodes, paymentMethod, roundTo, nil)
 	if err != nil {
 		return err
 	}
@@ -220,7 +220,7 @@ func checkPreviouslyAppliedRules(voucherPriceRule *PriceRule, voucher *Voucher, 
 				found = true
 			}
 			for _, article := range articleCollection.Articles {
-				applicable, _ := validatePriceRuleForPosition(*ruleVoucherPair.Rule, articleCollection, article, productGroupIDsPerPosition, groupIDsForCustomer)
+				applicable, _ := validatePriceRuleForPosition(*ruleVoucherPair.Rule, articleCollection, article, productGroupIDsPerPosition, groupIDsForCustomer, false)
 				if applicable && ruleVoucherPair.Rule.Exclusive == true {
 					if found == false {
 						return false, ValidationPreviouslyAppliedRuleBlock

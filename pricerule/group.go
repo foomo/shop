@@ -137,37 +137,69 @@ func (group *Group) Upsert() error {
 		if err != nil {
 			return err
 		}
-
 	}
-
 	if err != nil {
 		return err
 	}
-	return nil
+	return cache.CacheAddGroupToItems(group.ItemIDs, group.ID, group.Type)
+
 }
 
 // Delete - delete group - ID must be set
 func (group *Group) Delete() error {
 	err := GetPersistorForObject(group).GetCollection().Remove(bson.M{"id": group.ID})
+	if err != nil {
+		return err
+	}
+	err = cache.CacheDeleteGroup(group)
 	group = nil
+
 	return err
 }
 
 // DeleteGroup -
 func DeleteGroup(ID string) error {
-	err := GetPersistorForObject(new(Group)).GetCollection().Remove(bson.M{"id": ID})
-	return err
+	group, err := GetGroupByID(ID, nil)
+	if err != nil {
+		group = nil
+	}
+
+	err = GetPersistorForObject(new(Group)).GetCollection().Remove(bson.M{"id": ID})
+	if err != nil {
+		return err
+	}
+
+	if group != nil {
+		err = cache.CacheDeleteGroup(group)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // RemoveAllGroups -
 func RemoveAllGroups() error {
 	p := GetPersistorForObject(new(Group))
 	_, err := p.GetCollection().RemoveAll(bson.M{})
+	if err != nil {
+		return err
+	}
+	if cache.enabled {
+		err = cache.InitCache()
+	}
 	return err
 }
 
 // GetGroupsIDSForItem -
 func GetGroupsIDSForItem(itemID string, groupType GroupType) []string {
+
+	// if we have the cache use it,
+	if groupIDs, ok := cache.groupsCache[groupType][itemID]; ok {
+		return groupIDs
+	}
+	//if no cache, retireve from mongo
+
 	p := GetPersistorForObject(new(Group))
 	query := bson.M{"itemids": bson.M{"$in": []string{itemID}}, "type": groupType}
 
