@@ -1,7 +1,7 @@
 package pricerule
 
 import (
-	"errors"
+	"fmt"
 	"sync"
 
 	"gopkg.in/mgo.v2/bson"
@@ -9,18 +9,17 @@ import (
 
 // Cache - the cache struct type
 type Cache struct {
-	groupsCache          map[GroupType]map[string][]string
-	loadGroupsCacheMutex *sync.Mutex
-	loadPriceRulesMutex  *sync.Mutex
-	validPriceRules      []PriceRule
-	enabled              bool
+	groupsCache            map[GroupType]map[string][]string
+	catalogValidRulesCache []PriceRule
+	cacheMutex             *sync.Mutex
+
+	enabled bool
 }
 
 // NewCache -
 func NewCache() *Cache {
 	c := &Cache{}
-	c.loadGroupsCacheMutex = &sync.Mutex{}
-
+	c.cacheMutex = &sync.Mutex{}
 	c.enabled = false
 	return c
 }
@@ -28,68 +27,50 @@ func NewCache() *Cache {
 // GetGroupsCache -
 func (c *Cache) GetGroupsCache() map[GroupType]map[string][]string {
 	return c.groupsCache
-
 }
 
-// InitCache - load groups data into memory
-func (c *Cache) InitCache() error {
-	return cache.loadGroupCacheByItem()
+// InitCatalogCalculationCache - load groups data into memory
+func (c *Cache) InitCatalogCalculationCache() error {
+	//synchronize code code
+	c.cacheMutex.Lock()
+	defer c.cacheMutex.Unlock()
+	catalogValidRulesCache, err := GetValidPriceRulesForPromotions([]Type{TypePromotionCustomer, TypePromotionProduct, TypePromotionOrder}, nil)
+	if err != nil {
+		return err
+	}
+	c.catalogValidRulesCache = catalogValidRulesCache
+	err = c.loadGroupCacheByItem()
+	if err != nil {
+		return err
+	}
+	c.enabled = true
+	return err
 }
 
 // ClearCache - will force the use of data from db
-func (c *Cache) ClearCache() {
+func (c *Cache) ClearCatalogCalculationCache() {
 	c.groupsCache = make(map[GroupType]map[string][]string)
+	c.catalogValidRulesCache = []PriceRule{}
 	c.enabled = false
 }
 
-// CacheAddGroupToItems -
-func (c *Cache) CacheAddGroupToItems(itemIDs []string, groupID string, groupType GroupType) error {
-	//synchronize code code
-	if !c.enabled {
-		return nil
-	}
-	c.loadGroupsCacheMutex.Lock()
-	defer cache.loadGroupsCacheMutex.Unlock()
-
-	for _, itemID := range itemIDs {
-		if _, ok := c.groupsCache[groupType]; ok {
-
-			if _, ok := cache.groupsCache[groupType][itemID]; ok {
-				c.groupsCache[groupType][itemID] = RemoveDuplicates(append(cache.groupsCache[groupType][itemID], groupID))
-			} else {
-				c.groupsCache[groupType][itemID] = []string{groupID}
-			}
-		} else {
-			// only if cached modify cached
-			c.groupsCache[groupType] = make(map[string][]string)
-			c.groupsCache[groupType][itemID] = []string{groupID}
+// GetGroupsIDSForItem - use cache or fallback to db retrieval
+func (c *Cache) GetGroupsIDSForItem(itemID string, groupType GroupType) []string {
+	// if we have the cache use it,
+	if c.enabled {
+		if groupIDs, ok := cache.groupsCache[groupType][itemID]; ok {
+			return groupIDs
 		}
-
 	}
-	return nil
+	return GetGroupsIDSForItem(itemID, groupType)
 }
 
-// CacheDeleteGroup -
-func (c *Cache) CacheDeleteGroup(group *Group) error {
-	if !c.enabled {
-		return nil
+// CachedGetValidProductAndCustomerPriceRules -
+func (c *Cache) CachedGetValidProductAndCustomerPriceRules(customProvider PriceRuleCustomProvider) ([]PriceRule, error) {
+	if c.enabled {
+		return c.catalogValidRulesCache, nil
 	}
-	//synchronize code code
-	c.loadGroupsCacheMutex.Lock()
-	defer cache.loadGroupsCacheMutex.Unlock()
-
-	if group != nil {
-		if _, ok := c.groupsCache[group.Type]; ok {
-			for _, itemID := range group.ItemIDs {
-				if _, ok := c.groupsCache[group.Type][itemID]; ok {
-					c.groupsCache[group.Type][itemID] = removeValueFromArray(group.ID, c.groupsCache[group.Type][itemID])
-				}
-			}
-		}
-		// the group type is not in the cache anyway
-		return nil
-	}
-	return errors.New("nil group passed to CacheDeleteGroup")
+	return GetValidPriceRulesForPromotions([]Type{TypePromotionCustomer, TypePromotionProduct}, customProvider)
 }
 
 // remove value from array - by value not index
@@ -104,9 +85,7 @@ func removeValueFromArray(val string, vals []string) []string {
 }
 
 func (c *Cache) loadGroupCacheByItem() error {
-	//synchronize code code
-	c.loadGroupsCacheMutex.Lock()
-	defer c.loadGroupsCacheMutex.Unlock()
+
 	tempMap := make(map[GroupType]map[string][]string)
 	for _, groupType := range []GroupType{ProductGroup, CustomerGroup} {
 		p := GetPersistorForObject(new(Group))
@@ -125,6 +104,8 @@ func (c *Cache) loadGroupCacheByItem() error {
 		if _, ok := tempMap[groupType]; ok {
 			tempMap[groupType] = make(map[string][]string)
 		}
+		fmt.Println("result")
+		fmt.Println(result)
 
 		for _, group := range result {
 			for _, itemID := range group.itemIDs {

@@ -1,6 +1,7 @@
 package pricerule
 
 import (
+	"fmt"
 	"time"
 
 	mgo "gopkg.in/mgo.v2"
@@ -141,7 +142,7 @@ func (group *Group) Upsert() error {
 	if err != nil {
 		return err
 	}
-	return cache.CacheAddGroupToItems(group.ItemIDs, group.ID, group.Type)
+	return nil
 
 }
 
@@ -151,29 +152,15 @@ func (group *Group) Delete() error {
 	if err != nil {
 		return err
 	}
-	err = cache.CacheDeleteGroup(group)
 	group = nil
-
-	return err
+	return nil
 }
 
 // DeleteGroup -
 func DeleteGroup(ID string) error {
-	group, err := GetGroupByID(ID, nil)
-	if err != nil {
-		group = nil
-	}
-
-	err = GetPersistorForObject(new(Group)).GetCollection().Remove(bson.M{"id": ID})
+	err := GetPersistorForObject(new(Group)).GetCollection().Remove(bson.M{"id": ID})
 	if err != nil {
 		return err
-	}
-
-	if group != nil {
-		err = cache.CacheDeleteGroup(group)
-		if err != nil {
-			return err
-		}
 	}
 	return nil
 }
@@ -185,21 +172,14 @@ func RemoveAllGroups() error {
 	if err != nil {
 		return err
 	}
-	if cache.enabled {
-		err = cache.InitCache()
-	}
-	return err
+	return nil
 }
 
 // GetGroupsIDSForItem -
 func GetGroupsIDSForItem(itemID string, groupType GroupType) []string {
 
-	// if we have the cache use it,
-	if groupIDs, ok := cache.groupsCache[groupType][itemID]; ok {
-		return groupIDs
-	}
 	//if no cache, retireve from mongo
-
+	fmt.Println("*****************itemID " + itemID)
 	p := GetPersistorForObject(new(Group))
 	query := bson.M{"itemids": bson.M{"$in": []string{itemID}}, "type": groupType}
 
@@ -218,7 +198,7 @@ func GetGroupsIDSForItem(itemID string, groupType GroupType) []string {
 	for _, val := range result {
 		ret = append(ret, val.ID)
 	}
-
+	fmt.Println(result)
 	return ret
 }
 

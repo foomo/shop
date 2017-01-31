@@ -67,6 +67,7 @@ var productsInGroups map[string][]string
 func init() {
 	fmt.Println("Initializing persistors...")
 	configuration.MONGO_URL = "mongodb://" + configuration.LocalUnitTests
+
 }
 
 func Init(t *testing.T) {
@@ -91,19 +92,16 @@ func Init(t *testing.T) {
 	checkVouchersExists(t)
 }
 
-func TestCache(t *testing.T) {
-	productsInGroups = make(map[string][]string)
-	productsInGroups[GroupIDSale] = []string{ProductID1, ProductID2, ProductID1SKU1, ProductID1SKU2, ProductID2SKU1, ProductID2SKU2}
-	productsInGroups[GroupIDNormal] = []string{ProductID4, ProductID5, ProductID4SKU1, ProductID4SKU2, ProductID5SKU1, ProductID5SKU2}
-	productsInGroups[GroupIDShirts] = []string{ProductID3, ProductID4, ProductID5, ProductID3SKU1, ProductID4SKU1, ProductID5SKU1, ProductID3SKU2, ProductID4SKU2, ProductID5SKU2}
+func testCache(t *testing.T) {
+	Init(t)
 
 	RemoveAllGroups()
 	RemoveAllPriceRules()
 	RemoveAllVouchers()
 
-	cache.InitCache()
-	fmt.Println("cache at start")
+	cache.InitCatalogCalculationCache()
 	spew.Dump(cache.GetGroupsCache())
+	cache.ClearCatalogCalculationCache()
 
 	for _, groupID := range []string{GroupIDSale, GroupIDNormal, GroupIDShirts} {
 		group := new(Group)
@@ -116,13 +114,14 @@ func TestCache(t *testing.T) {
 			t.Fatal("Could not upsert product group " + groupID)
 		}
 	}
+	cache.InitCatalogCalculationCache()
 	spew.Dump(cache.GetGroupsCache())
-
 }
 
 // Test groups creation
-func testScaled(t *testing.T) {
+func TestScaled(t *testing.T) {
 	//Init
+
 	RemoveAllGroups()
 	RemoveAllPriceRules()
 	groupID := "ProductsToScale"
@@ -143,7 +142,7 @@ func testScaled(t *testing.T) {
 	priceRule.Description = priceRule.Name
 	priceRule.Action = ActionScaled
 
-	priceRule.ScaledAmounts = append(priceRule.ScaledAmounts, ScaledAmountLevel{FromValue: 100.0, ToValue: 150.0, Amount: 10, IsScaledAmountPercentage: true})
+	priceRule.ScaledAmounts = append(priceRule.ScaledAmounts, ScaledAmountLevel{FromValue: 50.0, ToValue: 150.0, Amount: 10, IsScaledAmountPercentage: true})
 	priceRule.ScaledAmounts = append(priceRule.ScaledAmounts, ScaledAmountLevel{FromValue: 150.01, ToValue: 100000.0, Amount: 50, IsScaledAmountPercentage: true})
 
 	priceRule.MaxUses = 10
@@ -226,7 +225,7 @@ func testBuyXGetY(t *testing.T) {
 }
 
 // Test groups creation
-func TestExclude(t *testing.T) {
+func testExclude(t *testing.T) {
 	//remove all and add again
 	productsInGroups = make(map[string][]string)
 	productsInGroups[GroupIDSale] = []string{ProductID1, ProductID2, ProductID1SKU1, ProductID1SKU2, ProductID2SKU1, ProductID2SKU2}
@@ -266,7 +265,7 @@ func TestExclude(t *testing.T) {
 		panic(err)
 	}
 
-	productGroupIDsPerPosition := getProductGroupIDsPerPosition(orderVo)
+	productGroupIDsPerPosition := getProductGroupIDsPerPosition(orderVo, false)
 	//spew.Dump(productGroupIDsPerPosition)
 	for _, article := range orderVo.Articles {
 		ok, _ := validatePriceRuleForPosition(*priceRule, orderVo, article, productGroupIDsPerPosition, []string{}, false)
@@ -744,7 +743,6 @@ func createMockOrder(t *testing.T) (*ArticleCollection, error) {
 	for _, positionID := range []string{ProductID1SKU1, ProductID3SKU2} {
 		i++
 		positionVo := &Article{}
-
 		positionVo.ID = positionID
 		positionVo.Price = 100
 		positionVo.Quantity = 1

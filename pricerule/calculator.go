@@ -104,7 +104,7 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 	//fmt.Println("ApplyDiscounts with CustomerTye: ", articleCollection.CustomerType)
 	now := time.Now()
 	//find the groupIds for articleCollection items
-	productGroupIDsPerPosition := getProductGroupIDsPerPosition(articleCollection)
+	productGroupIDsPerPosition := getProductGroupIDsPerPosition(articleCollection, false)
 
 	//find groups for customer
 	groupIDsForCustomer := GetGroupsIDSForItem(articleCollection.CustomerType, CustomerGroup)
@@ -249,18 +249,18 @@ func ApplyDiscountsOnCatalog(articleCollection *ArticleCollection, existingDisco
 	}*/
 	timeTrack(now, "cache loading took")
 	//find the groupIds for articleCollection items
-	productGroupIDsPerPosition := getProductGroupIDsPerPosition(articleCollection)
+	productGroupIDsPerPosition := getProductGroupIDsPerPosition(articleCollection, true)
 	timeTrack(now, "loading of productGroupIDsPerPosition took")
 
 	//find groups for customer
-	groupIDsForCustomer := GetGroupsIDSForItem(articleCollection.CustomerType, CustomerGroup)
+	groupIDsForCustomer := cache.GetGroupsIDSForItem(articleCollection.CustomerType, CustomerGroup)
 	if len(groupIDsForCustomer) == 0 {
 		groupIDsForCustomer = []string{}
 	}
 	timeTrack(now, "loading of groupIDsForCustomer took")
 
 	// find applicable pricerules - auto promotions
-	promotionPriceRules, err := GetValidPriceRulesForPromotions([]Type{TypePromotionCustomer, TypePromotionProduct}, customProvider)
+	promotionPriceRules, err := cache.CachedGetValidProductAndCustomerPriceRules(customProvider)
 
 	timeTrack(now, "loading pricerules took ")
 	if err != nil {
@@ -296,14 +296,14 @@ func ApplyDiscountsOnCatalog(articleCollection *ArticleCollection, existingDisco
 
 	timeTrack(nowAll, "All rules together")
 	for _, orderDiscount := range orderDiscounts {
-		summary.TotalDiscount += orderDiscount.TotalDiscountAmount
-		summary.TotalDiscountApplicable += orderDiscount.TotalDiscountAmountApplicable
+		//summary.TotalDiscount += orderDiscount.TotalDiscountAmount
+		//summary.TotalDiscountApplicable += orderDiscount.TotalDiscountAmountApplicable
 		for _, appliedDiscount := range orderDiscount.AppliedDiscounts {
 			summary.AppliedPriceRuleIDs = append(summary.AppliedPriceRuleIDs, appliedDiscount.PriceRuleID)
 		}
 	}
-	summary.TotalDiscountPercentage = summary.TotalDiscount / getOrderTotal(articleCollection) * 100.0
-	summary.TotalDiscountApplicablePercentage = summary.TotalDiscountApplicable / getOrderTotal(articleCollection) * 100.0
+	//summary.TotalDiscountPercentage = summary.TotalDiscount / getOrderTotal(articleCollection) * 100.0
+	//summary.TotalDiscountApplicablePercentage = summary.TotalDiscountApplicable / getOrderTotal(articleCollection) * 100.0
 
 	summary.AppliedPriceRuleIDs = RemoveDuplicates(summary.AppliedPriceRuleIDs)
 	summary.AppliedVoucherIDs = []string{}
@@ -521,13 +521,16 @@ func validatePriceRule(priceRule PriceRule, articleCollection *ArticleCollection
 }
 
 // get map of [ItemID] -> [groupID1, groupID2]
-func getProductGroupIDsPerPosition(articleCollection *ArticleCollection) map[string][]string {
+func getProductGroupIDsPerPosition(articleCollection *ArticleCollection, isCatalogCalculation bool) map[string][]string {
 	//product groups per article
 
 	productGroupsPerPosition := make(map[string][]string) //ItemID -> []GroupID
 	for _, positionVo := range articleCollection.Articles {
-		productGroupsPerPosition[positionVo.ID] = GetGroupsIDSForItem(positionVo.ID, ProductGroup)
-
+		if isCatalogCalculation == true {
+			productGroupsPerPosition[positionVo.ID] = cache.GetGroupsIDSForItem(positionVo.ID, ProductGroup)
+		} else {
+			productGroupsPerPosition[positionVo.ID] = GetGroupsIDSForItem(positionVo.ID, ProductGroup)
+		}
 	}
 	return productGroupsPerPosition
 }

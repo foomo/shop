@@ -99,7 +99,7 @@ func ValidateVoucher(voucherCode string, articleCollection *ArticleCollection) (
 		groupIDsForCustomer = []string{}
 	}
 	//find the groupIds for articleCollection items
-	productGroupIDsPerPosition := getProductGroupIDsPerPosition(articleCollection)
+	productGroupIDsPerPosition := getProductGroupIDsPerPosition(articleCollection, false)
 	ok, priceRuleFailReason := validatePriceRuleForOrder(*voucherPriceRule, articleCollection, productGroupIDsPerPosition, groupIDsForCustomer, false)
 	if !ok {
 		return false, priceRuleFailReason
