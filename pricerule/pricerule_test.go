@@ -67,7 +67,7 @@ var productsInGroups map[string][]string
 func init() {
 	fmt.Println("Initializing persistors...")
 	configuration.MONGO_URL = "mongodb://" + configuration.LocalUnitTests
-
+	fmt.Println(configuration.MONGO_URL)
 }
 
 func Init(t *testing.T) {
@@ -92,16 +92,16 @@ func Init(t *testing.T) {
 	checkVouchersExists(t)
 }
 
-func testCache(t *testing.T) {
+func TestCache(t *testing.T) {
 	Init(t)
 
 	RemoveAllGroups()
 	RemoveAllPriceRules()
 	RemoveAllVouchers()
 
-	cache.InitCatalogCalculationCache()
-	spew.Dump(cache.GetGroupsCache())
-	cache.ClearCatalogCalculationCache()
+	//cache.InitCatalogCalculationCache()
+	//spew.Dump(cache.GetGroupsCache())
+	//cache.ClearCatalogCalculationCache()
 
 	for _, groupID := range []string{GroupIDSale, GroupIDNormal, GroupIDShirts} {
 		group := new(Group)
@@ -114,12 +114,52 @@ func testCache(t *testing.T) {
 			t.Fatal("Could not upsert product group " + groupID)
 		}
 	}
+
+	groupID := "ProductsToScale"
+	//createGroup
+	group := new(Group)
+	group.Type = ProductGroup
+	group.ID = groupID
+	group.Name = groupID
+
+	//create pricerule
+	priceRule := NewPriceRule(PriceRuleIDSale)
+	priceRule.Name = map[string]string{
+		"de": PriceRuleIDSale,
+		"fr": PriceRuleIDSale,
+		"it": PriceRuleIDSale,
+	}
+	priceRule.Type = TypePromotionProduct
+	priceRule.Description = priceRule.Name
+	priceRule.Action = ActionItemByAbsolute
+	priceRule.Amount = 10
+	priceRule.IncludedProductGroupIDS = []string{groupID}
+	priceRule.IncludedCustomerGroupIDS = []string{}
+	priceRule.Upsert()
+	//insert as well
+	group.AddGroupItemIDs([]string{ProductID1SKU1})
+
+	err := group.Upsert()
+	if err != nil {
+		log.Println(err)
+	}
+
 	cache.InitCatalogCalculationCache()
-	spew.Dump(cache.GetGroupsCache())
+	//spew.Dump(cache.GetGroupsCache())
+
+	//create articleCollection
+	orderVo, err := createMockOrderScaled(t)
+	if err != nil {
+		panic(err)
+	}
+
+	discountsVo, summary, err := ApplyDiscountsOnCatalog(orderVo, nil, []string{""}, "", 0.05, nil)
+	spew.Dump(discountsVo, summary, err)
+
 }
 
 // Test groups creation
-func TestScaled(t *testing.T) {
+func testScaled(t *testing.T) {
 	//Init
 
 	RemoveAllGroups()
@@ -142,15 +182,15 @@ func TestScaled(t *testing.T) {
 	priceRule.Description = priceRule.Name
 	priceRule.Action = ActionScaled
 
-	priceRule.ScaledAmounts = append(priceRule.ScaledAmounts, ScaledAmountLevel{FromValue: 50.0, ToValue: 150.0, Amount: 10, IsScaledAmountPercentage: true})
-	priceRule.ScaledAmounts = append(priceRule.ScaledAmounts, ScaledAmountLevel{FromValue: 150.01, ToValue: 100000.0, Amount: 50, IsScaledAmountPercentage: true})
+	priceRule.ScaledAmounts = append(priceRule.ScaledAmounts, ScaledAmountLevel{FromValue: 50.0, ToValue: 150.0, Amount: 12, IsScaledAmountPercentage: true})
+	priceRule.ScaledAmounts = append(priceRule.ScaledAmounts, ScaledAmountLevel{FromValue: 150.01, ToValue: 100000.0, Amount: 55, IsScaledAmountPercentage: true})
 
 	priceRule.MaxUses = 10
 	priceRule.MaxUsesPerCustomer = 10
 	priceRule.WhichXYFree = XYCheapestFree
 	priceRule.IncludedProductGroupIDS = []string{groupID}
 	priceRule.IncludedCustomerGroupIDS = []string{}
-
+	priceRule.Upsert()
 	//insert as well
 	group.AddGroupItemIDs([]string{ProductID1SKU1})
 

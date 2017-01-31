@@ -1,9 +1,9 @@
 package pricerule
 
 import (
-	"fmt"
 	"sync"
 
+	"github.com/davecgh/go-spew/spew"
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -34,15 +34,18 @@ func (c *Cache) InitCatalogCalculationCache() error {
 	//synchronize code code
 	c.cacheMutex.Lock()
 	defer c.cacheMutex.Unlock()
+
+	err := c.loadGroupCacheByItem()
+	if err != nil {
+		return err
+	}
+
 	catalogValidRulesCache, err := GetValidPriceRulesForPromotions([]Type{TypePromotionCustomer, TypePromotionProduct, TypePromotionOrder}, nil)
 	if err != nil {
 		return err
 	}
 	c.catalogValidRulesCache = catalogValidRulesCache
-	err = c.loadGroupCacheByItem()
-	if err != nil {
-		return err
-	}
+
 	c.enabled = true
 	return err
 }
@@ -88,27 +91,23 @@ func (c *Cache) loadGroupCacheByItem() error {
 
 	tempMap := make(map[GroupType]map[string][]string)
 	for _, groupType := range []GroupType{ProductGroup, CustomerGroup} {
-		p := GetPersistorForObject(new(Group))
-		query := bson.M{"type": groupType}
-		var result []struct {
-			ID      string   `bson:"id"`
-			Name    string   `bson:"name"`
-			itemIDs []string `bson:"itemids"`
-		}
 
-		err := p.GetCollection().Find(query).Select(bson.M{"id": 1}).Sort("priority").All(&result)
+		p := GetPersistorForObject(&Group{})
+		query := bson.M{"type": groupType}
+
+		var result = []Group{}
+
+		err := p.GetCollection().Find(query).Sort("priority").All(&result)
 		if err != nil {
 			return err
 		}
 
-		if _, ok := tempMap[groupType]; ok {
+		if _, ok := tempMap[groupType]; !ok {
 			tempMap[groupType] = make(map[string][]string)
 		}
-		fmt.Println("result")
-		fmt.Println(result)
 
 		for _, group := range result {
-			for _, itemID := range group.itemIDs {
+			for _, itemID := range group.ItemIDs {
 
 				// if we have a key already append
 				if _, ok := tempMap[groupType][itemID]; ok {
@@ -122,6 +121,7 @@ func (c *Cache) loadGroupCacheByItem() error {
 
 	}
 	c.groupsCache = tempMap
+	spew.Dump(tempMap)
 	c.enabled = true
 	return nil
 }

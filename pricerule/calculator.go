@@ -316,7 +316,7 @@ func calculateRule(orderDiscounts OrderDiscounts, priceRulePair RuleVoucherPair,
 	//ok, _ := validatePriceRuleForOrder(*priceRulePair.Rule, articleCollection, productGroupIDsPerPosition, groupIDsForCustomer)
 	nowOne := time.Now()
 
-	if ok {
+	if ok == true {
 		switch priceRulePair.Rule.Action {
 		case ActionItemByAbsolute:
 			orderDiscounts = calculateDiscountsItemByAbsolute(articleCollection, priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo, isCatalogCalculation)

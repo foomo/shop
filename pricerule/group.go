@@ -1,7 +1,6 @@
 package pricerule
 
 import (
-	"fmt"
 	"time"
 
 	mgo "gopkg.in/mgo.v2"
@@ -27,9 +26,9 @@ type GroupType string
 type Group struct {
 	Type           GroupType
 	BsonID         bson.ObjectId `bson:"_id,omitempty"`
-	ID             string        //group id - referenced by PriceRule (s)
+	ID             string        `bson:"id"` //group id - referenced by PriceRule (s)
 	Name           string        //group name
-	ItemIDs        []string      //list of product IDs or customer IDs in assigned to the group
+	ItemIDs        []string      `bson:"itemids"` //list of product IDs or customer IDs in assigned to the group
 	CreatedAt      time.Time
 	LastModifiedAt time.Time
 	Custom         interface{} `bson:",omitempty"` //make it extensible if needed
@@ -179,7 +178,7 @@ func RemoveAllGroups() error {
 func GetGroupsIDSForItem(itemID string, groupType GroupType) []string {
 
 	//if no cache, retireve from mongo
-	fmt.Println("*****************itemID " + itemID)
+
 	p := GetPersistorForObject(new(Group))
 	query := bson.M{"itemids": bson.M{"$in": []string{itemID}}, "type": groupType}
 
@@ -198,7 +197,6 @@ func GetGroupsIDSForItem(itemID string, groupType GroupType) []string {
 	for _, val := range result {
 		ret = append(ret, val.ID)
 	}
-	fmt.Println(result)
 	return ret
 }
 
