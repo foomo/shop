@@ -93,6 +93,14 @@ type RuleVoucherPair struct {
 
 var cache = NewCache()
 
+func InitCache() {
+	cache.InitCatalogCalculationCache()
+}
+
+func ClearCache() {
+	cache.ClearCatalogCalculationCache()
+}
+
 //------------------------------------------------------------------
 // ~ PUBLIC METHODS
 //------------------------------------------------------------------
