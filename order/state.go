@@ -13,22 +13,22 @@ const (
 	OrderStatusShipped               string = "OrderStatusShipped"
 	OrderStatusWaitingForStorePickUp string = "OrderStatusWaitingForStorePickUp"
 	OrderStatusComplete              string = "OrderStatusComplete"
-	OrderStatusFullReturn            string = "OrderStatusFullReturn"
-	OrderStatusPartialReturn         string = "OrderStatusPartialReturn"
+	OrderStatusReturn                string = "OrderStatusReturn"
 	OrderStatusCanceled              string = "OrderStatusCanceled"
-	OrderStatusPartiallyCanceled     string = "OrderStatusPartiallyCanceled"
 )
 
 var transitions = map[string][]string{
 	OrderStatusInvalid:               []string{state.WILDCARD},
 	OrderStatusCart:                  []string{OrderStatusConfirmed, OrderStatusInvalid},
 	OrderStatusConfirmed:             []string{OrderStatusTransmitted, OrderStatusInvalid, OrderStatusCanceled},
-	OrderStatusTransmitted:           []string{OrderStatusInProgress, OrderStatusInvalid, OrderStatusCanceled, OrderStatusPartiallyCanceled},
-	OrderStatusInProgress:            []string{OrderStatusPartiallyShipped, OrderStatusShipped, OrderStatusInvalid, OrderStatusCanceled, OrderStatusPartiallyCanceled},
-	OrderStatusShipped:               []string{OrderStatusWaitingForStorePickUp, OrderStatusComplete, OrderStatusInvalid, OrderStatusCanceled, OrderStatusPartiallyCanceled},
+	OrderStatusTransmitted:           []string{OrderStatusInProgress, OrderStatusInvalid, OrderStatusCanceled},
+	OrderStatusInProgress:            []string{OrderStatusPartiallyShipped, OrderStatusShipped, OrderStatusInvalid, OrderStatusCanceled},
+	OrderStatusShipped:               []string{OrderStatusWaitingForStorePickUp, OrderStatusComplete, OrderStatusInvalid, OrderStatusCanceled},
+	OrderStatusPartiallyShipped:      []string{OrderStatusWaitingForStorePickUp, OrderStatusShipped, OrderStatusInvalid, OrderStatusCanceled},
 	OrderStatusWaitingForStorePickUp: []string{OrderStatusComplete, OrderStatusInvalid, OrderStatusCanceled},
-	OrderStatusPartiallyShipped:      []string{OrderStatusWaitingForStorePickUp, OrderStatusShipped, OrderStatusInvalid, OrderStatusCanceled, OrderStatusPartiallyCanceled},
-	OrderStatusComplete:              []string{OrderStatusFullReturn, OrderStatusPartialReturn},
+	OrderStatusComplete:              []string{OrderStatusReturn},
+	OrderStatusReturn:                []string{OrderStatusInvalid},
+	OrderStatusCanceled:              []string{OrderStatusInvalid},
 }
 
 // blueprints for possible states
@@ -57,10 +57,28 @@ var blueprints = map[string]state.BluePrint{
 		Description: "Order has been transmitted to external system.",
 		Initial:     false,
 	},
+	OrderStatusInProgress: state.BluePrint{
+		Type:        StateType,
+		Key:         OrderStatusInProgress,
+		Description: "Order is being processed.",
+		Initial:     false,
+	},
 	OrderStatusShipped: state.BluePrint{
 		Type:        StateType,
 		Key:         OrderStatusShipped,
 		Description: "Order has been shipped.",
+		Initial:     false,
+	},
+	OrderStatusPartiallyShipped: state.BluePrint{
+		Type:        StateType,
+		Key:         OrderStatusPartiallyShipped,
+		Description: "Order has been partially shipped.",
+		Initial:     false,
+	},
+	OrderStatusWaitingForStorePickUp: state.BluePrint{
+		Type:        StateType,
+		Key:         OrderStatusWaitingForStorePickUp,
+		Description: "Order is ready to be picked up in store.",
 		Initial:     false,
 	},
 	OrderStatusComplete: state.BluePrint{
@@ -69,22 +87,16 @@ var blueprints = map[string]state.BluePrint{
 		Description: "Order has been completed.",
 		Initial:     false,
 	},
+	OrderStatusReturn: state.BluePrint{
+		Type:        StateType,
+		Key:         OrderStatusReturn,
+		Description: "At least one item of the order has been returned.",
+		Initial:     false,
+	},
 	OrderStatusCanceled: state.BluePrint{
 		Type:        StateType,
 		Key:         OrderStatusCanceled,
 		Description: "Order has been canceled.",
-		Initial:     false,
-	},
-	OrderStatusPartiallyCanceled: state.BluePrint{
-		Type:        StateType,
-		Key:         OrderStatusPartiallyCanceled,
-		Description: "Order has been partially canceled.",
-		Initial:     false,
-	},
-	OrderStatusWaitingForStorePickUp: state.BluePrint{
-		Type:        StateType,
-		Key:         OrderStatusWaitingForStorePickUp,
-		Description: "Order is ready to be picked up in store.",
 		Initial:     false,
 	},
 }
