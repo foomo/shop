@@ -38,9 +38,8 @@ const (
 	ActionValidation             ActionOrder  = "actionValidation"
 	OrderTypeOrder               OrderType    = "order"
 	OrderTypeReturn              OrderType    = "return"
-	LanguageCodeGerman           LanguageCode = "DE"
-	LanguageCodeFrench           LanguageCode = "FR"
-	LanguageCodeItalian          LanguageCode = "IT"
+	LanguageCodeGerman           LanguageCode = "de"
+	LanguageCodeFrench           LanguageCode = "fr"
 )
 
 //------------------------------------------------------------------
