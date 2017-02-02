@@ -3,29 +3,31 @@ package order
 import "github.com/foomo/shop/state"
 
 const (
-	StateType                   string = "OrderStatus"
-	OrderStatusInvalid          string = "OrderStatusInvalid"
-	OrderStatusCart             string = "OrderStatusCart"
-	OrderStatusConfirmed        string = "OrderStatusConfirmed"
-	OrderStatusTransmitted      string = "OrderStatusTransmitted"
-	OrderStatusInProgress       string = "OrderStatusInProgress"
-	OrderStatusPartiallyShipped string = "OrderStatusPartiallyShipped"
-	OrderStatusShipped          string = "OrderStatusShipped"
-	OrderStatusComplete         string = "OrderStatusComplete"
-	OrderStatusFullReturn       string = "OrderStatusFullReturn"
-	OrderStatusPartialReturn    string = "OrderStatusPartialReturn"
-	OrderStatusCanceled         string = "OrderStatusCanceled"
+	StateType                        string = "OrderStatus"
+	OrderStatusInvalid               string = "OrderStatusInvalid"
+	OrderStatusCart                  string = "OrderStatusCart"
+	OrderStatusConfirmed             string = "OrderStatusConfirmed"
+	OrderStatusTransmitted           string = "OrderStatusTransmitted"
+	OrderStatusInProgress            string = "OrderStatusInProgress"
+	OrderStatusPartiallyShipped      string = "OrderStatusPartiallyShipped"
+	OrderStatusShipped               string = "OrderStatusShipped"
+	OrderStatusWaitingForStorePickUp string = "OrderStatusWaitingForStorePickUp"
+	OrderStatusComplete              string = "OrderStatusComplete"
+	OrderStatusFullReturn            string = "OrderStatusFullReturn"
+	OrderStatusPartialReturn         string = "OrderStatusPartialReturn"
+	OrderStatusCanceled              string = "OrderStatusCanceled"
 )
 
 var transitions = map[string][]string{
-	OrderStatusInvalid:          []string{state.WILDCARD},
-	OrderStatusCart:             []string{OrderStatusConfirmed, OrderStatusInvalid},
-	OrderStatusConfirmed:        []string{OrderStatusTransmitted, OrderStatusInvalid, OrderStatusCanceled},
-	OrderStatusTransmitted:      []string{OrderStatusInProgress, OrderStatusInvalid, OrderStatusCanceled},
-	OrderStatusInProgress:       []string{OrderStatusPartiallyShipped, OrderStatusShipped, OrderStatusInvalid, OrderStatusCanceled},
-	OrderStatusShipped:          []string{OrderStatusComplete, OrderStatusInvalid, OrderStatusCanceled},
-	OrderStatusPartiallyShipped: []string{OrderStatusShipped, OrderStatusInvalid, OrderStatusCanceled},
-	OrderStatusComplete:         []string{OrderStatusFullReturn, OrderStatusPartialReturn},
+	OrderStatusInvalid:               []string{state.WILDCARD},
+	OrderStatusCart:                  []string{OrderStatusConfirmed, OrderStatusInvalid},
+	OrderStatusConfirmed:             []string{OrderStatusTransmitted, OrderStatusInvalid, OrderStatusCanceled},
+	OrderStatusTransmitted:           []string{OrderStatusInProgress, OrderStatusInvalid, OrderStatusCanceled},
+	OrderStatusInProgress:            []string{OrderStatusPartiallyShipped, OrderStatusShipped, OrderStatusInvalid, OrderStatusCanceled},
+	OrderStatusShipped:               []string{OrderStatusWaitingForStorePickUp, OrderStatusComplete, OrderStatusInvalid, OrderStatusCanceled},
+	OrderStatusWaitingForStorePickUp: []string{OrderStatusComplete, OrderStatusInvalid, OrderStatusCanceled},
+	OrderStatusPartiallyShipped:      []string{OrderStatusWaitingForStorePickUp, OrderStatusShipped, OrderStatusInvalid, OrderStatusCanceled},
+	OrderStatusComplete:              []string{OrderStatusFullReturn, OrderStatusPartialReturn},
 }
 
 // blueprints for possible states
