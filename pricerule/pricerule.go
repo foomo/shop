@@ -276,6 +276,7 @@ func GetValidPriceRulesForPaymentMethod(paymentMethod string) ([]PriceRule, erro
 // GetValidPriceRulesForPromotions - find rule for payment
 // check ValidFrom, ValidTo
 func GetValidPriceRulesForPromotions(priceRuleTypes []Type, customProvider PriceRuleCustomProvider) ([]PriceRule, error) {
+	now := time.Now()
 	p := GetPersistorForObject(new(PriceRule))
 	query := bson.M{"type": bson.M{"$in": priceRuleTypes}, "validfrom": bson.M{"$lte": time.Now()}, "validto": bson.M{"$gte": time.Now()}}
 
@@ -308,7 +309,7 @@ func GetValidPriceRulesForPromotions(priceRuleTypes []Type, customProvider Price
 			priceRulesMapped = append(priceRulesMapped, *r)
 		}
 	}
-
+	timeTrack(now, "[GetValidPriceRulesForPromotions] cache loading took ")
 	return priceRulesMapped, nil
 }
 

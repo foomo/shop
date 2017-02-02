@@ -12,6 +12,10 @@ func calculateDiscountsCartByAbsolute(articleCollection *ArticleCollection, pric
 		panic("CalculateDiscountsCartByAbsolute called with pricerule of action " + priceRuleVoucherPair.Rule.Action)
 	}
 
+	if isCatalogCalculation == true {
+		panic("catalog calculations can not handle actions of type CalculateDiscountsCartByAbsolute")
+	}
+
 	//collect item values = price * qty for applicable items
 	amountsMap := getAmountsOfApplicablePositions(priceRuleVoucherPair.Rule, articleCollection, productGroupIDsPerPosition, groupIDsForCustomer, isCatalogCalculation)
 	amounts := getMapValues(amountsMap)

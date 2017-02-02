@@ -3,7 +3,10 @@ package pricerule
 import (
 	"sync"
 
-	"github.com/davecgh/go-spew/spew"
+	"time"
+
+	"fmt"
+
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -31,6 +34,7 @@ func (c *Cache) GetGroupsCache() map[GroupType]map[string][]string {
 
 // InitCatalogCalculationCache - load groups data into memory
 func (c *Cache) InitCatalogCalculationCache() error {
+	now := time.Now()
 	//synchronize code code
 	c.cacheMutex.Lock()
 	defer c.cacheMutex.Unlock()
@@ -47,6 +51,7 @@ func (c *Cache) InitCatalogCalculationCache() error {
 	c.catalogValidRulesCache = catalogValidRulesCache
 
 	c.enabled = true
+	timeTrack(now, "[InitCatalogCalculationCache] cache loading took ")
 	return err
 }
 
@@ -59,13 +64,19 @@ func (c *Cache) ClearCatalogCalculationCache() {
 
 // GetGroupsIDSForItem - use cache or fallback to db retrieval
 func (c *Cache) GetGroupsIDSForItem(itemID string, groupType GroupType) []string {
+
 	// if we have the cache use it,
-	if c.enabled {
-		if groupIDs, ok := cache.groupsCache[groupType][itemID]; ok {
+	if c.enabled == true {
+		if groupIDs, ok := c.groupsCache[groupType][itemID]; ok {
+			return groupIDs
+		} else {
+			groupIDs := []string{} //TODO: if not in the cache means we do not have it
+			c.groupsCache[groupType][itemID] = groupIDs
 			return groupIDs
 		}
 	}
-	return GetGroupsIDSForItem(itemID, groupType)
+	groupIDs := GetGroupsIDSForItem(itemID, groupType)
+	return groupIDs
 }
 
 // CachedGetValidProductAndCustomerPriceRules -
@@ -88,10 +99,10 @@ func removeValueFromArray(val string, vals []string) []string {
 }
 
 func (c *Cache) loadGroupCacheByItem() error {
+	now := time.Now()
 
 	tempMap := make(map[GroupType]map[string][]string)
 	for _, groupType := range []GroupType{ProductGroup, CustomerGroup} {
-
 		p := GetPersistorForObject(&Group{})
 		query := bson.M{"type": groupType}
 
@@ -108,7 +119,6 @@ func (c *Cache) loadGroupCacheByItem() error {
 
 		for _, group := range result {
 			for _, itemID := range group.ItemIDs {
-
 				// if we have a key already append
 				if _, ok := tempMap[groupType][itemID]; ok {
 					tempMap[groupType][itemID] = append(tempMap[groupType][itemID], group.ID)
@@ -121,7 +131,9 @@ func (c *Cache) loadGroupCacheByItem() error {
 
 	}
 	c.groupsCache = tempMap
-	spew.Dump(tempMap)
+	fmt.Println(c.GetGroupsCache())
 	c.enabled = true
+	timeTrack(now, "[loadGroupCacheByItem] cache loading took")
+
 	return nil
 }

@@ -11,6 +11,9 @@ func calculateDiscountsBuyXGetY(articleCollection *ArticleCollection, priceRuleV
 	if priceRuleVoucherPair.Rule.Action != ActionBuyXGetY {
 		panic("CalculateDiscountsBuyXGetY called with pricerule of action " + priceRuleVoucherPair.Rule.Action)
 	}
+	if isCatalogCalculation == true {
+		panic("catalog calculations can not handle actions of type CalculateDiscountsBuyXGetY")
+	}
 
 	for _, article := range articleCollection.Articles {
 		ok, _ := validatePriceRuleForPosition(*priceRuleVoucherPair.Rule, articleCollection, article, productGroupIDsPerPosition, groupIDsForCustomer, isCatalogCalculation)

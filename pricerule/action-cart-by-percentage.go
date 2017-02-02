@@ -5,6 +5,9 @@ func calculateDiscountsCartByPercentage(articleCollection *ArticleCollection, pr
 	if priceRuleVoucherPair.Rule.Action != ActionCartByPercent {
 		panic("CalculateDiscountsCartByPercentage called with pricerule of action " + priceRuleVoucherPair.Rule.Action)
 	}
+	if isCatalogCalculation == true {
+		panic("catalog calculations can not handle actions of type CalculateDiscountsCartByPercentage")
+	}
 
 	//get the total - for vouchers it is lowered by previous discounts
 	orderTotal := getOrderTotalForPriceRule(priceRuleVoucherPair.Rule, articleCollection, productGroupIDsPerPosition, groupIDsForCustomer, orderDiscounts)

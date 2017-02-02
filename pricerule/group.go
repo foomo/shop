@@ -176,9 +176,7 @@ func RemoveAllGroups() error {
 
 // GetGroupsIDSForItem -
 func GetGroupsIDSForItem(itemID string, groupType GroupType) []string {
-
-	//if no cache, retireve from mongo
-
+	//now := time.Now()
 	p := GetPersistorForObject(new(Group))
 	query := bson.M{"itemids": bson.M{"$in": []string{itemID}}, "type": groupType}
 
@@ -197,6 +195,7 @@ func GetGroupsIDSForItem(itemID string, groupType GroupType) []string {
 	for _, val := range result {
 		ret = append(ret, val.ID)
 	}
+	//timeTrack(now, "[GetGroupsIDSForItem -> from db]")
 	return ret
 }
 
