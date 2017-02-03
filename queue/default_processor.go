@@ -76,6 +76,7 @@ type DefaultProcessor struct {
 	stop                bool
 	startTimeProcessing int64
 	endTimeProcessing   int64
+	Verbose             bool
 }
 
 //------------------------------------------------------------------
@@ -84,6 +85,7 @@ type DefaultProcessor struct {
 func NewDefaultProcessor(id string) *DefaultProcessor {
 
 	pr := &DefaultProcessor{
+		Verbose:        true,
 		Id:             id,
 		waitGroup:      &sync.WaitGroup{},
 		query:          &bson.M{},
@@ -92,7 +94,9 @@ func NewDefaultProcessor(id string) *DefaultProcessor {
 		chanExit:       make(chan int),
 		maxConcurrency: 16,
 		ProcessingFunc: func(interface{}) error {
+
 			log.Println("Nothing happening here... Specify a ProcessingFunc!")
+
 			return nil
 		},
 	}
@@ -234,7 +238,9 @@ func (proc *DefaultProcessor) Reset() {
 
 // Find returns an iterator for all entries found matching on query.
 func (proc *DefaultProcessor) Find(query *bson.M, p *persistence.Persistor) (iter func() (data interface{}, err error), err error) {
-	log.Println("Default Processor Find")
+	if proc.Verbose {
+		log.Println("Default Processor Find")
+	}
 	_, err = p.GetCollection().Find(query).Count()
 	if err != nil {
 		log.Println(err)
@@ -242,7 +248,9 @@ func (proc *DefaultProcessor) Find(query *bson.M, p *persistence.Persistor) (ite
 	q := p.GetCollection().Find(query)
 
 	count, err := q.Count()
-	log.Println("Found", count, "items in database ", "("+proc.GetId()+")")
+	if proc.Verbose {
+		log.Println("Found", count, "items in database ", "("+proc.GetId()+")")
+	}
 	if err != nil {
 		return
 	}

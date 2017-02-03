@@ -15,6 +15,7 @@ import (
 //------------------------------------------------------------------
 
 type Queue struct {
+	Verbose                bool
 	running                bool
 	processors             []Processor
 	waitGroup              *sync.WaitGroup
@@ -44,9 +45,13 @@ func (q *Queue) getChanFinished() chan int {
 // AddProcessor Add a processor to the queue. Do not add multiple processors for the same task!
 func (q *Queue) AddProcessor(processor Processor) {
 	q.processors = append(q.processors, processor)
-	log.Println("Added Processor to queue. New length: ", len(q.processors))
+	if q.Verbose {
+		log.Println("Added Processor to queue. New length: ", len(q.processors))
+	}
 	for _, p := range q.processors {
-		fmt.Println("\t", p.GetId())
+		if q.Verbose {
+			fmt.Println("\t", p.GetId())
+		}
 	}
 }
 
@@ -62,7 +67,9 @@ func (q *Queue) IsRunning() bool {
 // Stop() has been called.
 // As long as there is only one processor per kind (Status, Payment, ...), there should be no race conditions
 func (q *Queue) Start() error {
-	log.Println("Queue: Schedule Start")
+	if q.Verbose {
+		log.Println("Queue: Schedule Start")
+	}
 	if q.IsRunning() {
 		return errors.New("Did not start Queue. It's already running!")
 	}
@@ -77,15 +84,19 @@ func (q *Queue) Start() error {
 	// for _, proc := range q.processors {
 	// 	proc.ResetStop()
 	// }
-	fmt.Println("")
-	fmt.Println("*****------------------------------------****")
+	if q.Verbose {
+		fmt.Println("")
+		fmt.Println("*****------------------------------------****")
+	}
 	for _, proc := range q.processors {
 		proc.Report()
 	}
 	for _, proc := range q.processors {
 		proc.Reset()
 	}
-	fmt.Println("*****------------------------------------****")
+	if q.Verbose {
+		fmt.Println("*****------------------------------------****")
+	}
 	if q.chanFinishedRegistered { // if true, we suppose that some is listening to the channel. Because otherwise we would block here forever!
 		q.chanFinished <- 1
 		q.chanFinishedRegistered = false
@@ -94,7 +105,9 @@ func (q *Queue) Start() error {
 }
 
 func (q *Queue) Stop() {
-	log.Println("Queue: Schedule Stop")
+	if q.Verbose {
+		log.Println("Queue: Schedule Stop")
+	}
 	chanQueueFinished := q.getChanFinished()
 	for _, proc := range q.processors {
 		proc.Stop()
@@ -129,7 +142,9 @@ func schedule(proc Processor, waitGroup *sync.WaitGroup) {
 		for {
 			select {
 			case <-chanStart:
-				log.Println("Started Processor:", proc.GetId())
+
+				//log.Println("Started Processor:", proc.GetId())
+
 				runProcessor(proc)
 			}
 		}
@@ -151,7 +166,7 @@ func schedule(proc Processor, waitGroup *sync.WaitGroup) {
 	proc.GetChanRun() <- true
 	<-chanStop
 	waitGroup.Done()
-	log.Println("Exiting schedule:", proc.GetId())
+	//	log.Println("Exiting schedule:", proc.GetId())
 
 }
 
@@ -243,7 +258,7 @@ func runProcessor(processor Processor) error {
 							processor.IncRunningJobs() // We count here also, because we cannot access current number of jobs through waitgroup
 							chanReady <- data
 						} else {
-							log.Println("data is nil", err)
+							//	log.Println("data is nil", err)
 							chanDone <- 1
 							break Loop
 						}
