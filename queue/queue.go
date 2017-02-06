@@ -78,7 +78,7 @@ func (q *Queue) Start() error {
 	for _, proc := range q.processors {
 		q.waitGroup.Add(1)
 		go schedule(proc, q.waitGroup)
-		fmt.Println("New go routine 8")
+		//fmt.Println("New go routine 8")
 	}
 	q.waitGroup.Wait()
 	q.running = false
@@ -126,7 +126,7 @@ func schedule(proc Processor, waitGroup *sync.WaitGroup) {
 	chanStop := make(chan int) // this is called by ScheduleStop()
 
 	go func() {
-		fmt.Println("New go routine 7")
+		//fmt.Println("New go routine 7")
 		for {
 			select {
 			case <-proc.GetChanExit():
@@ -142,7 +142,7 @@ func schedule(proc Processor, waitGroup *sync.WaitGroup) {
 	}()
 
 	go func() {
-		fmt.Println("New go routine 6")
+		//	fmt.Println("New go routine 6")
 		for {
 			select {
 			case <-chanStart:
@@ -155,7 +155,7 @@ func schedule(proc Processor, waitGroup *sync.WaitGroup) {
 	}()
 
 	go func() {
-		fmt.Println("New go routine 5")
+		//	fmt.Println("New go routine 5")
 		for {
 			select {
 			// Initially start processor or stop processing completely
@@ -211,7 +211,7 @@ func runProcessor(processor Processor) error {
 				}
 
 				go f(data)
-				fmt.Println("New go routine 2")
+				//	fmt.Println("New go routine 2")
 				chanCheckRunning <- 1
 			case <-chanDone2:
 				//	fmt.Println("Return 1")
