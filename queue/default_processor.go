@@ -245,7 +245,7 @@ func (proc *DefaultProcessor) Find(query *bson.M, p *persistence.Persistor) (ite
 	if err != nil {
 		log.Println(err)
 	}
-	q := p.GetCollection().Find(query)
+	q := p.GetCollection().Find(query).Sort("_id")
 
 	count, err := q.Count()
 	if proc.Verbose {
