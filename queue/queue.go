@@ -78,6 +78,7 @@ func (q *Queue) Start() error {
 	for _, proc := range q.processors {
 		q.waitGroup.Add(1)
 		go schedule(proc, q.waitGroup)
+		fmt.Println("New go routine 8")
 	}
 	q.waitGroup.Wait()
 	q.running = false
@@ -125,9 +126,11 @@ func schedule(proc Processor, waitGroup *sync.WaitGroup) {
 	chanStop := make(chan int) // this is called by ScheduleStop()
 
 	go func() {
+		fmt.Println("New go routine 7")
 		for {
 			select {
 			case <-proc.GetChanExit():
+				//fmt.Println("exiting")
 				if proc.GetCountProcessed() < proc.GetJobsAssigned() && !proc.GetStop() {
 					time.Sleep(100 * time.Millisecond) // wait a moment and try again
 					chanStart <- 1
@@ -139,6 +142,7 @@ func schedule(proc Processor, waitGroup *sync.WaitGroup) {
 	}()
 
 	go func() {
+		fmt.Println("New go routine 6")
 		for {
 			select {
 			case <-chanStart:
@@ -151,6 +155,7 @@ func schedule(proc Processor, waitGroup *sync.WaitGroup) {
 	}()
 
 	go func() {
+		fmt.Println("New go routine 5")
 		for {
 			select {
 			// Initially start processor or stop processing completely
@@ -173,6 +178,7 @@ func schedule(proc Processor, waitGroup *sync.WaitGroup) {
 func runProcessor(processor Processor) error {
 	processor.SetStartTimeProcessing(time.Now().UnixNano())
 	chanDone := make(chan int)
+	chanDone2 := make(chan int)
 	chanReady := make(chan interface{})
 	chanCheckRunning := make(chan int)
 	chanGoCheckRunning := make(chan int)
@@ -183,11 +189,15 @@ func runProcessor(processor Processor) error {
 		processor.GetChanExit() <- 1 // this will be received in schedule() and stop the processor
 		return err
 	}
+
+	// Process availably data
 	go func() {
+		//fmt.Println("New go routine 1")
 		for {
 			select {
 			case data := <-chanReady:
-				//log.Println("** chanReady", processor.GetId())
+				// fmt.Println("--- DATA")
+				// fmt.Println(spew.Sdump(data))
 				f := func(data interface{}) {
 					err := processor.Process(data)
 					if err != nil {
@@ -196,16 +206,25 @@ func runProcessor(processor Processor) error {
 					processor.IncCountProcessed()
 					processor.DecRunningJobs()
 					processor.GetWaitGroup().Done()
+					//	fmt.Println("Return 1")
+					return
 				}
 
 				go f(data)
+				fmt.Println("New go routine 2")
 				chanCheckRunning <- 1
+			case <-chanDone2:
+				//	fmt.Println("Return 1")
+				return
 
 			}
 		}
+		//fmt.Println("Exiting 1")
 	}()
 
+	// Wait for chanDone to end current processing
 	go func() {
+		//fmt.Println("New go routine 3")
 		for {
 			select {
 			case <-chanDone:
@@ -215,6 +234,9 @@ func runProcessor(processor Processor) error {
 				processor.SetWaitGroupFinished(true)
 				processor.GetChanExit() <- 1
 				processor.SetEndTimeProcessing(time.Now().UnixNano())
+				chanDone2 <- 1
+				//		fmt.Println("Return 3")
+				return
 
 			case <-chanGoCheckRunning:
 				//log.Println("** goCheckRunning", processor.GetId())
@@ -222,23 +244,28 @@ func runProcessor(processor Processor) error {
 			}
 		}
 
+		//	fmt.Println("Exiting 3")
 	}()
 	go func() {
+		//	fmt.Println("New go routine 4")
 		run := true
-	Loop:
+		//Loop:
 		for run {
 			select {
 			case <-chanCheckRunning:
 				if processor.GetStop() {
+					//			fmt.Println("--- chanDone return 1")
 					chanDone <- 1
 					run = false
-					break Loop
+					//			fmt.Println("Return 4")
+					return //break Loop
 				}
 				//log.Println("** chanCheckRunning", processor.GetId())
 				if processor.GetJobsStarted() >= processor.GetJobsAssigned() { // We are done
 					//	log.Println("** goChanDone :: JobsAssignedProcessed", processor.GetId())
 					chanDone <- 1
-					break Loop
+					//			fmt.Println("--- chanDone return 2")
+					return // break Loop
 				} else if processor.GetRunningJobs() >= processor.GetMaxConcurrency() { // Wait for better times
 
 					//	log.Println("** wait", processor.GetId())
@@ -246,11 +273,11 @@ func runProcessor(processor Processor) error {
 				} else {
 					if processor.GetJobsStarted() < processor.GetJobsAssigned() {
 						data, err := iter()
-
 						if err != nil {
 							log.Println("Error: Could not get data", err)
 							chanDone <- 1
-							break
+							//			fmt.Println("--- chanDone return 3")
+							return //break
 						}
 						if data != nil {
 							processor.GetWaitGroup().Add(1)
@@ -260,13 +287,15 @@ func runProcessor(processor Processor) error {
 						} else {
 							//	log.Println("data is nil", err)
 							chanDone <- 1
-							break Loop
+							//	fmt.Println("--- chanDone return 4")
+							return // break Loop
 						}
 					}
 				}
 
 			}
 		}
+		//fmt.Println("Exiting 4")
 	}()
 	chanCheckRunning <- 1 // Start loop
 	return nil
