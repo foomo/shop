@@ -15,6 +15,7 @@ const (
 	OrderStatusComplete              string = "OrderStatusComplete"
 	OrderStatusReturn                string = "OrderStatusReturn"
 	OrderStatusCanceled              string = "OrderStatusCanceled"
+	OrderStatusTechnical             string = "OrderStatusTechnical"
 )
 
 var transitions = map[string][]string{
@@ -29,6 +30,7 @@ var transitions = map[string][]string{
 	OrderStatusComplete:              []string{OrderStatusReturn},
 	OrderStatusReturn:                []string{OrderStatusInvalid},
 	OrderStatusCanceled:              []string{OrderStatusInvalid},
+	OrderStatusTechnical:             []string{},
 }
 
 // blueprints for possible states
@@ -97,6 +99,12 @@ var blueprints = map[string]state.BluePrint{
 		Type:        StateType,
 		Key:         OrderStatusCanceled,
 		Description: "Order has been canceled.",
+		Initial:     false,
+	},
+	OrderStatusTechnical: state.BluePrint{
+		Type:        StateType,
+		Key:         OrderStatusTechnical,
+		Description: "Order is only for internal calculation and must be transparent for the customer.",
 		Initial:     false,
 	},
 }
