@@ -92,7 +92,7 @@ func Init(t *testing.T) {
 	checkVouchersExists(t)
 }
 
-func TestShipping(t *testing.T) {
+func testShipping(t *testing.T) {
 
 	RemoveAllGroups()
 	RemoveAllPriceRules()
