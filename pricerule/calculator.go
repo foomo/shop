@@ -138,7 +138,7 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 	// find applicable payment discounts
 	var paymentPriceRules []PriceRule
 	if len(paymentMethod) > 0 {
-		paymentPriceRules, err = GetValidPriceRulesForPaymentMethod(paymentMethod)
+		paymentPriceRules, err = GetValidPriceRulesForPaymentMethod(paymentMethod, customProvider)
 		if err != nil {
 			return nil, nil, err
 		}
