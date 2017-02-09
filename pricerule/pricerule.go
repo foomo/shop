@@ -258,30 +258,23 @@ func RemoveAllPriceRules() error {
 
 // GetValidPriceRulesForPaymentMethod - find rule for payment
 // check ValidFrom, ValidTo
-func GetValidPriceRulesForPaymentMethod(paymentMethod string) ([]PriceRule, error) {
-	p := GetPersistorForObject(new(PriceRule))
+func GetValidPriceRulesForPaymentMethod(paymentMethod string, customProvider PriceRuleCustomProvider) ([]PriceRule, error) {
 	query := bson.M{"type": TypePaymentMethodDiscount, "includedpaymentmethods": bson.M{"$in": []string{paymentMethod}}, "validfrom": bson.M{"$lte": time.Now()}, "validto": bson.M{"$gte": time.Now()}}
-
-	var result []PriceRule
-
-	err := p.GetCollection().Find(query).Select(nil).Sort("priority").All(&result)
-	if err != nil {
-		// handle error
-		return nil, err
-	}
-
-	return result, nil
+	return getPromotions(query, customProvider)
 }
 
 // GetValidPriceRulesForPromotions - find rule for payment
 // check ValidFrom, ValidTo
 func GetValidPriceRulesForPromotions(priceRuleTypes []Type, customProvider PriceRuleCustomProvider) ([]PriceRule, error) {
-	now := time.Now()
-	p := GetPersistorForObject(new(PriceRule))
 	query := bson.M{"type": bson.M{"$in": priceRuleTypes}, "validfrom": bson.M{"$lte": time.Now()}, "validto": bson.M{"$gte": time.Now()}}
+	return getPromotions(query, customProvider)
+}
 
+func getPromotions(query bson.M, customProvider PriceRuleCustomProvider) ([]PriceRule, error) {
+	now := time.Now()
 	var result []*PriceRule
 
+	p := GetPersistorForObject(new(PriceRule))
 	err := p.GetCollection().Find(query).Select(nil).Sort("priority").All(&result)
 	if err != nil {
 		// handle error
@@ -311,6 +304,7 @@ func GetValidPriceRulesForPromotions(priceRuleTypes []Type, customProvider Price
 	}
 	timeTrack(now, "[GetValidPriceRulesForPromotions] cache loading took ")
 	return priceRulesMapped, nil
+
 }
 
 //------------------------------------------------------------------
