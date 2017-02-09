@@ -231,11 +231,20 @@ func GetCartID(customerId string) (string, error) {
 }
 
 func GetOrdersOfCustomer(customerId string, customProvider OrderCustomProvider) ([]*Order, error) {
+
 	if customProvider == nil {
 		return nil, errors.New("Error: customProvider must not be nil")
 	}
+	// Query for all orders which are neither in OrderStatusCart nor in OrderStatusTechnical
+	query := &bson.M{
 
-	orderIter, err := Find(&bson.M{"customerdata.customerid": customerId}, customProvider)
+		"$and": []interface{}{
+			bson.M{"customerdata.customerid": customerId},
+			bson.M{"state.key": bson.M{"$ne": OrderStatusTechnical}},
+			bson.M{"state.key": bson.M{"$ne": OrderStatusCart}},
+		},
+	}
+	orderIter, err := Find(query, customProvider)
 	if err != nil {
 		log.Println("Query customerdata.customerid failed", customerId)
 		return nil, err
@@ -258,7 +267,16 @@ func GetOrdersOfCustomer(customerId string, customProvider OrderCustomProvider) 
 
 // GetOrderIdsOfCustomer returns all orderIds associated with this customer
 func GetOrderIdsOfCustomer(customerId string) ([]string, error) {
-	orderIter, err := Find(&bson.M{"customerdata.customerid": customerId}, nil) // @TODO this could use a select as we only want the id's
+	// Query for all orders which are neither in OrderStatusCart nor in OrderStatusTechnical
+	query := &bson.M{
+
+		"$and": []interface{}{
+			bson.M{"customerdata.customerid": customerId},
+			bson.M{"state.key": bson.M{"$ne": OrderStatusTechnical}},
+			bson.M{"state.key": bson.M{"$ne": OrderStatusCart}},
+		},
+	}
+	orderIter, err := Find(query, nil) // @TODO this could use a select as we only want the id's
 	if err != nil {
 		log.Println("Query customerdata.customerid failed:", customerId)
 		return nil, err
