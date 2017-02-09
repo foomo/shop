@@ -109,7 +109,6 @@ func ClearCache() {
 // This is not yet used. ApplyDiscounts should at some point be able to consider previousle calculated discounts
 func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts OrderDiscounts, voucherCodes []string, paymentMethod string, roundTo float64, customProvider PriceRuleCustomProvider) (OrderDiscounts, *OrderDiscountSummary, error) {
 	var ruleVoucherPairs []RuleVoucherPair
-	//fmt.Println("ApplyDiscounts with CustomerTye: ", articleCollection.CustomerType)
 	now := time.Now()
 	//find the groupIds for articleCollection items
 	productGroupIDsPerPosition := getProductGroupIDsPerPosition(articleCollection, false)
@@ -475,16 +474,15 @@ func validatePriceRule(priceRule PriceRule, articleCollection *ArticleCollection
 
 		if priceRule.MinOrderAmount > 0.0 {
 			if priceRule.MinOrderAmountApplicableItemsOnly {
-				if priceRule.MinOrderAmount > 0 {
-					if priceRule.MinOrderAmount > getOrderTotalForPriceRule(&priceRule, articleCollection, productGroupIDsPerPosition, customerGroupIDs, nil) {
-						return false, ValidationPriceRuleMinimumAmount
-					}
-				} else {
-					if priceRule.MinOrderAmount > getOrderTotal(articleCollection) {
-						return false, ValidationPriceRuleMinimumAmount
-					}
+				if priceRule.MinOrderAmount > getOrderTotalForPriceRule(&priceRule, articleCollection, productGroupIDsPerPosition, customerGroupIDs, nil) {
+					return false, ValidationPriceRuleMinimumAmount
+				}
+			} else {
+				if priceRule.MinOrderAmount > getOrderTotal(articleCollection) {
+					return false, ValidationPriceRuleMinimumAmount
 				}
 			}
+
 		}
 	}
 

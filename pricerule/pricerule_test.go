@@ -92,7 +92,56 @@ func Init(t *testing.T) {
 	checkVouchersExists(t)
 }
 
-func TestCache(t *testing.T) {
+func TestShipping(t *testing.T) {
+
+	RemoveAllGroups()
+	RemoveAllPriceRules()
+	RemoveAllVouchers()
+
+	group := new(Group)
+	group.Type = ProductGroup
+	group.ID = "shipping"
+	group.Name = "shipping"
+	group.AddGroupItemIDs([]string{"shipping-item-id"})
+	err := group.Upsert()
+	if err != nil {
+		t.Fatal("Could not upsert shipping product group ")
+	}
+
+	//create pricerule
+	priceRule := NewPriceRule(PriceRuleIDSale)
+	priceRule.Name = map[string]string{
+		"de": "shipping",
+		"fr": "shipping",
+		"it": "shipping",
+	}
+	priceRule.Type = TypePromotionProduct
+	priceRule.Description = priceRule.Name
+	priceRule.Action = ActionItemByPercent
+	priceRule.Amount = 100
+	priceRule.MinOrderAmount = 100
+	priceRule.MinOrderAmountApplicableItemsOnly = false
+	priceRule.IncludedProductGroupIDS = []string{"shipping"}
+	priceRule.IncludedCustomerGroupIDS = []string{}
+	priceRule.Upsert()
+
+	//create order
+
+	// order = articleCollection
+	orderVo := &ArticleCollection{}
+	orderVo.CustomerID = CustomerID1
+	positionVo := &Article{}
+	positionVo.ID = "shipping-item-id"
+	positionVo.Price = 100.0
+	positionVo.Quantity = 1
+	orderVo.Articles = append(orderVo.Articles, positionVo)
+
+	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{""}, "", 0.05, nil)
+	spew.Dump(discountsVo, summary, err)
+
+}
+
+func testCache(t *testing.T) {
 	Init(t)
 
 	RemoveAllGroups()
