@@ -13,7 +13,8 @@ func calculateDiscountsCartByAbsolute(articleCollection *ArticleCollection, pric
 	}
 
 	if isCatalogCalculation == true {
-		panic("catalog calculations can not handle actions of type CalculateDiscountsCartByAbsolute")
+		log.Println("catalog calculations can not handle actions of type CalculateDiscountsCartByAbsolute")
+		return orderDiscounts
 	}
 
 	//collect item values = price * qty for applicable items

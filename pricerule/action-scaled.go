@@ -1,5 +1,7 @@
 package pricerule
 
+import "log"
+
 // CalculateScaledDiscounts -
 func calculateScaledDiscounts(articleCollection *ArticleCollection, priceRuleVoucherPair RuleVoucherPair, orderDiscounts OrderDiscounts, productGroupIDsPerPosition map[string][]string, groupIDsForCustomer []string, roundTo float64, isCatalogCalculation bool) OrderDiscounts {
 	if priceRuleVoucherPair.Rule.Action != ActionScaled {
@@ -7,7 +9,8 @@ func calculateScaledDiscounts(articleCollection *ArticleCollection, priceRuleVou
 	}
 
 	if isCatalogCalculation == true {
-		panic("catalog calculations can not handle actions of type CalculateScaledDiscounts")
+		log.Println("catalog calculations can not handle actions of type CalculateScaledDiscounts")
+		return orderDiscounts
 	}
 
 	orderTotal := getOrderTotalForPriceRule(priceRuleVoucherPair.Rule, articleCollection, productGroupIDsPerPosition, groupIDsForCustomer, orderDiscounts)

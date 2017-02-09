@@ -1,12 +1,16 @@
 package pricerule
 
+import "log"
+
 // CalculateDiscountsCartByPercentage -
 func calculateDiscountsCartByPercentage(articleCollection *ArticleCollection, priceRuleVoucherPair RuleVoucherPair, orderDiscounts OrderDiscounts, productGroupIDsPerPosition map[string][]string, groupIDsForCustomer []string, roundTo float64, isCatalogCalculation bool) OrderDiscounts {
 	if priceRuleVoucherPair.Rule.Action != ActionCartByPercent {
 		panic("CalculateDiscountsCartByPercentage called with pricerule of action " + priceRuleVoucherPair.Rule.Action)
 	}
+
 	if isCatalogCalculation == true {
-		panic("catalog calculations can not handle actions of type CalculateDiscountsCartByPercentage")
+		log.Println("catalog calculations can not handle actions of type CalculateDiscountsCartByPercentage")
+		return orderDiscounts
 	}
 
 	//get the total - for vouchers it is lowered by previous discounts

@@ -12,7 +12,8 @@ func calculateDiscountsBuyXGetY(articleCollection *ArticleCollection, priceRuleV
 		panic("CalculateDiscountsBuyXGetY called with pricerule of action " + priceRuleVoucherPair.Rule.Action)
 	}
 	if isCatalogCalculation == true {
-		panic("catalog calculations can not handle actions of type CalculateDiscountsBuyXGetY")
+		log.Println("catalog calculations can not handle actions of type CalculateDiscountsBuyXGetY")
+		return orderDiscounts
 	}
 
 	for _, article := range articleCollection.Articles {
