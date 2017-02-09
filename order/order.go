@@ -285,6 +285,8 @@ func (order *Order) AddToPositionQuantity(itemID string, addQty float64, crossPr
 	quantity := 1.0
 	if pos != nil {
 		quantity = pos.Quantity + addQty
+	} else {
+		quantity = addQty
 	}
 	return order.SetPositionQuantity(itemID, quantity, crossPrice, price, customProvider)
 }
