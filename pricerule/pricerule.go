@@ -89,6 +89,8 @@ type PriceRule struct {
 
 	ScaledAmounts []ScaledAmountLevel //defines discount scale 100 -> 2%, 200 -> 3% etc - See ActionScaledPercentage & ActionScaledAbsolute
 
+	ScaledAmountsPerQuantity []ScaledAmountLevel
+
 	MinOrderAmount float64 //minimum amount for discount to be applocable
 
 	MinOrderAmountApplicableItemsOnly bool // must the min amount be calculated only over the applicable items
@@ -124,6 +126,7 @@ type XYWhichType string
 
 // ScaledAmountLevel -
 type ScaledAmountLevel struct {
+	IsFromToPrice            bool
 	FromValue                float64
 	ToValue                  float64
 	Amount                   float64 //if percentage, the amount is 0.0 - 100.0

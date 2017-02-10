@@ -201,26 +201,29 @@ func testCache(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-
 	discountsVo, summary, err := ApplyDiscountsOnCatalog(orderVo, nil, []string{""}, "", 0.05, nil)
 	spew.Dump(discountsVo, summary, err)
-
 }
 
 // Test groups creation
-func testScaled(t *testing.T) {
+func TestScaled(t *testing.T) {
 	//Init
 
+	//Init
 	RemoveAllGroups()
 	RemoveAllPriceRules()
-	groupID := "ProductsToScale"
+
+	// Create group --------------------------------------------------------------------------
+	groupID := "productstoscale"
 	//createGroup
 	group := new(Group)
 	group.Type = ProductGroup
 	group.ID = groupID
 	group.Name = groupID
+	group.AddGroupItemIDs([]string{ProductID1SKU1, ProductID3SKU2})
+	group.Upsert()
 
-	//create pricerule
+	// Create pricerule ----------------------------------------------------------------------
 	priceRule := NewPriceRule(PriceRuleIDSale)
 	priceRule.Name = map[string]string{
 		"de": PriceRuleIDSale,
@@ -229,30 +232,41 @@ func testScaled(t *testing.T) {
 	}
 	priceRule.Type = TypePromotionOrder
 	priceRule.Description = priceRule.Name
-	priceRule.Action = ActionScaled
 
-	priceRule.ScaledAmounts = append(priceRule.ScaledAmounts, ScaledAmountLevel{FromValue: 50.0, ToValue: 150.0, Amount: 12, IsScaledAmountPercentage: true})
-	priceRule.ScaledAmounts = append(priceRule.ScaledAmounts, ScaledAmountLevel{FromValue: 150.01, ToValue: 100000.0, Amount: 55, IsScaledAmountPercentage: true})
+	priceRule.Action = ActionScaled
+	priceRule.ScaledAmounts = append(priceRule.ScaledAmounts, ScaledAmountLevel{FromValue: 2.0, ToValue: 15.0, Amount: 10, IsScaledAmountPercentage: true, IsFromToPrice: false})
 
 	priceRule.MaxUses = 10
 	priceRule.MaxUsesPerCustomer = 10
-	priceRule.WhichXYFree = XYCheapestFree
-	priceRule.IncludedProductGroupIDS = []string{groupID}
+	priceRule.IncludedProductGroupIDS = []string{"productstoscale"}
 	priceRule.IncludedCustomerGroupIDS = []string{}
-	priceRule.Upsert()
-	//insert as well
-	group.AddGroupItemIDs([]string{ProductID1SKU1})
 
-	err := group.Upsert()
-	if err != nil {
-		log.Println(err)
-	}
-
-	//create articleCollection
-	orderVo, err := createMockOrderScaled(t)
+	err := priceRule.Upsert()
 	if err != nil {
 		panic(err)
 	}
+	// Order -------------------------------------------------------------------------------
+	orderVo := &ArticleCollection{}
+	orderVo.CustomerID = CustomerID1
+
+	positionVo := &Article{}
+	positionVo.ID = ProductID1SKU1
+	positionVo.Price = 100
+	positionVo.Quantity = 2
+	orderVo.Articles = append(orderVo.Articles, positionVo)
+
+	positionVo = &Article{}
+	positionVo.ID = ProductID1SKU2
+	positionVo.Price = 300
+	positionVo.Quantity = float64(2)
+	orderVo.Articles = append(orderVo.Articles, positionVo)
+
+	positionVo = &Article{}
+	positionVo.ID = ProductID3SKU2
+	positionVo.Price = 500
+	positionVo.Quantity = float64(2)
+	orderVo.Articles = append(orderVo.Articles, positionVo)
+	// Order -------------------------------------------------------------------------------
 
 	now := time.Now()
 	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{""}, "", 0.05, nil)
@@ -273,8 +287,9 @@ func testBuyXGetY(t *testing.T) {
 	RemoveAllGroups()
 	RemoveAllPriceRules()
 
+	//create group --------------------------------------------------------------------
+
 	groupID := "discounted"
-	//createGroup
 	group := new(Group)
 	group.Type = ProductGroup
 	group.ID = groupID
@@ -282,7 +297,7 @@ func testBuyXGetY(t *testing.T) {
 	group.AddGroupItemIDs([]string{ProductID1SKU1, ProductID3SKU2})
 	group.Upsert()
 
-	//create pricerule
+	//create pricerule --------------------------------------------------------------------
 	priceRule := NewPriceRule(PriceRuleIDSale)
 	priceRule.Name = map[string]string{
 		"de": PriceRuleIDSale,
@@ -304,13 +319,28 @@ func testBuyXGetY(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
+	// Order -------------------------------------------------------------------------------
+	orderVo := &ArticleCollection{}
+	orderVo.CustomerID = CustomerID1
 
-	//create articleCollection
-	orderVo, err := createMockOrderXY(t)
-	if err != nil {
-		panic(err)
-	}
+	positionVo := &Article{}
+	positionVo.ID = ProductID1SKU1
+	positionVo.Price = 100
+	positionVo.Quantity = 2
+	orderVo.Articles = append(orderVo.Articles, positionVo)
 
+	positionVo = &Article{}
+	positionVo.ID = ProductID1SKU2
+	positionVo.Price = 300
+	positionVo.Quantity = float64(2)
+	orderVo.Articles = append(orderVo.Articles, positionVo)
+
+	positionVo = &Article{}
+	positionVo.ID = ProductID3SKU2
+	positionVo.Price = 500
+	positionVo.Quantity = float64(2)
+	orderVo.Articles = append(orderVo.Articles, positionVo)
+	// Order -------------------------------------------------------------------------------
 	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{""}, "", 0.05, nil)
 	// defer removeOrder(orderVo)
 	if err != nil {
