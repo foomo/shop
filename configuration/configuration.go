@@ -18,7 +18,6 @@ var (
 	MONGO_URL_PRODUCTS string = "mongodb://" + ProductsLocal
 
 	MONGO_COLLECTION_CREDENTIALS       string = "credentials"
-	MONGO_COLLECTION_SHOP_EVENT_LOG    string = "shop_event_log"
 	MONGO_COLLECTION_ORDERS            string = "orders"
 	MONGO_COLLECTION_ORDERS_HISTORY    string = "orders_history"
 	MONGO_COLLECTION_CUSTOMERS_HISTORY string = "customers_history"

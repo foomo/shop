@@ -6,7 +6,6 @@ import (
 	"log"
 	"strconv"
 
-	"github.com/foomo/shop/event_log"
 	"github.com/foomo/shop/persistence"
 	"github.com/foomo/shop/version"
 	"github.com/mitchellh/mapstructure"
@@ -74,7 +73,6 @@ func Find(query *bson.M, customProvider OrderCustomProvider) (iter func() (o *Or
 }
 
 func UpsertOrder(o *Order) error {
-	defer event_log.SaveShopEvent(event_log.ActionTest, &event_log.Info{OrderId: o.GetID()}, nil, "")
 	// order is unlinked or not yet inserted in db
 
 	if o.unlinkDB || o.BsonId == "" {
@@ -125,7 +123,6 @@ func UpsertOrder(o *Order) error {
 	pHistory := GetOrderVersionsPersistor()
 	pHistory.GetCollection().Insert(o)
 	o.BsonId = bsonId // restore bsonId
-	//event_log.SaveShopEvent(event_log.ActionUpsertingOrder, o.GetID(), err, "")
 	return err
 }
 
@@ -139,12 +136,11 @@ func UpsertAndGetOrder(o *Order, customProvider OrderCustomProvider) (*Order, er
 
 func DeleteOrder(o *Order) error {
 	err := GetOrderPersistor().GetCollection().Remove(bson.M{"_id": o.BsonId})
-	//	event_log.SaveShopEvent(event_log.ActionDeleteOrder, o.GetID(), err, "")
+
 	return err
 }
 func DeleteOrderById(id string) error {
 	err := GetOrderPersistor().GetCollection().Remove(bson.M{"id": id})
-	//event_log.SaveShopEvent(event_log.ActionDeleteOrder, id, err, "")
 	return err
 }
 
@@ -372,7 +368,6 @@ func findOneOrder(find *bson.M, selection *bson.M, sort string, customProvider O
 			return nil, err
 		}
 	}
-	//event_log.SaveShopEvent(event_log.ActionRetrieveOrder, order.GetID(), nil, "")
 	return order, nil
 }
 
@@ -393,7 +388,6 @@ func insertOrder(o *Order) error {
 	}
 	pHistory := GetOrderVersionsPersistor()
 	err = pHistory.GetCollection().Insert(o)
-	//	event_log.SaveShopEvent(event_log.ActionCreateOrder, o.GetID(), err, "")
 	return err
 }
 

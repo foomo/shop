@@ -146,7 +146,6 @@ func Find(query *bson.M, customProvider CustomerCustomProvider) (iter func() (cu
 }
 
 func UpsertCustomer(c *Customer) error {
-	//defer event_log.SaveShopEvent(event_log.ActionTest, &event_log.Info{CustomerId: c.GetID()}, nil, "")
 
 	// order is unlinked or not yet inserted in db
 	if c.unlinkDB || c.BsonId == "" {
@@ -197,7 +196,7 @@ func UpsertCustomer(c *Customer) error {
 	pHistory := GetCustomerVersionsPersistor()
 	pHistory.GetCollection().Insert(c)
 	c.BsonId = bsonId // restore bsonId
-	//event_log.SaveShopEvent(event_log.ActionUpsertingCustomer, c.GetID(), err, "")
+
 	return err
 }
 
@@ -215,7 +214,7 @@ func DeleteCustomer(c *Customer) error {
 		return err
 	}
 	err = DeleteCredential(c.Email)
-	//event_log.SaveShopEvent(event_log.ActionDeleteCustomer, c.GetID(), err, "")
+
 	return err
 }
 func DeleteCustomerById(id string) error {
@@ -224,7 +223,6 @@ func DeleteCustomerById(id string) error {
 		return err
 	}
 	DeleteCustomer(customer)
-	//event_log.SaveShopEvent(event_log.ActionDeleteCustomer, id, err, "")
 	return err
 }
 
@@ -331,7 +329,7 @@ func findOneCustomer(find *bson.M, selection *bson.M, sort string, customProvide
 	if customer == nil {
 		return nil, errors.New("No result for " + utils.ToJSON(find))
 	}
-	//event_log.SaveShopEvent(event_log.ActionRetrieveCustomer, customer.GetID(), nil, customer.GetEmail())
+
 	return customer, nil
 }
 
@@ -352,7 +350,7 @@ func insertCustomer(c *Customer) error {
 	}
 	pHistory := GetCustomerVersionsPersistor()
 	err = pHistory.GetCollection().Insert(c)
-	//event_log.SaveShopEvent(event_log.ActionCreateCustomer, c.GetID(), err, "")
+
 	return err
 }
 

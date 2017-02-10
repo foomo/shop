@@ -6,8 +6,6 @@ import (
 
 	"github.com/foomo/shop/address"
 	"github.com/foomo/shop/customer"
-	"github.com/foomo/shop/payment"
-	"github.com/foomo/shop/shipping"
 	"github.com/foomo/shop/state"
 	"github.com/foomo/shop/utils"
 	"github.com/foomo/shop/version"
@@ -40,15 +38,9 @@ func (order *Order) GetCustomerId() string {
 	return order.CustomerData.CustomerId
 }
 
-func (order *Order) GetOrderType() OrderType {
-	return order.OrderType
-}
-
 // GetCustomer returns the latest version of the customer or version specified in CustomerFreeze
 func (order *Order) GetCustomer(customProvider customer.CustomerCustomProvider) (c *customer.Customer, err error) {
-	if order.IsFrozenCustomer() {
-		return customer.GetCustomerByVersion(order.CustomerData.CustomerId, order.CustomerFreeze.Version, customProvider)
-	}
+
 	return customer.GetCustomerById(order.CustomerData.CustomerId, customProvider)
 }
 
@@ -69,20 +61,12 @@ func (order *Order) GetShippingAddress() (*address.Address, error) {
 	return order.CustomerData.ShippingAddress, nil
 }
 
-// func (order *Order) GetAddressBillingId() string {
-// 	return order.AddressBillingId
+// func (order *Order) GetPayment() *payment.Payment {
+// 	return order.Payment
 // }
-
-// func (order *Order) GetAddressShippingId() string {
-// 	return order.AddressShippingId
+// func (order *Order) GetShipping() *shipping.ShippingProperties {
+// 	return order.Shipping
 // }
-
-func (order *Order) GetPayment() *payment.Payment {
-	return order.Payment
-}
-func (order *Order) GetShipping() *shipping.ShippingProperties {
-	return order.Shipping
-}
 
 func (order *Order) GetCreatedAt() time.Time {
 	return order.CreatedAt
@@ -169,51 +153,27 @@ func (order *Order) SetModified() error {
 	order.LastModifiedAt = utils.TimeNow()
 	return order.Upsert()
 }
-func (order *Order) SetShipping(shipping *shipping.ShippingProperties) error {
-	order.Shipping = shipping
-	return order.Upsert()
-}
-func (order *Order) SetPayment(payment *payment.Payment) error {
-	order.Payment = payment
-	return order.Upsert()
-}
+
+// func (order *Order) SetShipping(shipping *shipping.ShippingProperties) error {
+// 	order.Shipping = shipping
+// 	return order.Upsert()
+// }
+// func (order *Order) SetPayment(payment *payment.Payment) error {
+// 	order.Payment = payment
+// 	return order.Upsert()
+// }
 
 func (order *Order) SetPositions(positions []*Position) error {
 	order.Positions = positions
 	return order.Upsert()
 }
 
-// TODO this does not check if id exists
-// func (order *Order) SetAddressShippingId(id string) error {
-// 	if order.IsFrozenCustomer() {
-// 		return errors.New("Error: Shipping Address cannot be changed after customer freeze.")
-// 	}
-// 	order.AddressShippingId = id
-// 	return order.Upsert()
-// }
-
-// // TODO this does not check if id exists
-// func (order *Order) SetAddressBillingId(id string) error {
-// 	if order.IsFrozenCustomer() {
-// 		return errors.New("Error: Shipping Address cannot be changed after customer freeze.")
-// 	}
-// 	order.AddressBillingId = id
-// 	return order.Upsert()
-// }
-
 func (order *Order) SetCustomerIdAndType(id string, customerType string) error {
-	if order.IsFrozenCustomer() {
-		return errors.New("Error: CustomerId cannot be changed after customer freeze.")
-	}
+
 	if order.CustomerData == nil {
 		order.CustomerData = &CustomerData{}
 	}
 	order.CustomerData.CustomerId = id
 	order.CustomerData.CustomerType = customerType
-	return order.Upsert()
-}
-
-func (order *Order) SetOrderType(t OrderType) error {
-	order.OrderType = t
 	return order.Upsert()
 }

@@ -32,7 +32,7 @@ func GetTestUtilsDir() string {
 	return path.Dir(filename)                                      // remove //"utils" and return
 }
 
-// Drops order collection and event_log collection
+// Drops order collection
 
 func DropAllShopCollections() error {
 	err := DropAllCollectionsFromUrl(configuration.MONGO_URL, configuration.MONGO_DB)

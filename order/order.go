@@ -13,8 +13,6 @@ import (
 	"gopkg.in/mgo.v2/bson"
 
 	"github.com/foomo/shop/address"
-	"github.com/foomo/shop/payment"
-	"github.com/foomo/shop/shipping"
 	"github.com/foomo/shop/state"
 	"github.com/foomo/shop/unique"
 	"github.com/foomo/shop/utils"
@@ -26,20 +24,8 @@ import (
 //------------------------------------------------------------------
 
 const (
-	ActionStatusUpdateHead       ActionOrder  = "actionStatusUpdateHead"
-	ActionStatusUpdatePosition   ActionOrder  = "actionStatusUpdatePosition"
-	ActionNoATPResponseForItemID ActionOrder  = "actionNoATPResponseForItemID"
-	ActionValidateStatusHead     ActionOrder  = "actionValidateStatusHead"
-	ActionValidateStatusPosition ActionOrder  = "actionValidateStatusPosition"
-	ActionAddPosition            ActionOrder  = "actionAddPosition"
-	ActionRemovePosition         ActionOrder  = "actionRemovePosition"
-	ActionChangeQuantityPosition ActionOrder  = "actionChangeQuantityPosition"
-	ActionCreateCustomOrder      ActionOrder  = "actionCreateCustomOrder"
-	ActionValidation             ActionOrder  = "actionValidation"
-	OrderTypeOrder               OrderType    = "order"
-	OrderTypeReturn              OrderType    = "return"
-	LanguageCodeGerman           LanguageCode = "de"
-	LanguageCodeFrench           LanguageCode = "fr"
+	LanguageCodeGerman LanguageCode = "de"
+	LanguageCodeFrench LanguageCode = "fr"
 )
 
 //------------------------------------------------------------------
@@ -47,7 +33,7 @@ const (
 //------------------------------------------------------------------
 
 type ActionOrder string
-type OrderType string
+
 type OrderStatus string
 type LanguageCode string
 
@@ -62,22 +48,20 @@ type Order struct {
 	unlinkDB         bool // if true, changes to Customer are not stored in database
 	Flags            *Flags
 	State            *state.State
-	CustomerFreeze   *Freeze
 	CustomerData     *CustomerData
-	OrderType        OrderType
 	CreatedAt        time.Time
 	ConfirmedAt      time.Time
 	LastModifiedAt   time.Time
 	CompletedAt      time.Time
 	ATPAt            time.Time
 	Positions        []*Position
-	Payment          *payment.Payment
-	PriceInfo        *OrderPriceInfo
-	Shipping         *shipping.ShippingProperties
-	LanguageCode     LanguageCode
-	CustomProvider   OrderCustomProvider
-	Coupons          []string
-	Custom           interface{} `bson:",omitempty"`
+	//	Payment          *payment.Payment
+	//	PriceInfo        *OrderPriceInfo
+	//	Shipping         *shipping.ShippingProperties
+	LanguageCode   LanguageCode
+	CustomProvider OrderCustomProvider
+	Coupons        []string
+	Custom         interface{} `bson:",omitempty"`
 }
 
 type CustomerData struct {
@@ -159,13 +143,13 @@ func NewOrderWithCustomId(customProvider OrderCustomProvider, orderIdFunc func()
 		Version:        version.NewVersion(),
 		CreatedAt:      utils.TimeNow(),
 		LastModifiedAt: utils.TimeNow(),
-		CustomerFreeze: &Freeze{},
-		CustomerData:   &CustomerData{},
-		OrderType:      OrderTypeOrder,
-		Positions:      []*Position{},
-		Payment:        &payment.Payment{},
-		PriceInfo:      &OrderPriceInfo{},
-		Shipping:       &shipping.ShippingProperties{},
+
+		CustomerData: &CustomerData{},
+
+		Positions: []*Position{},
+		//Payment:        &payment.Payment{},
+		//PriceInfo:      &OrderPriceInfo{},
+		//Shipping:       &shipping.ShippingProperties{},
 	}
 
 	if customProvider != nil {
@@ -210,35 +194,6 @@ func (order *Order) UpsertAndGetOrder(customProvider OrderCustomProvider) (*Orde
 }
 func (order *Order) Delete() error {
 	return DeleteOrder(order)
-}
-
-// FreezeCustomer associates the current version of the customer with the order
-// Changes on customer after freeze are no longer considered for this order.
-func (order *Order) FreezeCustomer() error {
-	if order.IsFrozenCustomer() {
-		return errors.New("Customer version has already been frozen! Use UnfreezeCustomer() is necessary")
-	}
-	if !order.HasCustomer() {
-		return errors.New("No customer is associated to this order yet!")
-	}
-	customer, err := order.GetCustomer(nil)
-	if err != nil {
-		return err
-	}
-	order.CustomerFreeze = &Freeze{
-		Version: customer.GetVersion().Current,
-		Time:    utils.TimeNow(),
-	}
-	return nil
-}
-func (order *Order) UnFreezeCustomer() {
-	order.CustomerFreeze = &Freeze{}
-}
-func (order *Order) IsFrozenCustomer() bool {
-	if order.CustomerFreeze == nil {
-		return false
-	}
-	return !order.CustomerFreeze.Time.IsZero()
 }
 
 // ReplacePosition replaces the itemId of a position, e.g. if article is desired with a different size or color. Quantity is preserved.
