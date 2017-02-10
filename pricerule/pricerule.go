@@ -24,7 +24,7 @@ const (
 	ActionCartByAbsolute ActionType = "cart_by_absolute"
 	ActionItemByAbsolute ActionType = "item_by_absolute"
 
-	ActionBuyXGetY ActionType = "buy_x_get_y"
+	ActionBuyXPayY ActionType = "buy_x_pay_y"
 	ActionScaled   ActionType = "scaled"
 
 	XYCheapestFree      XYWhichType = "xy-cheapest-free"
@@ -81,9 +81,9 @@ type PriceRule struct {
 
 	IncludedPaymentMethods []string // for TypePaymentMethodDiscount - to which payment methods do we apply
 
-	X int // buy X - see ActionBuyXGetY
+	X int // buy X - the number of items that are applicable for an ActionBuyXGetY pricerule, for example order 4 pay 3 means X=4 and Y=3
 
-	Y int // get Y - see ActionBuyXGetY
+	Y int // get Y - the number of items that one has to pay for for an ActionBuyXGetY price, so X-Y are free, X>=Y
 
 	WhichXYFree XYWhichType
 

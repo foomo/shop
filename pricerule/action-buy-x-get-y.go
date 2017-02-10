@@ -3,61 +3,80 @@ package pricerule
 import (
 	"log"
 	"math"
+	"sort"
 )
 
 // CalculateDiscountsBuyXGetY -
-func calculateDiscountsBuyXGetY(articleCollection *ArticleCollection, priceRuleVoucherPair RuleVoucherPair, orderDiscounts OrderDiscounts, productGroupIDsPerPosition map[string][]string, groupIDsForCustomer []string, roundTo float64, isCatalogCalculation bool) OrderDiscounts {
-	log.Println("=== calculateDiscountsBuyXGetY ...")
-	if priceRuleVoucherPair.Rule.Action != ActionBuyXGetY {
+func calculateDiscountsBuyXPayY(articleCollection *ArticleCollection, priceRuleVoucherPair RuleVoucherPair, orderDiscounts OrderDiscounts, productGroupIDsPerPosition map[string][]string, groupIDsForCustomer []string, roundTo float64, isCatalogCalculation bool) OrderDiscounts {
+	log.Println("=== calculateDiscountsBuyXPayY ...")
+	if priceRuleVoucherPair.Rule.Action != ActionBuyXPayY {
 		panic("CalculateDiscountsBuyXGetY called with pricerule of action " + priceRuleVoucherPair.Rule.Action)
 	}
 	if isCatalogCalculation == true {
-		log.Println("catalog calculations can not handle actions of type CalculateDiscountsBuyXGetY")
+		log.Println("catalog calculations can not handle actions of type CalculateDiscountsBuyXPayY")
 		return orderDiscounts
 	}
 
-	for _, article := range articleCollection.Articles {
-		ok, _ := validatePriceRuleForPosition(*priceRuleVoucherPair.Rule, articleCollection, article, productGroupIDsPerPosition, groupIDsForCustomer, isCatalogCalculation)
+	//clone! we do not want to manipiulate cart/articleCollection item articleCollection
+	var sortedPositions []Article
+	for _, positionVoPtr := range articleCollection.Articles {
+		sortedPositions = append(sortedPositions, *positionVoPtr)
+	}
+
+	if priceRuleVoucherPair.Rule.WhichXYFree == XYMostExpensiveFree {
+		sort.Sort(ByPriceDescending(sortedPositions))
+	} else {
+		sort.Sort(ByPriceAscending(sortedPositions))
+	}
+
+	//count matching first and articleCollection by price
+	var totalMatchingQty float64
+	for _, article := range sortedPositions {
+		ok, _ := validatePriceRuleForPosition(*priceRuleVoucherPair.Rule, articleCollection, &article, productGroupIDsPerPosition, groupIDsForCustomer, isCatalogCalculation)
+		if ok {
+			totalMatchingQty += article.Quantity
+		}
+	}
+
+	var timesX = roundToStep(totalMatchingQty/float64(priceRuleVoucherPair.Rule.X), 0.01)
+	timesXInt := int(math.Floor(timesX))
+	freeQty := timesXInt * (priceRuleVoucherPair.Rule.X - int(priceRuleVoucherPair.Rule.Y))
+	var productsAssignedFree int
+
+	for _, article := range sortedPositions {
+		ok, _ := validatePriceRuleForPosition(*priceRuleVoucherPair.Rule, articleCollection, &article, productGroupIDsPerPosition, groupIDsForCustomer, isCatalogCalculation)
 
 		orderDiscountsForPosition := orderDiscounts[article.ID]
 		if !orderDiscounts[article.ID].StopApplyingDiscounts && ok && !previouslyAppliedExclusionInPlace(priceRuleVoucherPair.Rule, orderDiscountsForPosition) {
 
-			totalQty := article.Quantity
-			var timesX = roundToStep(totalQty/float64(priceRuleVoucherPair.Rule.X), 0.01)
-			timesXInt := int(math.Floor(timesX))
-			freeQty := timesXInt * int(priceRuleVoucherPair.Rule.Y)
-			//	fmt.Println("freeQty", freeQty)
-			//	if freeQty > 0 {
-			var productsFree int
+			if freeQty > 0 {
+				if productsAssignedFree < freeQty {
+					//orderDiscountsForPosition := orderDiscounts[article.ID]
+					//apply the discount here
+					discountApplied := getInitializedDiscountApplied(priceRuleVoucherPair, orderDiscounts, article.ID)
 
-			if productsFree < freeQty {
-				//orderDiscountsForPosition := orderDiscounts[article.ID]
-
-				//apply the discount here
-				discountApplied := getInitializedDiscountApplied(priceRuleVoucherPair, orderDiscounts, article.ID)
-
-				for qty := 0; qty < int(article.Quantity/float64(priceRuleVoucherPair.Rule.Y)); qty++ {
-					//calculate the actual discount
-					discountApplied.DiscountAmount += orderDiscounts[article.ID].CurrentItemPrice
-					//discountApplied.DiscountAmount += article.Price
-					//discountApplied.DiscountSingle += positionByPrice.Price // always zero as the discount is not for a single item
-					discountApplied.Quantity = orderDiscounts[article.ID].Quantity
-
-					productsFree++
-					if productsFree >= freeQty {
-						break
+					maxQty := int(article.Quantity)
+					if maxQty > freeQty {
+						maxQty = freeQty
 					}
+
+					for qty := 0; qty < int(maxQty); qty++ {
+						//calculate the actual discount
+						discountApplied.DiscountAmount += orderDiscounts[article.ID].CurrentItemPrice
+						//discountApplied.DiscountAmount += article.Price
+						//discountApplied.DiscountSingle += positionByPrice.Price // always zero as the discount is not for a single item
+						discountApplied.Quantity = orderDiscounts[article.ID].Quantity
+						productsAssignedFree++
+						if productsAssignedFree >= freeQty {
+							break
+						}
+					}
+					orderDiscountsForPosition = calculateCurrentPriceAndApplicableDiscountsEnforceRules(*discountApplied, article.ID, orderDiscountsForPosition, orderDiscounts, *priceRuleVoucherPair.Rule, roundTo)
+					orderDiscounts[article.ID] = orderDiscountsForPosition
 				}
-
-				orderDiscountsForPosition = calculateCurrentPriceAndApplicableDiscountsEnforceRules(*discountApplied, article.ID, orderDiscountsForPosition, orderDiscounts, *priceRuleVoucherPair.Rule, roundTo)
-
-				orderDiscounts[article.ID] = orderDiscountsForPosition
-
 			}
-
 		}
 	}
-
 	return orderDiscounts
 }
 
@@ -75,4 +94,4 @@ type ByPriceDescending []Article
 
 func (a ByPriceDescending) Len() int           { return len(a) }
 func (a ByPriceDescending) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a ByPriceDescending) Less(i, j int) bool { return a[i].Price < a[j].Price }
+func (a ByPriceDescending) Less(i, j int) bool { return a[i].Price > a[j].Price }

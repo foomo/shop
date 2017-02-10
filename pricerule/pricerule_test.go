@@ -268,10 +268,19 @@ func testScaled(t *testing.T) {
 }
 
 // Test groups creation
-func testBuyXGetY(t *testing.T) {
+func TestBuyXGetY(t *testing.T) {
 	//Init
 	RemoveAllGroups()
 	RemoveAllPriceRules()
+
+	groupID := "discounted"
+	//createGroup
+	group := new(Group)
+	group.Type = ProductGroup
+	group.ID = groupID
+	group.Name = groupID
+	group.AddGroupItemIDs([]string{ProductID1SKU1, ProductID3SKU2})
+	group.Upsert()
 
 	//create pricerule
 	priceRule := NewPriceRule(PriceRuleIDSale)
@@ -282,12 +291,13 @@ func testBuyXGetY(t *testing.T) {
 	}
 	priceRule.Type = TypePromotionOrder
 	priceRule.Description = priceRule.Name
-	priceRule.Action = ActionBuyXGetY
-	priceRule.X = 3
-	priceRule.Y = 1
+	priceRule.Action = ActionBuyXPayY
+	priceRule.X = 4
+	priceRule.Y = 3
+	priceRule.WhichXYFree = XYMostExpensiveFree
 	priceRule.MaxUses = 10
 	priceRule.MaxUsesPerCustomer = 10
-	priceRule.IncludedProductGroupIDS = []string{}
+	priceRule.IncludedProductGroupIDS = []string{"discounted"}
 	priceRule.IncludedCustomerGroupIDS = []string{}
 
 	err := priceRule.Upsert()
@@ -863,17 +873,25 @@ func createMockOrderXY(t *testing.T) (*ArticleCollection, error) {
 	orderVo := &ArticleCollection{}
 
 	orderVo.CustomerID = CustomerID1
-	var i int
-	for _, positionID := range []string{ProductID1SKU1, ProductID1SKU2, ProductID3SKU2} {
-		i++
-		positionVo := &Article{}
 
-		positionVo.ID = positionID
-		positionVo.Price = 100 * float64(i)
-		positionVo.Quantity = float64(1)
+	positionVo := &Article{}
+	positionVo.ID = ProductID1SKU1
+	positionVo.Price = 100
+	positionVo.Quantity = 2
+	orderVo.Articles = append(orderVo.Articles, positionVo)
 
-		orderVo.Articles = append(orderVo.Articles, positionVo)
-	}
+	positionVo = &Article{}
+	positionVo.ID = ProductID1SKU2
+	positionVo.Price = 300
+	positionVo.Quantity = float64(2)
+	orderVo.Articles = append(orderVo.Articles, positionVo)
+
+	positionVo = &Article{}
+	positionVo.ID = ProductID3SKU2
+	positionVo.Price = 500
+	positionVo.Quantity = float64(2)
+	orderVo.Articles = append(orderVo.Articles, positionVo)
+
 	return orderVo, nil
 }
 

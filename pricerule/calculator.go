@@ -335,16 +335,11 @@ func calculateRule(orderDiscounts OrderDiscounts, priceRulePair RuleVoucherPair,
 			orderDiscounts = calculateDiscountsCartByAbsolute(articleCollection, priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo, isCatalogCalculation)
 		case ActionCartByPercent:
 			orderDiscounts = calculateDiscountsCartByPercentage(articleCollection, priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo, isCatalogCalculation)
-		case ActionBuyXGetY:
-			orderDiscounts = calculateDiscountsBuyXGetY(articleCollection, priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo, isCatalogCalculation)
+		case ActionBuyXPayY:
+			orderDiscounts = calculateDiscountsBuyXPayY(articleCollection, priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo, isCatalogCalculation)
 		case ActionScaled:
 			orderDiscounts = calculateScaledDiscounts(articleCollection, priceRulePair, orderDiscounts, productGroupIDsPerPosition, groupIDsForCustomer, roundTo, isCatalogCalculation)
 		}
-		//log.Println(":-) Applied " + priceRulePair.Rule.ID)
-		//timeTrack(nowOne, "[calculateRule] "+priceRulePair.Rule.ID+" --> APPLIED")
-	} else {
-		//log.Println(":-/ Not applied " + priceRulePair.Rule.ID + " ----> " + string(priceRuleFailReason))
-		//timeTrack(nowOne, "[calculateRule] "+priceRulePair.Rule.ID+"-------> NOT APPLIED")
 	}
 	return orderDiscounts
 }
