@@ -268,7 +268,7 @@ func testScaled(t *testing.T) {
 }
 
 // Test groups creation
-func TestBuyXGetY(t *testing.T) {
+func testBuyXGetY(t *testing.T) {
 	//Init
 	RemoveAllGroups()
 	RemoveAllPriceRules()
