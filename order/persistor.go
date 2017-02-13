@@ -245,17 +245,22 @@ func GetOrdersOfCustomer(customerId string, customProvider OrderCustomProvider) 
 		log.Println("Query customerdata.customerid failed", customerId)
 		return nil, err
 	}
-	orders := []*Order{}
+	ordersTmp := []*Order{}
 	for {
 		o, err := orderIter()
 		if err != nil {
 			return nil, err
 		}
 		if o != nil {
-			orders = append(orders, o)
+			ordersTmp = append(ordersTmp, o)
 		} else {
 			break
 		}
+	}
+	// reverse order of orders
+	orders := []*Order{}
+	for i := len(ordersTmp) - 1; i >= 0; i-- {
+		orders = append(orders, ordersTmp[i])
 	}
 
 	return orders, nil
@@ -277,17 +282,23 @@ func GetOrderIdsOfCustomer(customerId string) ([]string, error) {
 		log.Println("Query customerdata.customerid failed:", customerId)
 		return nil, err
 	}
-	ids := []string{}
+	idsTmp := []string{}
 	for {
 		o, err := orderIter()
 		if err != nil {
 			return nil, err
 		}
 		if o != nil {
-			ids = append(ids, o.GetID())
+			idsTmp = append(idsTmp, o.GetID())
 		} else {
 			break
 		}
+	}
+
+	// reverse order of ids
+	ids := []string{}
+	for i := len(idsTmp) - 1; i >= 0; i-- {
+		ids = append(ids, idsTmp[i])
 	}
 	return ids, nil
 
