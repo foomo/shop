@@ -7,19 +7,19 @@ import (
 )
 
 // CalculateDiscountsBuyXGetY -
-func calculateDiscountsBuyXPayY(articleCollection *ArticleCollection, priceRuleVoucherPair RuleVoucherPair, orderDiscounts OrderDiscounts, productGroupIDsPerPosition map[string][]string, groupIDsForCustomer []string, roundTo float64, isCatalogCalculation bool) OrderDiscounts {
+func calculateDiscountsBuyXPayY(priceRuleVoucherPair RuleVoucherPair, orderDiscounts OrderDiscounts, calculationParameters *CalculationParameters) OrderDiscounts {
 	log.Println("=== calculateDiscountsBuyXPayY ...")
 	if priceRuleVoucherPair.Rule.Action != ActionBuyXPayY {
 		panic("CalculateDiscountsBuyXGetY called with pricerule of action " + priceRuleVoucherPair.Rule.Action)
 	}
-	if isCatalogCalculation == true {
+	if calculationParameters.isCatalogCalculation == true {
 		log.Println("catalog calculations can not handle actions of type CalculateDiscountsBuyXPayY")
 		return orderDiscounts
 	}
 
 	//clone! we do not want to manipiulate cart/articleCollection item articleCollection
 	var sortedPositions []Article
-	for _, positionVoPtr := range articleCollection.Articles {
+	for _, positionVoPtr := range calculationParameters.articleCollection.Articles {
 		sortedPositions = append(sortedPositions, *positionVoPtr)
 	}
 
@@ -32,7 +32,7 @@ func calculateDiscountsBuyXPayY(articleCollection *ArticleCollection, priceRuleV
 	//count matching first and articleCollection by price
 	var totalMatchingQty float64
 	for _, article := range sortedPositions {
-		ok, _ := validatePriceRuleForPosition(*priceRuleVoucherPair.Rule, articleCollection, &article, productGroupIDsPerPosition, groupIDsForCustomer, isCatalogCalculation)
+		ok, _ := validatePriceRuleForPosition(*priceRuleVoucherPair.Rule, &article, calculationParameters, orderDiscounts)
 		if ok {
 			totalMatchingQty += article.Quantity
 		}
@@ -44,7 +44,7 @@ func calculateDiscountsBuyXPayY(articleCollection *ArticleCollection, priceRuleV
 	var productsAssignedFree int
 
 	for _, article := range sortedPositions {
-		ok, _ := validatePriceRuleForPosition(*priceRuleVoucherPair.Rule, articleCollection, &article, productGroupIDsPerPosition, groupIDsForCustomer, isCatalogCalculation)
+		ok, _ := validatePriceRuleForPosition(*priceRuleVoucherPair.Rule, &article, calculationParameters, orderDiscounts)
 
 		orderDiscountsForPosition := orderDiscounts[article.ID]
 		if !orderDiscounts[article.ID].StopApplyingDiscounts && ok && !previouslyAppliedExclusionInPlace(priceRuleVoucherPair.Rule, orderDiscountsForPosition) {
@@ -71,7 +71,7 @@ func calculateDiscountsBuyXPayY(articleCollection *ArticleCollection, priceRuleV
 							break
 						}
 					}
-					orderDiscountsForPosition = calculateCurrentPriceAndApplicableDiscountsEnforceRules(*discountApplied, article.ID, orderDiscountsForPosition, orderDiscounts, *priceRuleVoucherPair.Rule, roundTo)
+					orderDiscountsForPosition = calculateCurrentPriceAndApplicableDiscountsEnforceRules(*discountApplied, article.ID, orderDiscountsForPosition, orderDiscounts, *priceRuleVoucherPair.Rule, calculationParameters.roundTo)
 					orderDiscounts[article.ID] = orderDiscountsForPosition
 				}
 			}

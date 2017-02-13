@@ -7,18 +7,18 @@ import (
 )
 
 // CalculateDiscountsCartByAbsolute -
-func calculateDiscountsCartByAbsolute(articleCollection *ArticleCollection, priceRuleVoucherPair RuleVoucherPair, orderDiscounts OrderDiscounts, productGroupIDsPerPosition map[string][]string, groupIDsForCustomer []string, roundTo float64, isCatalogCalculation bool) OrderDiscounts {
+func calculateDiscountsCartByAbsolute(priceRuleVoucherPair RuleVoucherPair, orderDiscounts OrderDiscounts, calculationParameters *CalculationParameters) OrderDiscounts {
 	if priceRuleVoucherPair.Rule.Action != ActionCartByAbsolute {
 		panic("CalculateDiscountsCartByAbsolute called with pricerule of action " + priceRuleVoucherPair.Rule.Action)
 	}
 
-	if isCatalogCalculation == true {
+	if calculationParameters.isCatalogCalculation == true {
 		log.Println("catalog calculations can not handle actions of type CalculateDiscountsCartByAbsolute")
 		return orderDiscounts
 	}
 
 	//collect item values = price * qty for applicable items
-	amountsMap := getAmountsOfApplicablePositions(priceRuleVoucherPair.Rule, articleCollection, productGroupIDsPerPosition, groupIDsForCustomer, isCatalogCalculation)
+	amountsMap := getAmountsOfApplicablePositions(priceRuleVoucherPair.Rule, calculationParameters, orderDiscounts)
 	amounts := getMapValues(amountsMap)
 	//spew.Dump(amounts)
 	// the tricky part - stolen code from Florian - distribute the amount proportional to the price
@@ -36,7 +36,7 @@ func calculateDiscountsCartByAbsolute(articleCollection *ArticleCollection, pric
 		panic(err)
 	}
 
-	for _, article := range articleCollection.Articles {
+	for _, article := range calculationParameters.articleCollection.Articles {
 		// if we have the distributed amount
 		if discountAmount, ok := distribution[article.ID]; ok {
 			// and rule can still be applied
@@ -53,8 +53,7 @@ func calculateDiscountsCartByAbsolute(articleCollection *ArticleCollection, pric
 
 					//pointer assignment WTF !!!
 					orderDiscountsForPosition := orderDiscounts[article.ID]
-					orderDiscountsForPosition = calculateCurrentPriceAndApplicableDiscountsEnforceRules(*discountApplied, article.ID, orderDiscountsForPosition, orderDiscounts, *priceRuleVoucherPair.Rule, roundTo)
-
+					orderDiscountsForPosition = calculateCurrentPriceAndApplicableDiscountsEnforceRules(*discountApplied, article.ID, orderDiscountsForPosition, orderDiscounts, *priceRuleVoucherPair.Rule, calculationParameters.roundTo)
 					orderDiscounts[article.ID] = orderDiscountsForPosition
 				}
 			}
@@ -209,13 +208,13 @@ func IteInt64(condition bool, thenDo int64, elseDo int64) int64 {
 }
 
 // get map of [positionID] => price*quantity for applicable positions
-func getAmountsOfApplicablePositions(priceRule *PriceRule, articleCollection *ArticleCollection, productGroupIDsPerPosition map[string][]string, groupIDsForCustomer []string, isCatalogCalculation bool) map[string]float64 {
+func getAmountsOfApplicablePositions(priceRule *PriceRule, calculationParameters *CalculationParameters, orderDiscounts OrderDiscounts) map[string]float64 {
 	//collect item values = price * qty for applicable items
 	//amounts := []float64{}
 	amountsMap := make(map[string]float64)
 
-	for _, article := range articleCollection.Articles {
-		ok, _ := validatePriceRuleForPosition(*priceRule, articleCollection, article, productGroupIDsPerPosition, groupIDsForCustomer, isCatalogCalculation)
+	for _, article := range calculationParameters.articleCollection.Articles {
+		ok, _ := validatePriceRuleForPosition(*priceRule, article, calculationParameters, orderDiscounts)
 		if ok {
 			//amounts = append(amounts, article.Price*article.Quantity)
 			amountsMap[article.ID] = article.Price * article.Quantity

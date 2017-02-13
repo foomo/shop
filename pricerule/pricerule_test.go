@@ -206,7 +206,7 @@ func testCache(t *testing.T) {
 }
 
 // Test groups creation
-func TestScaled(t *testing.T) {
+func testScaled(t *testing.T) {
 	//Init
 
 	//Init
@@ -234,7 +234,7 @@ func TestScaled(t *testing.T) {
 	priceRule.Description = priceRule.Name
 
 	priceRule.Action = ActionScaled
-	priceRule.ScaledAmounts = append(priceRule.ScaledAmounts, ScaledAmountLevel{FromValue: 2.0, ToValue: 15.0, Amount: 10, IsScaledAmountPercentage: true, IsFromToPrice: false})
+	priceRule.ScaledAmounts = append(priceRule.ScaledAmounts, ScaledAmountLevel{FromValue: 2.0, ToValue: 10.0, Amount: 10, IsScaledAmountPercentage: true, IsFromToPrice: false})
 
 	priceRule.MaxUses = 10
 	priceRule.MaxUsesPerCustomer = 10
@@ -395,9 +395,13 @@ func testExclude(t *testing.T) {
 	}
 
 	productGroupIDsPerPosition := getProductGroupIDsPerPosition(orderVo, false)
+	calculationParameters := &CalculationParameters{}
+	calculationParameters.productGroupIDsPerPosition = productGroupIDsPerPosition
+	calculationParameters.isCatalogCalculation = false
+	calculationParameters.articleCollection = orderVo
 	//spew.Dump(productGroupIDsPerPosition)
 	for _, article := range orderVo.Articles {
-		ok, _ := validatePriceRuleForPosition(*priceRule, orderVo, article, productGroupIDsPerPosition, []string{}, false)
+		ok, _ := validatePriceRuleForPosition(*priceRule, article, calculationParameters, nil)
 		log.Println(article.ID + " " + priceRule.ID + " " + strconv.FormatBool(ok))
 	}
 

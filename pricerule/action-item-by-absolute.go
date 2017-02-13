@@ -1,13 +1,13 @@
 package pricerule
 
 // CalculateDiscountsItemByPercent -
-func calculateDiscountsItemByAbsolute(articleCollection *ArticleCollection, priceRuleVoucherPair RuleVoucherPair, orderDiscounts OrderDiscounts, productGroupIDsPerPosition map[string][]string, groupIDsForCustomer []string, roundTo float64, isCatalogCalculation bool) OrderDiscounts {
+func calculateDiscountsItemByAbsolute(priceRuleVoucherPair RuleVoucherPair, orderDiscounts OrderDiscounts, calculationParameters *CalculationParameters) OrderDiscounts {
 
 	if priceRuleVoucherPair.Rule.Action != ActionItemByAbsolute {
 		panic("CalculateDiscountsItemByPercent called with pricerule of action " + priceRuleVoucherPair.Rule.Action)
 	}
-	for _, article := range articleCollection.Articles {
-		ok, _ := validatePriceRuleForPosition(*priceRuleVoucherPair.Rule, articleCollection, article, productGroupIDsPerPosition, groupIDsForCustomer, isCatalogCalculation)
+	for _, article := range calculationParameters.articleCollection.Articles {
+		ok, _ := validatePriceRuleForPosition(*priceRuleVoucherPair.Rule, article, calculationParameters, orderDiscounts)
 
 		orderDiscountsForPosition := orderDiscounts[article.ID]
 		if !orderDiscounts[article.ID].StopApplyingDiscounts && ok && !previouslyAppliedExclusionInPlace(priceRuleVoucherPair.Rule, orderDiscountsForPosition) {
@@ -15,13 +15,13 @@ func calculateDiscountsItemByAbsolute(articleCollection *ArticleCollection, pric
 			discountApplied := getInitializedDiscountApplied(priceRuleVoucherPair, orderDiscounts, article.ID)
 
 			//calculate the actual discount
-			discountApplied.DiscountAmount = roundToStep((orderDiscounts[article.ID].Quantity * priceRuleVoucherPair.Rule.Amount), roundTo)
+			discountApplied.DiscountAmount = roundToStep((orderDiscounts[article.ID].Quantity * priceRuleVoucherPair.Rule.Amount), calculationParameters.roundTo)
 			discountApplied.DiscountSingle = priceRuleVoucherPair.Rule.Amount
 			discountApplied.Quantity = orderDiscounts[article.ID].Quantity
 
 			//pointer assignment WTF !!!
 			orderDiscountsForPosition := orderDiscounts[article.ID]
-			orderDiscountsForPosition = calculateCurrentPriceAndApplicableDiscountsEnforceRules(*discountApplied, article.ID, orderDiscountsForPosition, orderDiscounts, *priceRuleVoucherPair.Rule, roundTo)
+			orderDiscountsForPosition = calculateCurrentPriceAndApplicableDiscountsEnforceRules(*discountApplied, article.ID, orderDiscountsForPosition, orderDiscounts, *priceRuleVoucherPair.Rule, calculationParameters.roundTo)
 			orderDiscounts[article.ID] = orderDiscountsForPosition
 		}
 	}
@@ -30,11 +30,7 @@ func calculateDiscountsItemByAbsolute(articleCollection *ArticleCollection, pric
 
 func previouslyAppliedExclusionInPlace(rule *PriceRule, orderDiscountsForPosition DiscountCalculationData) bool {
 	previouslyAppliedExclusion := false
-	// if rule.Type == TypePromotionProduct {
-	// 	if orderDiscountsForPosition.ProductPromotionApplied {
-	// 		previouslyAppliedExclusion = true
-	// 	}
-	// }
+
 	if rule.Type == TypePromotionCustomer || rule.Type == TypePromotionProduct {
 		if orderDiscountsForPosition.CustomerPromotionApplied || orderDiscountsForPosition.ProductPromotionApplied {
 			previouslyAppliedExclusion = true

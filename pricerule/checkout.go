@@ -1,10 +1,6 @@
 package pricerule
 
-import (
-	"sort"
-
-	"github.com/davecgh/go-spew/spew"
-)
+import "sort"
 
 //------------------------------------------------------------------
 // ~ PUBLIC TYPES
@@ -68,7 +64,9 @@ const (
 func ValidateVoucher(voucherCode string, articleCollection *ArticleCollection) (ok bool, validationMessage TypeRuleValidationMsg) {
 	//check if voucher is for customer or generic/guest
 	//get voucher
-
+	calculationParameters := &CalculationParameters{}
+	calculationParameters.articleCollection = articleCollection
+	calculationParameters.isCatalogCalculation = false
 	customerID := articleCollection.CustomerID
 	voucher, voucherPriceRule, err := GetVoucherAndPriceRule(voucherCode, nil)
 
@@ -98,14 +96,18 @@ func ValidateVoucher(voucherCode string, articleCollection *ArticleCollection) (
 	if len(groupIDsForCustomer) == 0 {
 		groupIDsForCustomer = []string{}
 	}
+	calculationParameters.groupIDsForCustomer = groupIDsForCustomer
+
 	//find the groupIds for articleCollection items
 	productGroupIDsPerPosition := getProductGroupIDsPerPosition(articleCollection, false)
-	ok, priceRuleFailReason := validatePriceRuleForOrder(*voucherPriceRule, articleCollection, productGroupIDsPerPosition, groupIDsForCustomer, false)
+	calculationParameters.productGroupIDsPerPosition = productGroupIDsPerPosition
+
+	ok, priceRuleFailReason := validatePriceRuleForOrder(*voucherPriceRule, calculationParameters, OrderDiscounts{})
 	if !ok {
 		return false, priceRuleFailReason
 	}
 
-	ok, priceRuleFailReason = checkPreviouslyAppliedRules(voucherPriceRule, voucher, articleCollection, groupIDsForCustomer, productGroupIDsPerPosition)
+	ok, priceRuleFailReason = checkPreviouslyAppliedRules(voucherPriceRule, voucher, calculationParameters)
 	if !ok {
 		return false, priceRuleFailReason
 	}
@@ -139,9 +141,6 @@ func CommitDiscounts(orderDiscounts *OrderDiscounts, customerID string) error {
 	appliedVoucherRuleIDs = RemoveDuplicates(appliedVoucherRuleIDs)
 	appliedVoucherCodes = RemoveDuplicates(appliedVoucherCodes)
 
-	spew.Dump(appliedRuleIDs)
-	spew.Dump(appliedVoucherRuleIDs)
-
 	//redeem vouchers first
 	//NOTE: redeem internaly manipulates the associated pricerule as well
 	for _, voucherCode := range appliedVoucherCodes {
@@ -152,7 +151,6 @@ func CommitDiscounts(orderDiscounts *OrderDiscounts, customerID string) error {
 		}
 	}
 
-	spew.Dump(appliedRuleIDs)
 	for _, ruleID := range appliedRuleIDs {
 		err := UpdatePriceRuleUsageHistoryAtomic(ruleID, customerID)
 		if err != nil {
@@ -189,7 +187,7 @@ func redeemVoucherByCode(voucherCode string, customerID string) error {
 }
 
 // Returns false, ValidationPreviouslyAppliedRuleBlock if a previous rule blocks application
-func checkPreviouslyAppliedRules(voucherPriceRule *PriceRule, voucher *Voucher, articleCollection *ArticleCollection, groupIDsForCustomer []string, productGroupIDsPerPosition map[string][]string) (ok bool, reason TypeRuleValidationMsg) {
+func checkPreviouslyAppliedRules(voucherPriceRule *PriceRule, voucher *Voucher, calculationParameters *CalculationParameters) (ok bool, reason TypeRuleValidationMsg) {
 	// find applicable pricerules - auto promotions
 	promotionPriceRules, err := GetValidPriceRulesForPromotions([]Type{TypePromotionOrder, TypePromotionCustomer, TypePromotionProduct}, nil)
 	if err != nil {
@@ -219,8 +217,8 @@ func checkPreviouslyAppliedRules(voucherPriceRule *PriceRule, voucher *Voucher, 
 			if ruleVoucherPair.Voucher.VoucherCode == voucher.VoucherCode {
 				found = true
 			}
-			for _, article := range articleCollection.Articles {
-				applicable, _ := validatePriceRuleForPosition(*ruleVoucherPair.Rule, articleCollection, article, productGroupIDsPerPosition, groupIDsForCustomer, false)
+			for _, article := range calculationParameters.articleCollection.Articles {
+				applicable, _ := validatePriceRuleForPosition(*ruleVoucherPair.Rule, article, calculationParameters, nil)
 				if applicable && ruleVoucherPair.Rule.Exclusive == true {
 					if found == false {
 						return false, ValidationPreviouslyAppliedRuleBlock
