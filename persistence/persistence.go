@@ -24,6 +24,18 @@ type Persistor struct {
 // ~ CONSTRUCTOR
 //------------------------------------------------------------------
 
+func NewPersistorWithIndex(mongoURL string, collection string, index mgo.Index) (p *Persistor, err error) {
+	p, err = NewPersistor(mongoURL, collection)
+	if err != nil {
+		return
+	}
+	err = p.GetCollection().EnsureIndex(index)
+	if err != nil {
+		return
+	}
+	return p, nil
+}
+
 // NewPersistor constructor
 func NewPersistor(mongoURL string, collection string) (p *Persistor, err error) {
 	parsedURL, err := url.Parse(mongoURL)
