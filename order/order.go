@@ -65,11 +65,14 @@ type Order struct {
 }
 
 type CustomerData struct {
-	CustomerId      string
-	CustomerType    string // Private / Staff etc.
-	Email           string
-	BillingAddress  *address.Address
-	ShippingAddress *address.Address
+	CustomerId          string
+	CustomerType        string // Private / Staff etc.
+	Email               string
+	BillingAddress      *address.Address
+	ShippingAddress     *address.Address
+	IsNewCustomer       bool
+	IsGuestCustomer     bool
+	IsReturningCustomer bool
 }
 
 type Flags struct {
