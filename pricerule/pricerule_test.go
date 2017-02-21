@@ -266,8 +266,8 @@ func testScaled(t *testing.T) {
 	positionVo.Price = 500
 	positionVo.Quantity = float64(2)
 	orderVo.Articles = append(orderVo.Articles, positionVo)
-	// Order -------------------------------------------------------------------------------
 
+	// Order -------------------------------------------------------------------------------
 	now := time.Now()
 	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{""}, "", 0.05, nil)
 	timeTrack(now, "Apply scaled voucher")
@@ -275,7 +275,6 @@ func testScaled(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-
 	fmt.Println("discounts for scaled percentage")
 	spew.Dump(discountsVo)
 	spew.Dump(*summary)
