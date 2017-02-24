@@ -117,7 +117,7 @@ func ClearCache() {
 
 // ApplyDiscounts applies all possible discounts on articleCollection ... if voucherCodes is "" the voucher is not applied
 // This is not yet used. ApplyDiscounts should at some point be able to consider previousle calculated discounts
-func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts OrderDiscounts, voucherCodes []string, paymentMethod string, roundTo float64, customProvider PriceRuleCustomProvider) (OrderDiscounts, *OrderDiscountSummary, error) {
+func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts OrderDiscounts, voucherCodes []string, paymentMethods []string, roundTo float64, customProvider PriceRuleCustomProvider) (OrderDiscounts, *OrderDiscountSummary, error) {
 	calculationParameters := &CalculationParameters{}
 	calculationParameters.articleCollection = articleCollection
 	calculationParameters.roundTo = roundTo
@@ -151,8 +151,8 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 
 	// find applicable payment discounts
 	var paymentPriceRules []PriceRule
-	if len(paymentMethod) > 0 {
-		paymentPriceRules, err = GetValidPriceRulesForPaymentMethod(paymentMethod, customProvider)
+	if len(paymentMethods) > 0 {
+		paymentPriceRules, err = GetValidPriceRulesForPaymentMethods(paymentMethods, customProvider)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -243,7 +243,6 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 					voucherDiscounts.DiscountAmount += appliedDiscount.DiscountAmountApplicable
 					summary.VoucherDiscounts[appliedDiscount.VoucherCode] = voucherDiscounts
 				}
-
 			}
 		}
 	}

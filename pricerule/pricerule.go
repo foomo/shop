@@ -261,8 +261,8 @@ func RemoveAllPriceRules() error {
 
 // GetValidPriceRulesForPaymentMethod - find rule for payment
 // check ValidFrom, ValidTo
-func GetValidPriceRulesForPaymentMethod(paymentMethod string, customProvider PriceRuleCustomProvider) ([]PriceRule, error) {
-	query := bson.M{"type": TypePaymentMethodDiscount, "includedpaymentmethods": bson.M{"$in": []string{paymentMethod}}, "validfrom": bson.M{"$lte": time.Now()}, "validto": bson.M{"$gte": time.Now()}}
+func GetValidPriceRulesForPaymentMethods(paymentMethods []string, customProvider PriceRuleCustomProvider) ([]PriceRule, error) {
+	query := bson.M{"type": TypePaymentMethodDiscount, "includedpaymentmethods": bson.M{"$in": paymentMethods}, "validfrom": bson.M{"$lte": time.Now()}, "validto": bson.M{"$gte": time.Now()}}
 	return getPromotions(query, customProvider)
 }
 
