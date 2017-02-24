@@ -51,6 +51,7 @@ type Order struct {
 	CustomerData     *CustomerData
 	CreatedAt        time.Time
 	ConfirmedAt      time.Time
+	TransmittedAt    time.Time
 	LastModifiedAt   time.Time
 	CompletedAt      time.Time
 	ATPAt            time.Time
