@@ -22,6 +22,7 @@ type CalculationParameters struct {
 	groupIDsForCustomer        []string
 	roundTo                    float64
 	isCatalogCalculation       bool
+	checkoutAttributes         []string
 }
 
 type ArticleCollection struct {
@@ -117,11 +118,12 @@ func ClearCache() {
 
 // ApplyDiscounts applies all possible discounts on articleCollection ... if voucherCodes is "" the voucher is not applied
 // This is not yet used. ApplyDiscounts should at some point be able to consider previousle calculated discounts
-func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts OrderDiscounts, voucherCodes []string, paymentMethods []string, roundTo float64, customProvider PriceRuleCustomProvider) (OrderDiscounts, *OrderDiscountSummary, error) {
+func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts OrderDiscounts, voucherCodes []string, checkoutAttributes []string, roundTo float64, customProvider PriceRuleCustomProvider) (OrderDiscounts, *OrderDiscountSummary, error) {
 	calculationParameters := &CalculationParameters{}
 	calculationParameters.articleCollection = articleCollection
 	calculationParameters.roundTo = roundTo
 	calculationParameters.isCatalogCalculation = false
+	calculationParameters.checkoutAttributes = checkoutAttributes
 	now := time.Now()
 	//find the groupIds for articleCollection items
 
@@ -149,15 +151,14 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 
 	timeTrack(now, "loading pricerules took ")
 
-	// find applicable payment discounts
+	// find applicable discounts limited to checkoutAttributes - payment methods etc
 	var paymentPriceRules []PriceRule
-	if len(paymentMethods) > 0 {
-		paymentPriceRules, err = GetValidPriceRulesForPaymentMethods(paymentMethods, customProvider)
+	if len(checkoutAttributes) > 0 {
+		paymentPriceRules, err = GetValidPriceRulesForCheckoutAttributes(checkoutAttributes, customProvider)
 		if err != nil {
 			return nil, nil, err
 		}
 		for _, paymentRule := range paymentPriceRules {
-
 			rule := &PriceRule{}
 			*rule = paymentRule
 			ruleVoucherPairs = append(ruleVoucherPairs, RuleVoucherPair{Rule: rule, Voucher: nil})
@@ -202,6 +203,20 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 					continue
 				}
 
+				//filter out the vouchers that can not be applied due to a mismatch with checkoutAttributes
+				if len(voucherPriceRule.CheckoutAttributes) > 0 {
+					match := false
+					for _, checkoutAttribute := range checkoutAttributes {
+						if contains(checkoutAttribute, voucherPriceRule.CheckoutAttributes) {
+							match = true
+							break
+						}
+					}
+					if !match {
+						continue
+					}
+				}
+
 				if !voucherVo.TimeRedeemed.IsZero() {
 					log.Println("voucher " + voucherCode + " already redeemed ... skipping")
 					continue
@@ -215,7 +230,6 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 			}
 		}
 		//apply them
-
 		for _, priceRulePair := range ruleVoucherPairsStep2 {
 			orderDiscounts = calculateRule(orderDiscounts, priceRulePair, calculationParameters)
 		}
@@ -256,13 +270,14 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 
 // ApplyDiscountsOnCatalog applies all possible discounts on articleCollection ... if voucherCodes is "" the voucher is not applied
 // This is not yet used. ApplyDiscounts should at some point be able to consider previousle calculated discounts
-func ApplyDiscountsOnCatalog(articleCollection *ArticleCollection, existingDiscounts OrderDiscounts, voucherCodes []string, paymentMethod string, roundTo float64, customProvider PriceRuleCustomProvider) (OrderDiscounts, *OrderDiscountSummary, error) {
+func ApplyDiscountsOnCatalog(articleCollection *ArticleCollection, existingDiscounts OrderDiscounts, roundTo float64, customProvider PriceRuleCustomProvider) (OrderDiscounts, *OrderDiscountSummary, error) {
 	var ruleVoucherPairs []RuleVoucherPair
 	start := time.Now()
 	calculationParameters := &CalculationParameters{}
 	calculationParameters.articleCollection = articleCollection
 	calculationParameters.roundTo = roundTo
 	calculationParameters.isCatalogCalculation = true
+	calculationParameters.checkoutAttributes = []string{}
 
 	now := time.Now()
 	//find the groupIds for articleCollection items
@@ -416,7 +431,6 @@ func IsOneProductOrCustomerGroupInIncludedGroups(ruleIncludeGroups []string, pro
 		}
 	}
 	return false
-
 }
 
 // check if all rule group IDs are included
@@ -473,6 +487,19 @@ func validatePriceRuleForPosition(priceRule PriceRule, article *Article, calcula
 
 // validatePriceRule -
 func validatePriceRule(priceRule PriceRule, checkedPosition *Article, calculationParameters *CalculationParameters, orderDiscounts OrderDiscounts) (ok bool, reason TypeRuleValidationMsg) {
+	if len(priceRule.CheckoutAttributes) > 0 {
+		match := false
+		for _, checkoutAttribute := range calculationParameters.checkoutAttributes {
+			if contains(checkoutAttribute, priceRule.CheckoutAttributes) {
+				match = true
+				break
+			}
+		}
+		if !match {
+			return false, ValidationPriceRuleCheckoutAttributesMismatch
+		}
+	}
+
 	if !calculationParameters.isCatalogCalculation {
 		if priceRule.MaxUses <= priceRule.UsageHistory.TotalUsages {
 			return false, ValidationPriceRuleMaxUsages
@@ -598,4 +625,13 @@ func dereferenceVoucherPriceRule(voucherRule *PriceRule) PriceRule {
 func timeTrack(start time.Time, name string) {
 	elapsed := time.Since(start)
 	log.Printf("%s %s", name, elapsed)
+}
+
+func contains(e string, s []string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
 }

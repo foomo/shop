@@ -79,7 +79,7 @@ type PriceRule struct {
 
 	IncludedCustomerGroupIDS []string //IncludedGroupIds -  MUST BE PRESSENT to be applicable
 
-	IncludedPaymentMethods []string // for TypePaymentMethodDiscount - to which payment methods do we apply
+	CheckoutAttributes []string // for CheckoutAttributes -  payment methods etc - only applicable if the checkout provides these attribues
 
 	X int // buy X - the number of items that are applicable for an ActionBuyXGetY pricerule, for example order 4 pay 3 means X=4 and Y=3
 
@@ -151,6 +151,7 @@ func NewPriceRule(ID string) *PriceRule {
 	priceRule.Exclusive = false
 	priceRule.ExcludedProductGroupIDS = []string{}
 	priceRule.IncludedProductGroupIDS = []string{}
+	priceRule.CheckoutAttributes = []string{}
 	priceRule.MaxUsesPerCustomer = MaxInt
 	priceRule.MinOrderAmountApplicableItemsOnly = false
 	priceRule.Priority = 999
@@ -259,19 +260,19 @@ func RemoveAllPriceRules() error {
 	return err
 }
 
-// GetValidPriceRulesForPaymentMethod - find rule for payment
+// GetValidPriceRulesForCheckoutAttributes - find rule for payment method etc etc
 // check ValidFrom, ValidTo
-func GetValidPriceRulesForPaymentMethods(paymentMethods []string, customProvider PriceRuleCustomProvider) ([]PriceRule, error) {
+func GetValidPriceRulesForCheckoutAttributes(checkoutAttributes []string, customProvider PriceRuleCustomProvider) ([]PriceRule, error) {
 
 	paymentPriceruleTypes := []Type{TypePromotionCustomer, TypePromotionProduct, TypePromotionOrder, TypePaymentMethodDiscount}
-	query := bson.M{"type": bson.M{"$in": paymentPriceruleTypes}, "includedpaymentmethods": bson.M{"$in": paymentMethods}, "validfrom": bson.M{"$lte": time.Now()}, "validto": bson.M{"$gte": time.Now()}}
+	query := bson.M{"type": bson.M{"$in": paymentPriceruleTypes}, "includedcheckoutattributes": bson.M{"$in": checkoutAttributes}, "validfrom": bson.M{"$lte": time.Now()}, "validto": bson.M{"$gte": time.Now()}}
 	return getPromotions(query, customProvider)
 }
 
 // GetValidPriceRulesForPromotions - find rule for payment
 // check ValidFrom, ValidTo
 func GetValidPriceRulesForPromotions(priceRuleTypes []Type, customProvider PriceRuleCustomProvider) ([]PriceRule, error) {
-	query := bson.M{"type": bson.M{"$in": priceRuleTypes}, "includedpaymentmethods": bson.M{"$exists": true, "$size": 0}, "validfrom": bson.M{"$lte": time.Now()}, "validto": bson.M{"$gte": time.Now()}}
+	query := bson.M{"type": bson.M{"$in": priceRuleTypes}, "includedcheckoutattributes": bson.M{"$exists": true, "$size": 0}, "validfrom": bson.M{"$lte": time.Now()}, "validto": bson.M{"$gte": time.Now()}}
 	return getPromotions(query, customProvider)
 }
 

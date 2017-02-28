@@ -92,15 +92,16 @@ func Init(t *testing.T) {
 	checkVouchersExists(t)
 }
 
-func testPaymentRuleOfDiscountType(t *testing.T) {
+func testVoucherRuleWithCheckoutAttributes(t *testing.T) {
 	RemoveAllGroups()
 	RemoveAllPriceRules()
 	RemoveAllVouchers()
+
 	group := new(Group)
 	group.Type = ProductGroup
 	group.ID = "sale"
 	group.Name = "sale"
-	group.AddGroupItemIDs([]string{"sale-item-id"})
+	group.AddGroupItemIDs([]string{ProductID1SKU1, ProductID1SKU2})
 	err := group.Upsert()
 	if err != nil {
 		t.Fatal("Could not upsert shipping product group ")
@@ -113,43 +114,51 @@ func testPaymentRuleOfDiscountType(t *testing.T) {
 		"fr": "normal-discount",
 		"it": "normal-discount",
 	}
-	priceRule.Type = TypePromotionProduct
+	priceRule.Type = TypeVoucher
 	priceRule.Description = priceRule.Name
 	priceRule.Action = ActionItemByAbsolute
 	priceRule.Amount = 10
 	priceRule.MinOrderAmount = 0
 	priceRule.MinOrderAmountApplicableItemsOnly = false
-	priceRule.IncludedProductGroupIDS = []string{"sale"}
+	priceRule.IncludedProductGroupIDS = []string{group.ID}
 	priceRule.IncludedCustomerGroupIDS = []string{}
+	priceRule.CheckoutAttributes = []string{PaymentMethodID1}
 	priceRule.Upsert()
 
 	//create pricerule
-	priceRule = NewPriceRule(PriceRuleIDPayment)
-	priceRule.Name = map[string]string{
-		"de": "payment-discount",
-		"fr": "payment-discount",
-		"it": "payment-discount",
+
+	//create voucher
+
+	voucher := NewVoucher(VoucherID1, VoucherCode1, priceRule, "")
+	err = voucher.Upsert()
+	if err != nil {
+		panic(err)
 	}
-	priceRule.Type = TypePromotionProduct
-	priceRule.Description = priceRule.Name
-	priceRule.Action = ActionItemByAbsolute
-	priceRule.Amount = 5
-	priceRule.MinOrderAmount = 0
-	priceRule.MinOrderAmountApplicableItemsOnly = false
-	priceRule.IncludedProductGroupIDS = []string{}
-	priceRule.IncludedCustomerGroupIDS = []string{}
-	priceRule.IncludedPaymentMethods = []string{PaymentMethodID1}
-	priceRule.Upsert()
 
-	// now retrieve
-	promotionPriceRules, err := GetValidPriceRulesForPromotions([]Type{TypePromotionCustomer, TypePromotionProduct, TypePromotionOrder}, nil)
-	spew.Dump(promotionPriceRules)
+	// Order -------------------------------------------------------------------------------
+	orderVo := &ArticleCollection{}
+	orderVo.CustomerID = CustomerID1
 
-	fmt.Println("-----------------------------------------")
+	positionVo := &Article{}
+	positionVo.ID = ProductID1SKU1
+	positionVo.Price = 100
+	positionVo.Quantity = 2
+	orderVo.Articles = append(orderVo.Articles, positionVo)
 
-	// now retrieve
-	paymentPriceRules, err := GetValidPriceRulesForPaymentMethods([]string{PaymentMethodID1}, nil)
-	spew.Dump(paymentPriceRules)
+	positionVo = &Article{}
+	positionVo.ID = ProductID1SKU2
+	positionVo.Price = 300
+	positionVo.Quantity = float64(2)
+	orderVo.Articles = append(orderVo.Articles, positionVo)
+
+	positionVo = &Article{}
+	positionVo.ID = ProductID3SKU2
+	positionVo.Price = 500
+	positionVo.Quantity = float64(2)
+	orderVo.Articles = append(orderVo.Articles, positionVo)
+
+	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{VoucherCode1}, []string{PaymentMethodID1}, 0.05, nil)
+	spew.Dump(discountsVo, summary, err)
 
 }
 
@@ -262,7 +271,7 @@ func testCache(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	discountsVo, summary, err := ApplyDiscountsOnCatalog(orderVo, nil, []string{""}, "", 0.05, nil)
+	discountsVo, summary, err := ApplyDiscountsOnCatalog(orderVo, nil, 0.05, nil)
 	spew.Dump(discountsVo, summary, err)
 }
 
@@ -737,7 +746,7 @@ func testCheckoutWorkflow(t *testing.T) {
 	}
 
 	now = time.Now()
-	ok, reason := ValidateVoucher(VoucherCode1, orderVo)
+	ok, reason := ValidateVoucher(VoucherCode1, orderVo, []string{})
 	if !ok {
 		log.Println("VOUCHER INVALID" + VoucherCode1 + reason)
 	}
@@ -876,7 +885,7 @@ func createMockPriceRules(t *testing.T) {
 
 	priceRule.Amount = 2.0 //2 ActionCartByPercent
 
-	priceRule.IncludedPaymentMethods = []string{PaymentMethodID1}
+	priceRule.CheckoutAttributes = []string{PaymentMethodID1}
 
 	priceRule.IncludedProductGroupIDS = []string{} //for all products
 

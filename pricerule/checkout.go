@@ -26,6 +26,8 @@ const (
 
 	ValidationPreviouslyAppliedRuleBlock TypeRuleValidationMsg = "rule_blocked_by_previously_applied_rule" //rule application blocked
 	ValidationPriceRuleOK                TypeRuleValidationMsg = "price_rule_ok"
+
+	ValidationPriceRuleCheckoutAttributesMismatch TypeRuleValidationMsg = "pricerule_checkout_attributes_missmatch"
 )
 
 //------------------------------------------------------------------
@@ -61,12 +63,13 @@ const (
 // - ValidationPriceRuleExcludeCustomerGroupsNotMatching - can not be applied for customers in the group ... for example rule not for employees
 //
 // - ValidationPreviouslyAppliedRuleBlock - a previously applied rule (with priority number higher) has a property set to true ... no further rules can be applied
-func ValidateVoucher(voucherCode string, articleCollection *ArticleCollection) (ok bool, validationMessage TypeRuleValidationMsg) {
+func ValidateVoucher(voucherCode string, articleCollection *ArticleCollection, checkoutAttributes []string) (ok bool, validationMessage TypeRuleValidationMsg) {
 	//check if voucher is for customer or generic/guest
 	//get voucher
 	calculationParameters := &CalculationParameters{}
 	calculationParameters.articleCollection = articleCollection
 	calculationParameters.isCatalogCalculation = false
+	calculationParameters.checkoutAttributes = checkoutAttributes
 	customerID := articleCollection.CustomerID
 	voucher, voucherPriceRule, err := GetVoucherAndPriceRule(voucherCode, nil)
 
