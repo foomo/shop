@@ -262,14 +262,16 @@ func RemoveAllPriceRules() error {
 // GetValidPriceRulesForPaymentMethod - find rule for payment
 // check ValidFrom, ValidTo
 func GetValidPriceRulesForPaymentMethods(paymentMethods []string, customProvider PriceRuleCustomProvider) ([]PriceRule, error) {
-	query := bson.M{"type": TypePaymentMethodDiscount, "includedpaymentmethods": bson.M{"$in": paymentMethods}, "validfrom": bson.M{"$lte": time.Now()}, "validto": bson.M{"$gte": time.Now()}}
+
+	paymentPriceruleTypes := []Type{TypePromotionCustomer, TypePromotionProduct, TypePromotionOrder, TypePaymentMethodDiscount}
+	query := bson.M{"type": bson.M{"$in": paymentPriceruleTypes}, "includedpaymentmethods": bson.M{"$in": paymentMethods}, "validfrom": bson.M{"$lte": time.Now()}, "validto": bson.M{"$gte": time.Now()}}
 	return getPromotions(query, customProvider)
 }
 
 // GetValidPriceRulesForPromotions - find rule for payment
 // check ValidFrom, ValidTo
 func GetValidPriceRulesForPromotions(priceRuleTypes []Type, customProvider PriceRuleCustomProvider) ([]PriceRule, error) {
-	query := bson.M{"type": bson.M{"$in": priceRuleTypes}, "validfrom": bson.M{"$lte": time.Now()}, "validto": bson.M{"$gte": time.Now()}}
+	query := bson.M{"type": bson.M{"$in": priceRuleTypes}, "includedpaymentmethods": bson.M{"$exists": true, "$size": 0}, "validfrom": bson.M{"$lte": time.Now()}, "validto": bson.M{"$gte": time.Now()}}
 	return getPromotions(query, customProvider)
 }
 

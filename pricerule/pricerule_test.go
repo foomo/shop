@@ -92,6 +92,67 @@ func Init(t *testing.T) {
 	checkVouchersExists(t)
 }
 
+func testPaymentRuleOfDiscountType(t *testing.T) {
+	RemoveAllGroups()
+	RemoveAllPriceRules()
+	RemoveAllVouchers()
+	group := new(Group)
+	group.Type = ProductGroup
+	group.ID = "sale"
+	group.Name = "sale"
+	group.AddGroupItemIDs([]string{"sale-item-id"})
+	err := group.Upsert()
+	if err != nil {
+		t.Fatal("Could not upsert shipping product group ")
+	}
+
+	//create pricerule
+	priceRule := NewPriceRule(PriceRuleIDSale)
+	priceRule.Name = map[string]string{
+		"de": "normal-discount",
+		"fr": "normal-discount",
+		"it": "normal-discount",
+	}
+	priceRule.Type = TypePromotionProduct
+	priceRule.Description = priceRule.Name
+	priceRule.Action = ActionItemByAbsolute
+	priceRule.Amount = 10
+	priceRule.MinOrderAmount = 0
+	priceRule.MinOrderAmountApplicableItemsOnly = false
+	priceRule.IncludedProductGroupIDS = []string{"sale"}
+	priceRule.IncludedCustomerGroupIDS = []string{}
+	priceRule.Upsert()
+
+	//create pricerule
+	priceRule = NewPriceRule(PriceRuleIDPayment)
+	priceRule.Name = map[string]string{
+		"de": "payment-discount",
+		"fr": "payment-discount",
+		"it": "payment-discount",
+	}
+	priceRule.Type = TypePromotionProduct
+	priceRule.Description = priceRule.Name
+	priceRule.Action = ActionItemByAbsolute
+	priceRule.Amount = 5
+	priceRule.MinOrderAmount = 0
+	priceRule.MinOrderAmountApplicableItemsOnly = false
+	priceRule.IncludedProductGroupIDS = []string{}
+	priceRule.IncludedCustomerGroupIDS = []string{}
+	priceRule.IncludedPaymentMethods = []string{PaymentMethodID1}
+	priceRule.Upsert()
+
+	// now retrieve
+	promotionPriceRules, err := GetValidPriceRulesForPromotions([]Type{TypePromotionCustomer, TypePromotionProduct, TypePromotionOrder}, nil)
+	spew.Dump(promotionPriceRules)
+
+	fmt.Println("-----------------------------------------")
+
+	// now retrieve
+	paymentPriceRules, err := GetValidPriceRulesForPaymentMethods([]string{PaymentMethodID1}, nil)
+	spew.Dump(paymentPriceRules)
+
+}
+
 func testShipping(t *testing.T) {
 
 	RemoveAllGroups()
