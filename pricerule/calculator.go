@@ -419,6 +419,34 @@ func getOrderTotal(articleCollection *ArticleCollection) float64 {
 	return total
 }
 
+// find what is the articleCollection total qty of positions that belong to group
+// previouslyAppliedDiscounts is for qty 1
+func getTotalQuantityForPriceRule(priceRule *PriceRule, calculationParameters *CalculationParameters) float64 {
+	var total float64
+
+	for _, article := range calculationParameters.articleCollection.Articles {
+		productGroupIDs := calculationParameters.productGroupIDsPerPosition[article.ID]
+
+		// rule has no customer or product group limitations
+		if len(priceRule.IncludedProductGroupIDS) == 0 &&
+			len(priceRule.ExcludedProductGroupIDS) == 0 &&
+			len(priceRule.IncludedCustomerGroupIDS) == 0 &&
+			len(priceRule.ExcludedCustomerGroupIDS) == 0 {
+			total += article.Quantity
+		} else {
+			//only sum up if limitations are matched
+			if IsOneProductOrCustomerGroupInIncludedGroups(priceRule.IncludedProductGroupIDS, productGroupIDs) &&
+				IsNoProductOrGroupInExcludeGroups(priceRule.ExcludedProductGroupIDS, productGroupIDs) &&
+				IsOneProductOrCustomerGroupInIncludedGroups(priceRule.IncludedCustomerGroupIDS, calculationParameters.groupIDsForCustomer) &&
+				IsNoProductOrGroupInExcludeGroups(priceRule.ExcludedCustomerGroupIDS, calculationParameters.groupIDsForCustomer) {
+
+				total += article.Quantity
+			}
+		}
+	}
+	return total
+}
+
 // check if all rule group IDs are included
 func IsOneProductOrCustomerGroupInIncludedGroups(ruleIncludeGroups []string, productAndCustomerGroups []string) bool {
 	if len(ruleIncludeGroups) == 0 {
@@ -523,6 +551,14 @@ func validatePriceRule(priceRule PriceRule, checkedPosition *Article, calculatio
 			}
 
 		}
+
+		//check the pricerule qty threshold
+		if priceRule.QtyThreshold > 0 {
+			ruleQtyThreshold := getTotalQuantityForPriceRule(&priceRule, calculationParameters)
+			if ruleQtyThreshold < priceRule.QtyThreshold {
+				return false, ValidationPriceRuleQuantityThresholdNotMet
+			}
+		}
 	}
 
 	now := time.Now()
@@ -533,12 +569,7 @@ func validatePriceRule(priceRule PriceRule, checkedPosition *Article, calculatio
 
 	if checkedPosition == nil {
 		for _, article := range calculationParameters.articleCollection.Articles {
-			//the continue here is now obsolete
-			if checkedPosition != nil {
-				if checkedPosition.ID != article.ID {
-					continue
-				}
-			}
+			//at least some must match
 			if IsOneProductOrCustomerGroupInIncludedGroups(priceRule.IncludedProductGroupIDS, calculationParameters.productGroupIDsPerPosition[article.ID]) {
 				productGroupIncludeMatchOK = true
 			}
@@ -548,7 +579,6 @@ func validatePriceRule(priceRule PriceRule, checkedPosition *Article, calculatio
 			if IsOneProductOrCustomerGroupInIncludedGroups(priceRule.IncludedCustomerGroupIDS, calculationParameters.groupIDsForCustomer) {
 				customerGroupIncludeMatchOK = true
 			}
-
 			if IsNoProductOrGroupInExcludeGroups(priceRule.ExcludedCustomerGroupIDS, calculationParameters.groupIDsForCustomer) {
 				customerGroupExcludeMatchOK = true
 			}

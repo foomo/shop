@@ -123,6 +123,7 @@ func testVoucherRuleWithCheckoutAttributes(t *testing.T) {
 	priceRule.IncludedProductGroupIDS = []string{group.ID}
 	priceRule.IncludedCustomerGroupIDS = []string{}
 	priceRule.CheckoutAttributes = []string{PaymentMethodID1}
+	priceRule.QtyThreshold = 2.0
 	priceRule.Upsert()
 
 	//create pricerule
@@ -142,19 +143,19 @@ func testVoucherRuleWithCheckoutAttributes(t *testing.T) {
 	positionVo := &Article{}
 	positionVo.ID = ProductID1SKU1
 	positionVo.Price = 100
-	positionVo.Quantity = 2
+	positionVo.Quantity = 1
 	orderVo.Articles = append(orderVo.Articles, positionVo)
 
 	positionVo = &Article{}
 	positionVo.ID = ProductID1SKU2
 	positionVo.Price = 300
-	positionVo.Quantity = float64(2)
+	positionVo.Quantity = float64(1)
 	orderVo.Articles = append(orderVo.Articles, positionVo)
 
 	positionVo = &Article{}
 	positionVo.ID = ProductID3SKU2
 	positionVo.Price = 500
-	positionVo.Quantity = float64(2)
+	positionVo.Quantity = float64(1)
 	orderVo.Articles = append(orderVo.Articles, positionVo)
 
 	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{VoucherCode1}, []string{PaymentMethodID1}, 0.05, nil)

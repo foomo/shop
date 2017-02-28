@@ -87,6 +87,8 @@ type PriceRule struct {
 
 	WhichXYFree XYWhichType
 
+	QtyThreshold float64 // - the total qty in order for the price rule to be applicable. defaults to 0.
+
 	ScaledAmounts []ScaledAmountLevel //defines discount scale 100 -> 2%, 200 -> 3% etc - See ActionScaledPercentage & ActionScaledAbsolute
 
 	ScaledAmountsPerQuantity []ScaledAmountLevel
@@ -146,6 +148,7 @@ func NewPriceRule(ID string) *PriceRule {
 	priceRule.Action = ActionItemByPercent
 	priceRule.Amount = 0
 	priceRule.MinOrderAmount = 0
+	priceRule.QtyThreshold = 0
 	priceRule.MaxUses = MaxInt
 	priceRule.MaxUsesPerCustomer = MaxInt
 	priceRule.Exclusive = false
