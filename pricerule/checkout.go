@@ -168,8 +168,8 @@ func CommitDiscounts(orderDiscounts *OrderDiscounts, customerID string) error {
 // IT IS IRREVERSIBLE!!!
 //
 // alternatively use CommitDiscounts
-func CommitOrderDiscounts(customerID string, articleCollection *ArticleCollection, voucherCodes []string, paymentMethods []string, roundTo float64) error {
-	orderDiscounts, _, err := ApplyDiscounts(articleCollection, nil, voucherCodes, paymentMethods, roundTo, nil)
+func CommitOrderDiscounts(customerID string, articleCollection *ArticleCollection, voucherCodes []string, checkoutAttributes []string, roundTo float64) error {
+	orderDiscounts, _, err := ApplyDiscounts(articleCollection, nil, voucherCodes, checkoutAttributes, roundTo, nil)
 	if err != nil {
 		return err
 	}
