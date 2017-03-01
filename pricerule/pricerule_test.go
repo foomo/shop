@@ -92,7 +92,7 @@ func Init(t *testing.T) {
 	checkVouchersExists(t)
 }
 
-func testVoucherRuleWithCheckoutAttributes(t *testing.T) {
+func TestVoucherRuleWithCheckoutAttributes(t *testing.T) {
 	RemoveAllGroups()
 	RemoveAllPriceRules()
 	RemoveAllVouchers()
@@ -114,7 +114,7 @@ func testVoucherRuleWithCheckoutAttributes(t *testing.T) {
 		"fr": "normal-discount",
 		"it": "normal-discount",
 	}
-	priceRule.Type = TypeVoucher
+	priceRule.Type = TypePromotionProduct
 	priceRule.Description = priceRule.Name
 	priceRule.Action = ActionItemByAbsolute
 	priceRule.Amount = 10
@@ -122,8 +122,8 @@ func testVoucherRuleWithCheckoutAttributes(t *testing.T) {
 	priceRule.MinOrderAmountApplicableItemsOnly = false
 	priceRule.IncludedProductGroupIDS = []string{group.ID}
 	priceRule.IncludedCustomerGroupIDS = []string{}
-	priceRule.CheckoutAttributes = []string{PaymentMethodID1}
-	priceRule.QtyThreshold = 2.0
+	priceRule.CheckoutAttributes = []string{}
+	priceRule.QtyThreshold = 0
 	priceRule.Upsert()
 
 	//create pricerule
@@ -158,7 +158,7 @@ func testVoucherRuleWithCheckoutAttributes(t *testing.T) {
 	positionVo.Quantity = float64(1)
 	orderVo.Articles = append(orderVo.Articles, positionVo)
 
-	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{VoucherCode1}, []string{PaymentMethodID1}, 0.05, nil)
+	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{}, []string{PaymentMethodID1}, 0.05, nil)
 	spew.Dump(discountsVo, summary, err)
 
 }
