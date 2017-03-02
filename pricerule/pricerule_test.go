@@ -92,7 +92,73 @@ func Init(t *testing.T) {
 	checkVouchersExists(t)
 }
 
-func TestVoucherRuleWithCheckoutAttributes(t *testing.T) {
+func testDiscountFoItemSets(t *testing.T) {
+	RemoveAllGroups()
+	RemoveAllPriceRules()
+	RemoveAllVouchers()
+
+	group := new(Group)
+	group.Type = ProductGroup
+	group.ID = "sale"
+	group.Name = "sale"
+	group.AddGroupItemIDs([]string{ProductID1SKU1, ProductID1SKU2, ProductID2SKU1, ProductID2SKU2})
+	err := group.Upsert()
+	if err != nil {
+		t.Fatal("Could not upsert shipping product group ")
+	}
+	//create pricerule
+	priceRule := NewPriceRule("itemset-discount")
+	priceRule.Name = map[string]string{
+		"de": "itemset-discount",
+		"fr": "itemset-discount",
+		"it": "itemset-discount",
+	}
+	priceRule.Type = TypePromotionProduct
+	priceRule.Description = priceRule.Name
+	priceRule.Action = ActionItemSetAbsolute
+	priceRule.Amount = 10
+	priceRule.MinOrderAmount = 0
+	priceRule.MinOrderAmountApplicableItemsOnly = false
+	priceRule.IncludedProductGroupIDS = []string{group.ID}
+	priceRule.IncludedCustomerGroupIDS = []string{}
+	priceRule.CheckoutAttributes = []string{}
+	priceRule.ItemSets = [][]string{
+		[]string{ProductID1SKU1, ProductID1SKU2},
+		[]string{ProductID2SKU1, ProductID2SKU2},
+	}
+	priceRule.QtyThreshold = 0
+	priceRule.Upsert()
+
+	//create pricerule
+
+	// Order -------------------------------------------------------------------------------
+	orderVo := &ArticleCollection{}
+	orderVo.CustomerID = CustomerID1
+
+	positionVo := &Article{}
+	positionVo.ID = ProductID1SKU1
+	positionVo.Price = 100
+	positionVo.Quantity = 2
+	orderVo.Articles = append(orderVo.Articles, positionVo)
+
+	positionVo = &Article{}
+	positionVo.ID = ProductID2SKU1
+	positionVo.Price = 300
+	positionVo.Quantity = 1
+	orderVo.Articles = append(orderVo.Articles, positionVo)
+
+	positionVo = &Article{}
+	positionVo.ID = ProductID3SKU2
+	positionVo.Price = 500
+	positionVo.Quantity = 33
+	orderVo.Articles = append(orderVo.Articles, positionVo)
+
+	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{}, []string{PaymentMethodID1}, 0.05, nil)
+	spew.Dump(discountsVo, summary, err)
+
+}
+
+func testVoucherRuleWithCheckoutAttributes(t *testing.T) {
 	RemoveAllGroups()
 	RemoveAllPriceRules()
 	RemoveAllVouchers()

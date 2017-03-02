@@ -9,7 +9,7 @@ func calculateDiscountsCartByPercentage(priceRuleVoucherPair RuleVoucherPair, or
 	}
 
 	if calculationParameters.isCatalogCalculation == true {
-		log.Println("catalog calculations can not handle actions of type CalculateDiscountsCartByPercentage")
+		log.Println("catalog calculations can not handle actions of type ActionCartByPercentage")
 		return orderDiscounts
 	}
 
