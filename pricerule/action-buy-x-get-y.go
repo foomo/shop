@@ -8,12 +8,16 @@ import (
 
 // CalculateDiscountsBuyXGetY -
 func calculateDiscountsBuyXPayY(priceRuleVoucherPair RuleVoucherPair, orderDiscounts OrderDiscounts, calculationParameters *CalculationParameters) OrderDiscounts {
-	log.Println("=== calculateDiscountsBuyXPayY ...")
+	if Verbose {
+		log.Println("=== calculateDiscountsBuyXPayY ...")
+	}
 	if priceRuleVoucherPair.Rule.Action != ActionBuyXPayY {
 		panic("CalculateDiscountsBuyXGetY called with pricerule of action " + priceRuleVoucherPair.Rule.Action)
 	}
 	if calculationParameters.isCatalogCalculation == true {
-		log.Println("catalog calculations can not handle actions of type CalculateDiscountsBuyXPayY")
+		if Verbose {
+			log.Println("catalog calculations can not handle actions of type CalculateDiscountsBuyXPayY")
+		}
 		return orderDiscounts
 	}
 

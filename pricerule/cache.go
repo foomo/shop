@@ -131,7 +131,9 @@ func (c *Cache) loadGroupCacheByItem() error {
 
 	}
 	c.groupsCache = tempMap
-	fmt.Println(c.GetGroupsCache())
+	if Verbose {
+		fmt.Println(c.GetGroupsCache())
+	}
 	c.enabled = true
 	timeTrack(now, "[loadGroupCacheByItem] cache loading took")
 

@@ -31,6 +31,8 @@ const (
 	XYMostExpensiveFree XYWhichType = "xy-most-expensive-free"
 )
 
+const Verbose = false
+
 // MaxUint const
 const MaxUint = ^uint(0)
 
@@ -184,7 +186,9 @@ func (pricerule *PriceRule) Insert() error {
 		return err
 	}
 	if exists {
-		log.Println("Did not insert Pricerule with id ", pricerule.ID, " ==> duplicate")
+		if Verbose {
+			log.Println("Did not insert Pricerule with id ", pricerule.ID, " ==> duplicate")
+		}
 		return nil
 	}
 	return pricerule.Upsert()
@@ -239,7 +243,9 @@ func (pricerule *PriceRule) UpdateUsageHistory(customerID string) error {
 	if len(customerID) > 0 {
 		pricerule.UsageHistory.UsagesPerCustomer[customerID]++
 	}
-	log.Println("updated rule usage history: " + pricerule.ID)
+	if Verbose {
+		log.Println("updated rule usage history: " + pricerule.ID)
+	}
 	return pricerule.Upsert()
 }
 

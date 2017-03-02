@@ -218,7 +218,9 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 				}
 
 				if !voucherVo.TimeRedeemed.IsZero() {
-					log.Println("voucher " + voucherCode + " already redeemed ... skipping")
+					if Verbose {
+						log.Println("voucher " + voucherCode + " already redeemed ... skipping")
+					}
 					continue
 				}
 
@@ -243,8 +245,10 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 			if len(appliedDiscount.VoucherCode) > 0 {
 				summary.AppliedVoucherCodes = append(summary.AppliedVoucherCodes, appliedDiscount.VoucherCode)
 				summary.AppliedVoucherIDs = append(summary.AppliedVoucherIDs, appliedDiscount.VoucherID)
-				log.Println("#### voucherCode: ", appliedDiscount.VoucherCode)
-				log.Println("#### voucherID: ", appliedDiscount.VoucherID)
+				if Verbose {
+					log.Println("#### voucherCode: ", appliedDiscount.VoucherCode)
+					log.Println("#### voucherID: ", appliedDiscount.VoucherID)
+				}
 
 				voucherDiscounts, ok := summary.VoucherDiscounts[appliedDiscount.VoucherCode]
 				if !ok {
