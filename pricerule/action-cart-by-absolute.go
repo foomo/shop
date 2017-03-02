@@ -15,7 +15,9 @@ func calculateDiscountsCartByAbsolute(priceRuleVoucherPair RuleVoucherPair, orde
 	}
 
 	if calculationParameters.isCatalogCalculation == true {
-		log.Println("catalog calculations can not handle actions of type ActionCartByAbsolute")
+		if Verbose {
+			log.Println("catalog calculations can not handle actions of type CalculateDiscountsCartByAbsolute")
+		}
 		return orderDiscounts
 	}
 
@@ -34,8 +36,10 @@ func calculateDiscountsCartByAbsolute(priceRuleVoucherPair RuleVoucherPair, orde
 		distribution[itemID] = distributedAmounts[i]
 		i++
 	}
-	fmt.Println("===> promo distribution")
-	fmt.Println(distribution)
+	if Verbose {
+		fmt.Println("===> promo distribution")
+		fmt.Println(distribution)
+	}
 	if err != nil {
 		panic(err)
 	}
@@ -133,14 +137,11 @@ func distribute(total int64, amt1s []int64) []int64 {
 
 	for i := range amt1s {
 
-		//fmt.Println(float64(amt1s[i])/float64(total), "Rounded:", Round(float64(amt1s[i])/float64(total)), "rappenDiff", rappenDiff)
 		amt2 := int64(Round(float64(amt1s[i]) / float64(total))) // not perfect, but with the best results
-		//amt2 := amt1s[i] / total // this would be the most correct version, but does not work
 		remainder := int64(math.Mod(float64(amt1s[i]), float64(total)))
 		condition := remainder*10 >= ((total * 10) / 2)
 		amt3 := IteInt64(condition, amt2+1, amt2)
 		reductions[i] = int64(Round(float64(amt3+rappenDiff)/5.0) * 5)
-		//fmt.Println("Reduction", reductions[i])
 
 		rappenDiff = amt3 - reductions[i] + rappenDiff
 	}
@@ -162,8 +163,9 @@ func adjustRoundingDifferences(totalReduction float64, reductions []int64) []flo
 		lastReductionAdjusted := lastReduction + reductionsDiff
 		reductions[len(reductions)-1] = int64(lastReductionAdjusted)
 
-		// TODO: this should be logged in the articleCollection history
-		fmt.Println("Found potential rounding error (expected ", totalReduction, " but found ", actualTotalReduction, "), last partial reduction is set to ", lastReduction, " (from ", lastReductionAdjusted, ")")
+		if Verbose {
+			fmt.Println("Found potential rounding error (expected ", totalReduction, " but found ", actualTotalReduction, "), last partial reduction is set to ", lastReduction, " (from ", lastReductionAdjusted, ")")
+		}
 	}
 
 	reductionsF := make([]float64, len(reductions))
@@ -183,7 +185,9 @@ func check(reductions []float64, totalReduction float64) float64 {
 	sumReductions = roundToStep(sumReductions, 0.05) // this is necessary to get rid of tiny precision errors when added up floats
 	if sumReductions != totalReduction {
 		diff := roundToStep(sumReductions-totalReduction, 0.05)
-		log.Println("WARNING: Total of distributed reduction has to be corrected by ", diff)
+		if Verbose {
+			log.Println("WARNING: Total of distributed reduction has to be corrected by ", diff)
+		}
 		return diff
 	}
 	return 0

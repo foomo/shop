@@ -9,7 +9,9 @@ func calculateScaledDiscounts(priceRuleVoucherPair RuleVoucherPair, orderDiscoun
 	}
 
 	if calculationParameters.isCatalogCalculation == true {
-		log.Println("catalog calculations can not handle actions of type CalculateScaledDiscounts")
+		if Verbose {
+			log.Println("catalog calculations can not handle actions of type CalculateScaledDiscounts")
+		}
 		return orderDiscounts
 	}
 	orderTotal := getOrderTotalForPriceRule(priceRuleVoucherPair.Rule, calculationParameters, orderDiscounts)

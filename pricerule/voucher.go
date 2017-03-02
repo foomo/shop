@@ -127,7 +127,9 @@ func (voucher *Voucher) Redeem(customerID string) error {
 	defer mutex.Unlock()
 	voucher.TimeRedeemed = time.Now()
 	err := voucher.Upsert()
-	log.Println("redeemed voucher " + voucher.VoucherCode)
+	if Verbose {
+		log.Println("redeemed voucher " + voucher.VoucherCode)
+	}
 	if err != nil {
 		return err
 	}
