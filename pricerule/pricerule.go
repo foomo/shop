@@ -27,6 +27,8 @@ const (
 	ActionBuyXPayY ActionType = "buy_x_pay_y"
 	ActionScaled   ActionType = "scaled"
 
+	ActionItemSetAbsolute ActionType = "itemset_absolute"
+
 	XYCheapestFree      XYWhichType = "xy-cheapest-free"
 	XYMostExpensiveFree XYWhichType = "xy-most-expensive-free"
 )
@@ -82,6 +84,8 @@ type PriceRule struct {
 	IncludedCustomerGroupIDS []string //IncludedGroupIds -  MUST BE PRESSENT to be applicable
 
 	CheckoutAttributes []string // for CheckoutAttributes -  payment methods etc - only applicable if the checkout provides these attribues
+
+	ItemSets [][]string // array of array of skus that represent an item
 
 	X int // buy X - the number of items that are applicable for an ActionBuyXGetY pricerule, for example order 4 pay 3 means X=4 and Y=3
 
@@ -163,6 +167,7 @@ func NewPriceRule(ID string) *PriceRule {
 	priceRule.ValidFrom = time.Date(1971, time.January, 1, 0, 0, 0, 0, time.UTC)
 	priceRule.ValidTo = time.Date(9999, time.January, 1, 0, 0, 0, 0, time.UTC) // far in the future
 	priceRule.WhichXYFree = XYCheapestFree
+	priceRule.ItemSets = [][]string{}
 	return priceRule
 }
 

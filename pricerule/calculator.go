@@ -183,7 +183,6 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 		pair := RuleVoucherPair{}
 		pair = priceRulePair
 		//apply them
-
 		orderDiscounts = calculateRule(orderDiscounts, pair, calculationParameters)
 	}
 
@@ -375,6 +374,8 @@ func calculateRule(orderDiscounts OrderDiscounts, priceRulePair RuleVoucherPair,
 			orderDiscounts = calculateDiscountsBuyXPayY(priceRulePair, orderDiscounts, calculationParameters)
 		case ActionScaled:
 			orderDiscounts = calculateScaledDiscounts(priceRulePair, orderDiscounts, calculationParameters)
+		case ActionItemSetAbsolute:
+			orderDiscounts = calculateItemSetAbsoluteDiscount(priceRulePair, orderDiscounts, calculationParameters)
 		}
 	}
 	return orderDiscounts

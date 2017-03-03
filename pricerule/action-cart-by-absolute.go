@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"math"
+
+	"github.com/davecgh/go-spew/spew"
 )
 
 // CalculateDiscountsCartByAbsolute -
@@ -21,7 +23,9 @@ func calculateDiscountsCartByAbsolute(priceRuleVoucherPair RuleVoucherPair, orde
 
 	//collect item values = price * qty for applicable items
 	amountsMap := getAmountsOfApplicablePositions(priceRuleVoucherPair.Rule, calculationParameters, orderDiscounts)
+
 	amounts := getMapValues(amountsMap)
+
 	//spew.Dump(amounts)
 	// the tricky part - stolen code from Florian - distribute the amount proportional to the price
 	distributedAmounts, err := Distribute(amounts, priceRuleVoucherPair.Rule.Amount)
@@ -81,12 +85,16 @@ func getMapValues(mapVal map[string]float64) []float64 {
 
 // Distribute - distribute the amounts proportionally to the total discount
 func Distribute(amounts []float64, totalReduction float64) ([]float64, error) {
+	if len(amounts) == 0 {
+		return []float64{}, nil
+	}
 	amountsint64 := make([]int64, len(amounts))
 	// Convert to Rappen and int64
 	for i, amount := range amounts {
 		amountsint64[i] = int64(amount * 100)
 	}
-
+	spew.Dump(amounts)
+	spew.Dump("-------------------")
 	distribution := distributeI(amountsint64, int64(totalReduction*100))
 	diff := check(distribution, totalReduction)
 	if diff > 0 {
@@ -214,16 +222,38 @@ func IteInt64(condition bool, thenDo int64, elseDo int64) int64 {
 // get map of [positionID] => price*quantity for applicable positions
 func getAmountsOfApplicablePositions(priceRule *PriceRule, calculationParameters *CalculationParameters, orderDiscounts OrderDiscounts) map[string]float64 {
 	//collect item values = price * qty for applicable items
-	//amounts := []float64{}
 	amountsMap := make(map[string]float64)
+	if len(priceRule.ItemSets) == 0 {
+		for _, article := range calculationParameters.articleCollection.Articles {
 
-	for _, article := range calculationParameters.articleCollection.Articles {
-		ok, _ := validatePriceRuleForPosition(*priceRule, article, calculationParameters, orderDiscounts)
-		if ok {
-			//amounts = append(amounts, article.Price*article.Quantity)
-			amountsMap[article.ID] = article.Price * article.Quantity
+			ok, _ := validatePriceRuleForPosition(*priceRule, article, calculationParameters, orderDiscounts)
+			if ok {
+				//amounts = append(amounts, article.Price*article.Quantity)
+				amountsMap[article.ID] = article.Price * article.Quantity
+			}
 		}
+	} else {
+		// if ActionCartByAbsolute is used to implement ActionItemSetByAbolute make sure we distribute to the right items
+		for _, article := range calculationParameters.articleCollection.Articles {
+
+			if isItemInItemSet(priceRule.ItemSets, article.ID) {
+				//amounts = append(amounts, article.Price*article.Quantity)
+				amountsMap[article.ID] = article.Price * article.Quantity
+			}
+		}
+
 	}
 	//return amounts, amountsMap
 	return amountsMap
+}
+
+func isItemInItemSet(itemSets [][]string, itemID string) (ret bool) {
+	ret = false
+	for _, items := range itemSets {
+		if contains(itemID, items) {
+			return true
+		}
+	}
+
+	return ret
 }
