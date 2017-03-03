@@ -132,7 +132,7 @@ func schedule(proc Processor, waitGroup *sync.WaitGroup) {
 			case <-proc.GetChanExit():
 				//fmt.Println("exiting")
 				if proc.GetCountProcessed() < proc.GetJobsAssigned() && !proc.GetStop() {
-					time.Sleep(100 * time.Millisecond) // wait a moment and try again
+					time.Sleep(5 * time.Second) // wait a moment and try again
 					chanStart <- 1
 				} else {
 					chanStop <- 1
