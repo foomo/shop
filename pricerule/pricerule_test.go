@@ -92,6 +92,128 @@ func Init(t *testing.T) {
 	checkVouchersExists(t)
 }
 
+func testSwap(t *testing.T) {
+	RemoveAllGroups()
+	RemoveAllPriceRules()
+	RemoveAllVouchers()
+
+	group := new(Group)
+	group.Type = ProductGroup
+	group.ID = "group1"
+	group.Name = "group1"
+	group.AddGroupItemIDs([]string{})
+	err := group.Upsert()
+	if err != nil {
+		t.Fatal("Could not upsert shipping product group ")
+	}
+
+	group = new(Group)
+	group.Type = ProductGroup
+	group.ID = "group2"
+	group.Name = "group2"
+	group.AddGroupItemIDs([]string{ProductID2SKU1, ProductID2SKU2})
+	err = group.Upsert()
+	if err != nil {
+		t.Fatal("Could not upsert shipping product group ")
+	}
+
+	group = new(Group)
+	group.Type = ProductGroup
+	group.ID = "shipping"
+	group.Name = "shipping"
+	group.AddGroupItemIDs([]string{"shipping"})
+	err = group.Upsert()
+	if err != nil {
+		t.Fatal("Could not upsert shipping product group ")
+	}
+
+	//create pricerule
+	priceRule := NewPriceRule("rule-group1")
+	priceRule.Name = map[string]string{
+		"de": "rule-group1",
+		"fr": "rule-group1",
+		"it": "rule-group1",
+	}
+	priceRule.Type = TypeVoucher
+	priceRule.Description = priceRule.Name
+	priceRule.Action = ActionCartByAbsolute
+	priceRule.Amount = 100
+	priceRule.MinOrderAmount = 0
+	priceRule.MinOrderAmountApplicableItemsOnly = false
+	priceRule.IncludedProductGroupIDS = []string{}
+	priceRule.IncludedCustomerGroupIDS = []string{}
+	priceRule.ExcludedProductGroupIDS = []string{"shipping"}
+	priceRule.CheckoutAttributes = []string{}
+	priceRule.QtyThreshold = 0
+	priceRule.Upsert()
+
+	voucher := NewVoucher(VoucherID1, VoucherCode1, priceRule, "")
+	err = voucher.Upsert()
+	if err != nil {
+		panic(err)
+	}
+
+	//create pricerule
+	priceRule = NewPriceRule("rule-group2")
+	priceRule.Name = map[string]string{
+		"de": "rule-group2",
+		"fr": "rule-group2",
+		"it": "rule-group2",
+	}
+	priceRule.Type = TypeVoucher
+	priceRule.Description = priceRule.Name
+	priceRule.Action = ActionItemByPercent
+	priceRule.Amount = 10
+	priceRule.MinOrderAmount = 0
+	priceRule.MinOrderAmountApplicableItemsOnly = false
+	priceRule.IncludedProductGroupIDS = []string{}
+	priceRule.IncludedCustomerGroupIDS = []string{}
+	priceRule.ExcludedProductGroupIDS = []string{}
+	priceRule.CheckoutAttributes = []string{}
+	priceRule.QtyThreshold = 0
+	priceRule.Upsert()
+
+	voucher = NewVoucher(VoucherID2, VoucherCode2, priceRule, "")
+	err = voucher.Upsert()
+	if err != nil {
+		panic(err)
+	}
+
+	//create pricerule
+
+	// Order -------------------------------------------------------------------------------
+	orderVo := &ArticleCollection{}
+	orderVo.CustomerID = CustomerID1
+
+	positionVo := &Article{}
+	positionVo.ID = ProductID1SKU1
+	positionVo.Price = 100
+	positionVo.Quantity = 1
+	orderVo.Articles = append(orderVo.Articles, positionVo)
+
+	positionVo = &Article{}
+	positionVo.ID = ProductID2SKU1
+	positionVo.Price = 200
+	positionVo.Quantity = 1
+	orderVo.Articles = append(orderVo.Articles, positionVo)
+
+	positionVo = &Article{}
+	positionVo.ID = ProductID3SKU2
+	positionVo.Price = 100
+	positionVo.Quantity = 1
+	orderVo.Articles = append(orderVo.Articles, positionVo)
+
+	positionVo = &Article{}
+	positionVo.ID = "shipping"
+	positionVo.Price = 5
+	positionVo.Quantity = 1
+	orderVo.Articles = append(orderVo.Articles, positionVo)
+
+	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{VoucherCode1}, []string{}, 0.05, nil)
+	spew.Dump(discountsVo, summary, err)
+
+}
+
 func testDiscountFoItemSets(t *testing.T) {
 	RemoveAllGroups()
 	RemoveAllPriceRules()

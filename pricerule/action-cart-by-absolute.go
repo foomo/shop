@@ -23,18 +23,15 @@ func calculateDiscountsCartByAbsolute(priceRuleVoucherPair RuleVoucherPair, orde
 
 	//collect item values = price * qty for applicable items
 	amountsMap := getAmountsOfApplicablePositions(priceRuleVoucherPair.Rule, calculationParameters, orderDiscounts)
+	itemIDs, amounts := getMapValues(amountsMap)
 
-	amounts := getMapValues(amountsMap)
-
-	//spew.Dump(amounts)
 	// the tricky part - stolen code from Florian - distribute the amount proportional to the price
 	distributedAmounts, err := Distribute(amounts, priceRuleVoucherPair.Rule.Amount)
 	distribution := map[string]float64{}
+	spew.Dump(distributedAmounts)
 
-	i := 0
-	for itemID, _ := range amountsMap {
+	for i, itemID := range itemIDs {
 		distribution[itemID] = distributedAmounts[i]
-		i++
 	}
 	if Verbose {
 		fmt.Println("===> promo distribution")
@@ -71,12 +68,16 @@ func calculateDiscountsCartByAbsolute(priceRuleVoucherPair RuleVoucherPair, orde
 }
 
 // Get values from map
-func getMapValues(mapVal map[string]float64) []float64 {
-	ret := []float64{}
-	for _, val := range mapVal {
-		ret = append(ret, val)
+func getMapValues(mapVal map[string]float64) ([]string, []float64) {
+	vals := []float64{}
+	keys := []string{}
+
+	for key, val := range mapVal {
+		keys = append(keys, key)
+		vals = append(vals, val)
 	}
-	return ret
+
+	return keys, vals
 }
 
 //------------------------------------------------------------------
@@ -93,8 +94,7 @@ func Distribute(amounts []float64, totalReduction float64) ([]float64, error) {
 	for i, amount := range amounts {
 		amountsint64[i] = int64(amount * 100)
 	}
-	spew.Dump(amounts)
-	spew.Dump("-------------------")
+
 	distribution := distributeI(amountsint64, int64(totalReduction*100))
 	diff := check(distribution, totalReduction)
 	if diff > 0 {
