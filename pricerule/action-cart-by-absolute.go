@@ -43,7 +43,7 @@ func calculateDiscountsCartByAbsolute(priceRuleVoucherPair RuleVoucherPair, orde
 		if discountAmount, ok := distribution[article.ID]; ok {
 			// and rule can still be applied
 			orderDiscountsForPosition := orderDiscounts[article.ID]
-			if !orderDiscounts[article.ID].StopApplyingDiscounts && ok && !previouslyAppliedExclusionInPlace(priceRuleVoucherPair.Rule, orderDiscountsForPosition) {
+			if !orderDiscounts[article.ID].StopApplyingDiscounts && ok && !previouslyAppliedExclusionInPlace(priceRuleVoucherPair.Rule, orderDiscountsForPosition, calculationParameters) {
 				if !orderDiscounts[article.ID].StopApplyingDiscounts {
 					//apply the discount here
 					discountApplied := getInitializedDiscountApplied(priceRuleVoucherPair, orderDiscounts, article.ID)

@@ -10,7 +10,7 @@ func calculateDiscountsItemByAbsolute(priceRuleVoucherPair RuleVoucherPair, orde
 		ok, _ := validatePriceRuleForPosition(*priceRuleVoucherPair.Rule, article, calculationParameters, orderDiscounts)
 
 		orderDiscountsForPosition := orderDiscounts[article.ID]
-		if !orderDiscounts[article.ID].StopApplyingDiscounts && ok && !previouslyAppliedExclusionInPlace(priceRuleVoucherPair.Rule, orderDiscountsForPosition) {
+		if !orderDiscounts[article.ID].StopApplyingDiscounts && ok && !previouslyAppliedExclusionInPlace(priceRuleVoucherPair.Rule, orderDiscountsForPosition, calculationParameters) {
 			//apply the discount here
 			discountApplied := getInitializedDiscountApplied(priceRuleVoucherPair, orderDiscounts, article.ID)
 
@@ -28,9 +28,21 @@ func calculateDiscountsItemByAbsolute(priceRuleVoucherPair RuleVoucherPair, orde
 	return orderDiscounts
 }
 
-func previouslyAppliedExclusionInPlace(rule *PriceRule, orderDiscountsForPosition DiscountCalculationData) bool {
+//allow only one customer or product promotion ... allow only the best one if specified
+func previouslyAppliedExclusionInPlace(rule *PriceRule, orderDiscountsForPosition DiscountCalculationData, calculationParameters *CalculationParameters) bool {
+	itemID := orderDiscountsForPosition.OrderItemID
 	previouslyAppliedExclusion := false
+
 	if rule.Type == TypePromotionCustomer || rule.Type == TypePromotionProduct {
+		if calculationParameters.bestOptionCustomeProductRulePerItem != nil {
+			if bestRuleID, ok := calculationParameters.bestOptionCustomeProductRulePerItem[itemID]; ok {
+				if rule.ID == bestRuleID {
+					return false
+				}
+				return true
+			}
+		}
+
 		if orderDiscountsForPosition.CustomerPromotionApplied || orderDiscountsForPosition.ProductPromotionApplied {
 			previouslyAppliedExclusion = true
 		}

@@ -8,12 +8,10 @@ func calculateDiscountsItemByPercent(priceRuleVoucherPair RuleVoucherPair, order
 	}
 	for _, article := range calculationParameters.articleCollection.Articles {
 		ok, _ := validatePriceRuleForPosition(*priceRuleVoucherPair.Rule, article, calculationParameters, orderDiscounts)
-
 		orderDiscountsForPosition := orderDiscounts[article.ID]
-		if !orderDiscounts[article.ID].StopApplyingDiscounts && ok && !previouslyAppliedExclusionInPlace(priceRuleVoucherPair.Rule, orderDiscountsForPosition) {
+		if !orderDiscounts[article.ID].StopApplyingDiscounts && ok && !previouslyAppliedExclusionInPlace(priceRuleVoucherPair.Rule, orderDiscountsForPosition, calculationParameters) {
 			//apply the discount here
 			discountApplied := getInitializedDiscountApplied(priceRuleVoucherPair, orderDiscounts, article.ID)
-
 			//calculate the actual discount
 			discountApplied.DiscountAmount = roundToStep(priceRuleVoucherPair.Rule.Amount/100*discountApplied.CalculationBasePrice*orderDiscounts[article.ID].Quantity, calculationParameters.roundTo)
 			discountApplied.DiscountSingle = roundToStep(priceRuleVoucherPair.Rule.Amount/100*discountApplied.CalculationBasePrice, calculationParameters.roundTo)
@@ -49,7 +47,6 @@ func calculateCurrentPriceAndApplicableDiscountsEnforceRules(discountApplied Dis
 	if orderDiscountsForPosition.CurrentItemPrice < discountApplied.DiscountSingle {
 		discountApplied.DiscountSingleApplicable = roundToStep(orderDiscountsForPosition.CurrentItemPrice, roundTo)
 		discountApplied.DiscountAmountApplicable = discountApplied.DiscountSingleApplicable * orderDiscounts[itemID].Quantity
-
 	} else {
 		discountApplied.DiscountSingleApplicable = discountApplied.DiscountSingle
 		discountApplied.DiscountAmountApplicable = discountApplied.DiscountAmount

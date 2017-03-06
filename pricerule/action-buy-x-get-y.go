@@ -51,7 +51,7 @@ func calculateDiscountsBuyXPayY(priceRuleVoucherPair RuleVoucherPair, orderDisco
 		ok, _ := validatePriceRuleForPosition(*priceRuleVoucherPair.Rule, &article, calculationParameters, orderDiscounts)
 
 		orderDiscountsForPosition := orderDiscounts[article.ID]
-		if !orderDiscounts[article.ID].StopApplyingDiscounts && ok && !previouslyAppliedExclusionInPlace(priceRuleVoucherPair.Rule, orderDiscountsForPosition) {
+		if !orderDiscounts[article.ID].StopApplyingDiscounts && ok && !previouslyAppliedExclusionInPlace(priceRuleVoucherPair.Rule, orderDiscountsForPosition, calculationParameters) {
 
 			if freeQty > 0 {
 				if productsAssignedFree < freeQty {

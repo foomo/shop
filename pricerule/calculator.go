@@ -4,6 +4,8 @@ import (
 	"log"
 	"sort"
 	"time"
+
+	"github.com/davecgh/go-spew/spew"
 )
 
 //------------------------------------------------------------------
@@ -17,12 +19,13 @@ import (
 // InputData
 
 type CalculationParameters struct {
-	articleCollection          *ArticleCollection
-	productGroupIDsPerPosition map[string][]string
-	groupIDsForCustomer        []string
-	roundTo                    float64
-	isCatalogCalculation       bool
-	checkoutAttributes         []string
+	articleCollection                   *ArticleCollection
+	productGroupIDsPerPosition          map[string][]string
+	groupIDsForCustomer                 []string
+	roundTo                             float64
+	isCatalogCalculation                bool
+	checkoutAttributes                  []string
+	bestOptionCustomeProductRulePerItem map[string]string // which is the product or customer type rule that is applied on item
 }
 
 type ArticleCollection struct {
@@ -179,6 +182,10 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 	sort.Sort(ByPriority(ruleVoucherPairs))
 	//first loop where all promotion discounts are applied
 
+	bestOptionCustomerProductRulePerItem := getBestOptionCustomerProductRulePerItem(ruleVoucherPairs, calculationParameters)
+	calculationParameters.bestOptionCustomeProductRulePerItem = bestOptionCustomerProductRulePerItem
+	spew.Dump(bestOptionCustomerProductRulePerItem)
+
 	for _, priceRulePair := range ruleVoucherPairs {
 		pair := RuleVoucherPair{}
 		pair = priceRulePair
@@ -324,6 +331,8 @@ func ApplyDiscountsOnCatalog(articleCollection *ArticleCollection, existingDisco
 	// ~ PRICERULE PAIR SORTING - BY PRIORITY - higher priority means it is applied first
 	sort.Sort(ByPriority(ruleVoucherPairs))
 
+	bestOptionCustomerProductRulePerItem := getBestOptionCustomerProductRulePerItem(ruleVoucherPairs, calculationParameters)
+	calculationParameters.bestOptionCustomeProductRulePerItem = bestOptionCustomerProductRulePerItem
 	//first loop where all promotion discounts are applied
 	now = time.Now()
 	for _, priceRulePair := range ruleVoucherPairs {
@@ -669,4 +678,32 @@ func contains(e string, s []string) bool {
 		}
 	}
 	return false
+}
+
+func getBestOptionCustomerProductRulePerItem(ruleVoucherPairs []RuleVoucherPair, calculationParameters *CalculationParameters) (ret map[string]string) {
+	start := time.Now()
+	ret = make(map[string]string)
+	currentDiscounts := make(map[string]float64)
+
+	for _, priceRulePair := range ruleVoucherPairs {
+		tempDiscounts := NewOrderDiscounts(calculationParameters.articleCollection)
+		tempDiscounts = calculateRule(tempDiscounts, priceRulePair, calculationParameters)
+
+		//go over applied discounts an select the better one
+		for _, article := range calculationParameters.articleCollection.Articles {
+			itemID := article.ID
+			discount := tempDiscounts[itemID].TotalDiscountAmount
+			//init map if necessary
+			if _, ok := currentDiscounts[itemID]; !ok {
+				currentDiscounts[itemID] = 0
+			}
+			//do the comparision
+			if discount > currentDiscounts[itemID] {
+				currentDiscounts[itemID] = discount
+				ret[itemID] = tempDiscounts[itemID].AppliedDiscounts[0].PriceRuleID
+			}
+		}
+	}
+	timeTrack(start, "getBestOptionCustomerProductRulePerItem took")
+	return ret
 }

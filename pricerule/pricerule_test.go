@@ -92,7 +92,7 @@ func Init(t *testing.T) {
 	checkVouchersExists(t)
 }
 
-func testSwap(t *testing.T) {
+func TestBestOption(t *testing.T) {
 	RemoveAllGroups()
 	RemoveAllPriceRules()
 	RemoveAllVouchers()
@@ -101,7 +101,7 @@ func testSwap(t *testing.T) {
 	group.Type = ProductGroup
 	group.ID = "group1"
 	group.Name = "group1"
-	group.AddGroupItemIDs([]string{})
+	group.AddGroupItemIDs([]string{ProductID1SKU1, ProductID1SKU2, ProductID2SKU1, ProductID2SKU2})
 	err := group.Upsert()
 	if err != nil {
 		t.Fatal("Could not upsert shipping product group ")
@@ -111,7 +111,7 @@ func testSwap(t *testing.T) {
 	group.Type = ProductGroup
 	group.ID = "group2"
 	group.Name = "group2"
-	group.AddGroupItemIDs([]string{ProductID2SKU1, ProductID2SKU2})
+	group.AddGroupItemIDs([]string{ProductID1SKU1, ProductID1SKU2, ProductID2SKU1, ProductID2SKU2})
 	err = group.Upsert()
 	if err != nil {
 		t.Fatal("Could not upsert shipping product group ")
@@ -134,24 +134,18 @@ func testSwap(t *testing.T) {
 		"fr": "rule-group1",
 		"it": "rule-group1",
 	}
-	priceRule.Type = TypeVoucher
+	priceRule.Type = TypePromotionProduct
 	priceRule.Description = priceRule.Name
-	priceRule.Action = ActionCartByAbsolute
-	priceRule.Amount = 100
+	priceRule.Action = ActionItemByPercent
+	priceRule.Amount = 10
 	priceRule.MinOrderAmount = 0
 	priceRule.MinOrderAmountApplicableItemsOnly = false
-	priceRule.IncludedProductGroupIDS = []string{}
+	priceRule.IncludedProductGroupIDS = []string{"group1"}
 	priceRule.IncludedCustomerGroupIDS = []string{}
 	priceRule.ExcludedProductGroupIDS = []string{"shipping"}
 	priceRule.CheckoutAttributes = []string{}
-	priceRule.QtyThreshold = 0
+	priceRule.QtyThreshold = 3.0
 	priceRule.Upsert()
-
-	voucher := NewVoucher(VoucherID1, VoucherCode1, priceRule, "")
-	err = voucher.Upsert()
-	if err != nil {
-		panic(err)
-	}
 
 	//create pricerule
 	priceRule = NewPriceRule("rule-group2")
@@ -160,25 +154,38 @@ func testSwap(t *testing.T) {
 		"fr": "rule-group2",
 		"it": "rule-group2",
 	}
-	priceRule.Type = TypeVoucher
+	priceRule.Type = TypePromotionProduct
 	priceRule.Description = priceRule.Name
 	priceRule.Action = ActionItemByPercent
 	priceRule.Amount = 10
 	priceRule.MinOrderAmount = 0
 	priceRule.MinOrderAmountApplicableItemsOnly = false
-	priceRule.IncludedProductGroupIDS = []string{}
+	priceRule.IncludedProductGroupIDS = []string{"group2"}
 	priceRule.IncludedCustomerGroupIDS = []string{}
 	priceRule.ExcludedProductGroupIDS = []string{}
 	priceRule.CheckoutAttributes = []string{}
 	priceRule.QtyThreshold = 0
 	priceRule.Upsert()
 
-	voucher = NewVoucher(VoucherID2, VoucherCode2, priceRule, "")
-	err = voucher.Upsert()
-	if err != nil {
-		panic(err)
+	//create pricerule
+	priceRule = NewPriceRule("rule-group3")
+	priceRule.Name = map[string]string{
+		"de": "rule-group3",
+		"fr": "rule-group3",
+		"it": "rule-group3",
 	}
-
+	priceRule.Type = TypePromotionProduct
+	priceRule.Description = priceRule.Name
+	priceRule.Action = ActionItemByPercent
+	priceRule.Amount = 5
+	priceRule.MinOrderAmount = 0
+	priceRule.MinOrderAmountApplicableItemsOnly = false
+	priceRule.IncludedProductGroupIDS = []string{}
+	priceRule.IncludedCustomerGroupIDS = []string{}
+	priceRule.ExcludedProductGroupIDS = []string{"shipping"}
+	priceRule.CheckoutAttributes = []string{}
+	priceRule.QtyThreshold = 0
+	priceRule.Upsert()
 	//create pricerule
 
 	// Order -------------------------------------------------------------------------------
@@ -188,7 +195,7 @@ func testSwap(t *testing.T) {
 	positionVo := &Article{}
 	positionVo.ID = ProductID1SKU1
 	positionVo.Price = 100
-	positionVo.Quantity = 1
+	positionVo.Quantity = 2
 	orderVo.Articles = append(orderVo.Articles, positionVo)
 
 	positionVo = &Article{}
@@ -209,7 +216,7 @@ func testSwap(t *testing.T) {
 	positionVo.Quantity = 1
 	orderVo.Articles = append(orderVo.Articles, positionVo)
 
-	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{VoucherCode1}, []string{}, 0.05, nil)
+	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{}, []string{}, 0.05, nil)
 	spew.Dump(discountsVo, summary, err)
 
 }
