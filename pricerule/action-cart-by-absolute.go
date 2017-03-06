@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"log"
 	"math"
-
-	"github.com/davecgh/go-spew/spew"
 )
 
 // CalculateDiscountsCartByAbsolute -
@@ -28,7 +26,6 @@ func calculateDiscountsCartByAbsolute(priceRuleVoucherPair RuleVoucherPair, orde
 	// the tricky part - stolen code from Florian - distribute the amount proportional to the price
 	distributedAmounts, err := Distribute(amounts, priceRuleVoucherPair.Rule.Amount)
 	distribution := map[string]float64{}
-	spew.Dump(distributedAmounts)
 
 	for i, itemID := range itemIDs {
 		distribution[itemID] = distributedAmounts[i]
