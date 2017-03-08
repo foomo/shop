@@ -95,6 +95,8 @@ type PriceRule struct {
 
 	WhichXYFree XYWhichType
 
+	WhichXYList []string // an ordered list of itemIDs (skus) that affect which item should be given for free. If array not empty WhichXYFree is disregarded
+
 	QtyThreshold float64 // - the total qty in order for the price rule to be applicable. defaults to 0.
 
 	ScaledAmounts []ScaledAmountLevel //defines discount scale 100 -> 2%, 200 -> 3% etc - See ActionScaledPercentage & ActionScaledAbsolute

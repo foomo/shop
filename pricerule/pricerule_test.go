@@ -221,7 +221,7 @@ func testBestOption(t *testing.T) {
 
 }
 
-func TestDiscountFoItemSets(t *testing.T) {
+func testDiscountFoItemSets(t *testing.T) {
 	RemoveAllGroups()
 	RemoveAllPriceRules()
 	RemoveAllVouchers()
@@ -242,13 +242,13 @@ func TestDiscountFoItemSets(t *testing.T) {
 		"fr": "itemset-discount",
 		"it": "itemset-discount",
 	}
-	priceRule.Type = TypePromotionOrder
+	priceRule.Type = TypePromotionProduct
 	priceRule.Description = priceRule.Name
 	priceRule.Action = ActionItemSetAbsolute
 	priceRule.Amount = 10
 	priceRule.MinOrderAmount = 0
 	priceRule.MinOrderAmountApplicableItemsOnly = false
-	priceRule.IncludedProductGroupIDS = []string{group.ID}
+	priceRule.IncludedProductGroupIDS = []string{}
 	priceRule.IncludedCustomerGroupIDS = []string{}
 	priceRule.CheckoutAttributes = []string{}
 	priceRule.ItemSets = [][]string{
@@ -267,7 +267,7 @@ func TestDiscountFoItemSets(t *testing.T) {
 	positionVo := &Article{}
 	positionVo.ID = ProductID1SKU1
 	positionVo.Price = 100
-	positionVo.Quantity = 4
+	positionVo.Quantity = 2
 	orderVo.Articles = append(orderVo.Articles, positionVo)
 
 	positionVo = &Article{}
@@ -279,6 +279,12 @@ func TestDiscountFoItemSets(t *testing.T) {
 	positionVo = &Article{}
 	positionVo.ID = ProductID3SKU2
 	positionVo.Price = 500
+	positionVo.Quantity = 5
+	orderVo.Articles = append(orderVo.Articles, positionVo)
+
+	positionVo = &Article{}
+	positionVo.ID = ProductID3SKU1
+	positionVo.Price = 100
 	positionVo.Quantity = 5
 	orderVo.Articles = append(orderVo.Articles, positionVo)
 
@@ -559,7 +565,7 @@ func testBuyXGetY(t *testing.T) {
 	group.Type = ProductGroup
 	group.ID = groupID
 	group.Name = groupID
-	group.AddGroupItemIDs([]string{ProductID1SKU1, ProductID3SKU2})
+	group.AddGroupItemIDs([]string{ProductID1SKU1, ProductID1SKU2, ProductID2SKU1})
 	group.Upsert()
 
 	//create pricerule --------------------------------------------------------------------
@@ -572,9 +578,10 @@ func testBuyXGetY(t *testing.T) {
 	priceRule.Type = TypePromotionOrder
 	priceRule.Description = priceRule.Name
 	priceRule.Action = ActionBuyXPayY
-	priceRule.X = 4
-	priceRule.Y = 3
+	priceRule.X = 3
+	priceRule.Y = 1
 	priceRule.WhichXYFree = XYMostExpensiveFree
+	priceRule.WhichXYList = []string{ProductID2SKU1, ProductID1SKU1, ProductID1SKU2}
 	priceRule.MaxUses = 10
 	priceRule.MaxUsesPerCustomer = 10
 	priceRule.IncludedProductGroupIDS = []string{"discounted"}
@@ -601,7 +608,7 @@ func testBuyXGetY(t *testing.T) {
 	orderVo.Articles = append(orderVo.Articles, positionVo)
 
 	positionVo = &Article{}
-	positionVo.ID = ProductID3SKU2
+	positionVo.ID = ProductID2SKU1
 	positionVo.Price = 500
 	positionVo.Quantity = float64(2)
 	orderVo.Articles = append(orderVo.Articles, positionVo)

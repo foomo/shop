@@ -27,10 +27,21 @@ func calculateDiscountsBuyXPayY(priceRuleVoucherPair RuleVoucherPair, orderDisco
 		sortedPositions = append(sortedPositions, *positionVoPtr)
 	}
 
-	if priceRuleVoucherPair.Rule.WhichXYFree == XYMostExpensiveFree {
-		sort.Sort(ByPriceDescending(sortedPositions))
+	//sort to allow for picking the one that is free
+	if len(priceRuleVoucherPair.Rule.WhichXYList) == 0 {
+		if priceRuleVoucherPair.Rule.WhichXYFree == XYMostExpensiveFree {
+			sort.Sort(ByPriceDescending(sortedPositions))
+		} else {
+			sort.Sort(ByPriceAscending(sortedPositions))
+		}
 	} else {
-		sort.Sort(ByPriceAscending(sortedPositions))
+		//if we have a list, sort by item
+		listToSort := ByList{
+			articles: sortedPositions,
+			list:     priceRuleVoucherPair.Rule.WhichXYList,
+		}
+		sort.Sort(ByList(listToSort))
+		sortedPositions = listToSort.articles
 	}
 
 	//count matching first and articleCollection by price
@@ -99,3 +110,41 @@ type ByPriceDescending []Article
 func (a ByPriceDescending) Len() int           { return len(a) }
 func (a ByPriceDescending) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByPriceDescending) Less(i, j int) bool { return a[i].Price > a[j].Price }
+
+type ByList struct {
+	articles []Article
+	list     []string
+}
+
+//sorting madness
+func (a ByList) Len() int      { return len(a.articles) }
+func (a ByList) Swap(i, j int) { a.articles[i], a.articles[j] = a.articles[j], a.articles[i] }
+func (a ByList) Less(i, j int) bool {
+	//is i in list
+	IDi := a.articles[i].ID
+	IDj := a.articles[j].ID
+
+	if contains(IDi, a.list) && contains(IDj, a.list) {
+		//if both in, find their locations and compare
+		posI := pos(IDi, a.list)
+		posJ := pos(IDj, a.list)
+		return posI < posJ
+	} else if contains(IDi, a.list) && !contains(IDj, a.list) {
+		// i is lower
+		return true
+	} else if !contains(IDi, a.list) && contains(IDj, a.list) {
+		//j is lower
+		return false
+	}
+	//none in the list ... lets compare prices and give the cheapest
+	return a.articles[i].Price < a.articles[j].Price
+}
+
+func pos(value string, slice []string) int {
+	for p, v := range slice {
+		if v == value {
+			return p
+		}
+	}
+	return -1
+}
