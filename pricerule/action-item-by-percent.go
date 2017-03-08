@@ -2,7 +2,6 @@ package pricerule
 
 // CalculateDiscountsItemByPercent -
 func calculateDiscountsItemByPercent(priceRuleVoucherPair RuleVoucherPair, orderDiscounts OrderDiscounts, calculationParameters *CalculationParameters) OrderDiscounts {
-
 	if priceRuleVoucherPair.Rule.Action != ActionItemByPercent {
 		panic("CalculateDiscountsItemByPercent called with pricerule of action " + priceRuleVoucherPair.Rule.Action)
 	}

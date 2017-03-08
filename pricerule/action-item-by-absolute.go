@@ -15,7 +15,12 @@ func calculateDiscountsItemByAbsolute(priceRuleVoucherPair RuleVoucherPair, orde
 			discountApplied := getInitializedDiscountApplied(priceRuleVoucherPair, orderDiscounts, article.ID)
 
 			//calculate the actual discount
-			discountApplied.DiscountAmount = roundToStep((orderDiscounts[article.ID].Quantity * priceRuleVoucherPair.Rule.Amount), calculationParameters.roundTo)
+			if !priceRuleVoucherPair.Rule.IsAmountIndependentOfQty {
+				discountApplied.DiscountAmount = roundToStep((orderDiscounts[article.ID].Quantity * priceRuleVoucherPair.Rule.Amount), calculationParameters.roundTo)
+			} else {
+				discountApplied.DiscountAmount = priceRuleVoucherPair.Rule.Amount
+			}
+
 			discountApplied.DiscountSingle = priceRuleVoucherPair.Rule.Amount
 			discountApplied.Quantity = orderDiscounts[article.ID].Quantity
 

@@ -52,6 +52,5 @@ func getTotalQuantityForRule(priceRule PriceRule, calculationParameters *Calcula
 			totalQty += article.Quantity
 		}
 	}
-
 	return totalQty
 }

@@ -22,7 +22,7 @@ func calculateItemSetAbsoluteDiscount(priceRuleVoucherPair RuleVoucherPair, orde
 		tempPriceRule := *priceRuleVoucherPair.Rule
 		tempPriceRule.Amount = cartDiscountAmount
 		tempPriceRule.Action = ActionCartByAbsolute
-		//tempPriceRule.IncludedProductGroupIDS = append(tempPriceRule.IncludedProductGroupIDS, orderItemsThatBelongToSet...)
+		tempPriceRule.IsAmountIndependentOfQty = priceRuleVoucherPair.Rule.IsAmountIndependentOfQty
 		log.Println("rule action ActionItemSetAbsolute internally converted to ActionCartAbsolute")
 		priceRuleVoucherPair.Rule = &tempPriceRule
 		return calculateDiscountsCartByAbsolute(priceRuleVoucherPair, orderDiscounts, calculationParameters)

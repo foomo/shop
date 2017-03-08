@@ -63,6 +63,8 @@ type PriceRule struct {
 
 	Amount float64 //the value depending on action
 
+	IsAmountIndependentOfQty bool // do we apply the discount as amount * qty // false by default
+
 	Priority int // the articleCollection in which rule is applied
 
 	ValidFrom time.Time // valid from timestamp
@@ -153,6 +155,7 @@ func NewPriceRule(ID string) *PriceRule {
 	priceRule.Description = map[string]string{}
 	priceRule.Action = ActionItemByPercent
 	priceRule.Amount = 0
+	priceRule.IsAmountIndependentOfQty = false
 	priceRule.MinOrderAmount = 0
 	priceRule.QtyThreshold = 0
 	priceRule.MaxUses = MaxInt
@@ -168,6 +171,7 @@ func NewPriceRule(ID string) *PriceRule {
 	priceRule.ValidTo = time.Date(9999, time.January, 1, 0, 0, 0, 0, time.UTC) // far in the future
 	priceRule.WhichXYFree = XYCheapestFree
 	priceRule.ItemSets = [][]string{}
+
 	return priceRule
 }
 
