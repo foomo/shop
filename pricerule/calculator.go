@@ -667,8 +667,10 @@ func dereferenceVoucherPriceRule(voucherRule *PriceRule) PriceRule {
 }
 
 func timeTrack(start time.Time, name string) {
-	elapsed := time.Since(start)
-	log.Printf("%s %s", name, elapsed)
+	if Verbose {
+		elapsed := time.Since(start)
+		log.Printf("%s %s", name, elapsed)
+	}
 }
 
 func contains(e string, s []string) bool {
