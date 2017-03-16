@@ -98,18 +98,20 @@ type OrderCustomProvider interface {
 
 // Position in an order
 type Position struct {
-	ItemID       string
-	State        *state.State
-	Name         string
-	Description  string
-	Quantity     float64
-	QuantityUnit string
-	Price        float64
-	CrossPrice   float64
-	IsATPApplied bool
-	IsShipping   bool
-	Refund       bool
-	Custom       interface{}
+	ItemID        string
+	State         *state.State
+	Name          string
+	Description   string
+	Quantity      float64
+	QuantityUnit  string
+	Price         float64
+	CrossPrice    float64
+	RawCrossPrice float64
+	RawPrice      float64
+	IsATPApplied  bool
+	IsShipping    bool
+	Refund        bool
+	Custom        interface{}
 }
 
 type Freeze struct {
