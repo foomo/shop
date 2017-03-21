@@ -270,8 +270,8 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 			}
 		}
 	}
-	summary.TotalDiscountPercentage = summary.TotalDiscount / getOrderTotal(articleCollection) * 100.0
-	summary.TotalDiscountApplicablePercentage = summary.TotalDiscountApplicable / getOrderTotal(articleCollection) * 100.0
+	summary.TotalDiscountPercentage = summary.TotalDiscount / getOrderTotal(articleCollection, []string{}) * 100.0
+	summary.TotalDiscountApplicablePercentage = summary.TotalDiscountApplicable / getOrderTotal(articleCollection, []string{}) * 100.0
 	summary.AppliedPriceRuleIDs = RemoveDuplicates(summary.AppliedPriceRuleIDs)
 	summary.AppliedVoucherIDs = RemoveDuplicates(summary.AppliedVoucherIDs)
 	summary.AppliedVoucherCodes = RemoveDuplicates(summary.AppliedVoucherCodes)
@@ -344,14 +344,10 @@ func ApplyDiscountsOnCatalog(articleCollection *ArticleCollection, existingDisco
 
 	timeTrack(now, "[ApplyDiscountsOnCatalog] CALCULATIONS and CHECKS took ")
 	for _, orderDiscount := range orderDiscounts {
-		//summary.TotalDiscount += orderDiscount.TotalDiscountAmount
-		//summary.TotalDiscountApplicable += orderDiscount.TotalDiscountAmountApplicable
 		for _, appliedDiscount := range orderDiscount.AppliedDiscounts {
 			summary.AppliedPriceRuleIDs = append(summary.AppliedPriceRuleIDs, appliedDiscount.PriceRuleID)
 		}
 	}
-	//summary.TotalDiscountPercentage = summary.TotalDiscount / getOrderTotal(articleCollection) * 100.0
-	//summary.TotalDiscountApplicablePercentage = summary.TotalDiscountApplicable / getOrderTotal(articleCollection) * 100.0
 
 	summary.AppliedPriceRuleIDs = RemoveDuplicates(summary.AppliedPriceRuleIDs)
 	summary.AppliedVoucherIDs = []string{}
@@ -397,27 +393,47 @@ func getOrderTotalForPriceRule(priceRule *PriceRule, calculationParameters *Calc
 
 	for _, article := range calculationParameters.articleCollection.Articles {
 		productGroupIDs := calculationParameters.productGroupIDsPerPosition[article.ID]
-
+		if contains(article.ID, priceRule.ExcludedItemIDsFromOrderAmountCalculation) {
+			continue
+		}
 		// rule has no customer or product group limitations
 		if len(priceRule.IncludedProductGroupIDS) == 0 &&
 			len(priceRule.ExcludedProductGroupIDS) == 0 &&
 			len(priceRule.IncludedCustomerGroupIDS) == 0 &&
 			len(priceRule.ExcludedCustomerGroupIDS) == 0 {
 			total += article.Price * article.Quantity
+
+			if priceRule.CalculateDiscountedOrderAmount == true {
+				if orderDiscount, ok := orderDiscounts[article.ID]; ok {
+					itemDiscount := orderDiscount.TotalDiscountAmountApplicable
+					total = total - itemDiscount
+				}
+			}
+
 		} else {
 			//only sum up if limitations are matched
 			if IsOneProductOrCustomerGroupInIncludedGroups(priceRule.IncludedProductGroupIDS, productGroupIDs) &&
 				IsNoProductOrGroupInExcludeGroups(priceRule.ExcludedProductGroupIDS, productGroupIDs) &&
 				IsOneProductOrCustomerGroupInIncludedGroups(priceRule.IncludedCustomerGroupIDS, calculationParameters.groupIDsForCustomer) &&
 				IsNoProductOrGroupInExcludeGroups(priceRule.ExcludedCustomerGroupIDS, calculationParameters.groupIDsForCustomer) {
-				sub := 0.0
+
+				if priceRule.CalculateDiscountedOrderAmount == true {
+					if orderDiscount, ok := orderDiscounts[article.ID]; ok {
+						itemDiscount := orderDiscount.TotalDiscountAmountApplicable
+						total = total - itemDiscount
+					}
+				}
+				//--------------------------------------------------
+				/*sub := 0.0
 				if orderDiscounts != nil {
 					previouslyAppliedDiscounts, ok := orderDiscounts[article.ID]
 					if ok {
 						sub = previouslyAppliedDiscounts.TotalDiscountAmount
 					}
 				}
+
 				total += article.Price*article.Quantity - sub
+				*/
 			}
 		}
 	}
@@ -425,9 +441,12 @@ func getOrderTotalForPriceRule(priceRule *PriceRule, calculationParameters *Calc
 }
 
 // find what is the articleCollection value of positions that belong to group
-func getOrderTotal(articleCollection *ArticleCollection) float64 {
+func getOrderTotal(articleCollection *ArticleCollection, excludedItemIDsFromOrderAmountCalculation []string) float64 {
 	var total float64
 	for _, article := range articleCollection.Articles {
+		if contains(article.ID, excludedItemIDsFromOrderAmountCalculation) {
+			continue
+		}
 		total += article.Price * article.Quantity
 	}
 	return total
@@ -559,7 +578,7 @@ func validatePriceRule(priceRule PriceRule, checkedPosition *Article, calculatio
 					return false, ValidationPriceRuleMinimumAmount
 				}
 			} else {
-				if priceRule.MinOrderAmount > getOrderTotal(calculationParameters.articleCollection) {
+				if priceRule.MinOrderAmount > getOrderTotal(calculationParameters.articleCollection, priceRule.ExcludedItemIDsFromOrderAmountCalculation) {
 					return false, ValidationPriceRuleMinimumAmount
 				}
 			}
