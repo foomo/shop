@@ -163,7 +163,7 @@ func NewPriceRule(ID string) *PriceRule {
 	priceRule.Amount = 0
 	priceRule.IsAmountIndependentOfQty = false
 	priceRule.MinOrderAmount = 0
-	priceRule.CalculateMinOrderWithoutTax = false
+	priceRule.CalculateDiscountedOrderAmount = false
 	priceRule.ExcludedItemIDsFromOrderAmountCalculation = []string{}
 	priceRule.QtyThreshold = 0
 	priceRule.MaxUses = MaxInt
