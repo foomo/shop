@@ -92,7 +92,7 @@ func Init(t *testing.T) {
 	checkVouchersExists(t)
 }
 
-func TestDiscountDistribution(t *testing.T) {
+func testDiscountDistribution(t *testing.T) {
 	RemoveAllGroups()
 	RemoveAllPriceRules()
 	RemoveAllVouchers()
@@ -485,7 +485,7 @@ func testVoucherRuleWithCheckoutAttributes(t *testing.T) {
 
 }
 
-func testShipping(t *testing.T) {
+func TestShipping(t *testing.T) {
 
 	RemoveAllGroups()
 	RemoveAllPriceRules()
@@ -502,20 +502,38 @@ func testShipping(t *testing.T) {
 	}
 
 	//create pricerule
-	priceRule := NewPriceRule(PriceRuleIDSale)
+	priceRule := NewPriceRule("shipping")
 	priceRule.Name = map[string]string{
 		"de": "shipping",
 		"fr": "shipping",
 		"it": "shipping",
 	}
-	priceRule.Type = TypePromotionProduct
+	priceRule.Type = TypeShipping
 	priceRule.Description = priceRule.Name
-	priceRule.Action = ActionItemByPercent
-	priceRule.Amount = 100
-	priceRule.MinOrderAmount = 100
+	priceRule.Action = ActionItemByAbsolute
+	priceRule.Amount = 5
+	priceRule.MinOrderAmount = 50
 	priceRule.MinOrderAmountApplicableItemsOnly = false
+	priceRule.CalculateDiscountedOrderAmount = true
+	priceRule.ExcludedItemIDsFromOrderAmountCalculation = []string{"shipping-item-id"}
 	priceRule.IncludedProductGroupIDS = []string{"shipping"}
 	priceRule.IncludedCustomerGroupIDS = []string{}
+	priceRule.Upsert()
+
+	priceRule = NewPriceRule("general-promotion")
+	priceRule.Name = map[string]string{
+		"de": "general-promotio",
+		"fr": "general-promotio",
+		"it": "general-promotio",
+	}
+	priceRule.Type = TypePromotionOrder
+	priceRule.Description = priceRule.Name
+	priceRule.Action = ActionItemByAbsolute
+	priceRule.Amount = 50
+	priceRule.MinOrderAmount = 0
+	priceRule.MinOrderAmountApplicableItemsOnly = false
+	priceRule.CalculateDiscountedOrderAmount = false
+	priceRule.ExcludedProductGroupIDS = []string{"shipping"}
 	priceRule.Upsert()
 
 	//create order
@@ -525,6 +543,12 @@ func testShipping(t *testing.T) {
 	orderVo.CustomerID = CustomerID1
 	positionVo := &Article{}
 	positionVo.ID = "shipping-item-id"
+	positionVo.Price = 5.0
+	positionVo.Quantity = 1
+	orderVo.Articles = append(orderVo.Articles, positionVo)
+
+	positionVo = &Article{}
+	positionVo.ID = "normal-item-id"
 	positionVo.Price = 100.0
 	positionVo.Quantity = 1
 	orderVo.Articles = append(orderVo.Articles, positionVo)

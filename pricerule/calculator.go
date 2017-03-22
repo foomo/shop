@@ -137,7 +137,8 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 		groupIDsForCustomer = []string{}
 	}
 	calculationParameters.groupIDsForCustomer = groupIDsForCustomer
-
+	// ----------------------------------------------------------------------------------------------------------
+	// promotions - step 1
 	timeTrack(now, "groups data took ")
 	// find applicable pricerules - auto promotions
 	promotionPriceRules, err := GetValidPriceRulesForPromotions([]Type{TypePromotionCustomer, TypePromotionProduct, TypePromotionOrder}, customProvider)
@@ -193,8 +194,10 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 		orderDiscounts = calculateRule(orderDiscounts, pair, calculationParameters)
 	}
 
-	//find the vouchers and voucher rules
-	//find applicable pricerules of type TypeVoucher for
+	// ----------------------------------------------------------------------------------------------------------
+	// vouchers: step 2
+	// find the vouchers and voucher rules
+	// find applicable pricerules of type TypeVoucher for
 
 	if len(voucherCodes) > 0 {
 		var ruleVoucherPairsStep2 []RuleVoucherPair
@@ -242,6 +245,31 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 			orderDiscounts = calculateRule(orderDiscounts, priceRulePair, calculationParameters)
 		}
 	}
+
+	// ----------------------------------------------------------------------------------------------------------
+	// shipping - step 3
+	// shipping costs handling
+	// find applicable pricerules - auto promotions
+	shippingPriceRules, err := GetValidPriceRulesForPromotions([]Type{TypeShipping}, customProvider)
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var ruleVoucherPairsShipping []RuleVoucherPair
+	for _, promotionRule := range shippingPriceRules {
+		rule := &PriceRule{}
+		*rule = promotionRule
+		ruleVoucherPairsShipping = append(ruleVoucherPairsShipping, RuleVoucherPair{Rule: rule, Voucher: nil})
+	}
+
+	//apply them
+	for _, priceRulePair := range ruleVoucherPairsShipping {
+		orderDiscounts = calculateRule(orderDiscounts, priceRulePair, calculationParameters)
+	}
+
+	// ----------------------------------------------------------------------------------------------------------
+
 	timeTrack(nowAll, "All rules together")
 	for _, orderDiscount := range orderDiscounts {
 		summary.TotalDiscount += orderDiscount.TotalDiscountAmount
@@ -255,7 +283,6 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 					log.Println("#### voucherCode: ", appliedDiscount.VoucherCode)
 					log.Println("#### voucherID: ", appliedDiscount.VoucherID)
 				}
-
 				voucherDiscounts, ok := summary.VoucherDiscounts[appliedDiscount.VoucherCode]
 				if !ok {
 					summary.VoucherDiscounts[appliedDiscount.VoucherCode] = VoucherDiscount{
@@ -270,6 +297,7 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 			}
 		}
 	}
+
 	summary.TotalDiscountPercentage = summary.TotalDiscount / getOrderTotal(articleCollection, []string{}) * 100.0
 	summary.TotalDiscountApplicablePercentage = summary.TotalDiscountApplicable / getOrderTotal(articleCollection, []string{}) * 100.0
 	summary.AppliedPriceRuleIDs = RemoveDuplicates(summary.AppliedPriceRuleIDs)
@@ -578,7 +606,18 @@ func validatePriceRule(priceRule PriceRule, checkedPosition *Article, calculatio
 					return false, ValidationPriceRuleMinimumAmount
 				}
 			} else {
-				if priceRule.MinOrderAmount > getOrderTotal(calculationParameters.articleCollection, priceRule.ExcludedItemIDsFromOrderAmountCalculation) {
+				orderTotal := getOrderTotal(calculationParameters.articleCollection, priceRule.ExcludedItemIDsFromOrderAmountCalculation)
+
+				//remove previously discounted amount if rule config says so
+				if priceRule.CalculateDiscountedOrderAmount {
+					for itemID, dicountCalculationData := range orderDiscounts {
+						if !contains(itemID, priceRule.ExcludedItemIDsFromOrderAmountCalculation) {
+							orderTotal -= dicountCalculationData.TotalDiscountAmount
+						}
+					}
+				}
+
+				if priceRule.MinOrderAmount > orderTotal {
 					return false, ValidationPriceRuleMinimumAmount
 				}
 			}

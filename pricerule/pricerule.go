@@ -17,6 +17,7 @@ const (
 	TypePromotionOrder        Type = "promotion_order"         // multiple can be applied
 	TypeVoucher               Type = "voucher"                 // rule associated to a voucher
 	TypePaymentMethodDiscount Type = "payment_method_discount" // rule associated to a payment method
+	TypeShipping              Type = "shipping"                // rule used to calculate shipping price
 
 	ActionItemByPercent ActionType = "item_by_percent"
 	ActionCartByPercent ActionType = "cart_by_percent"
