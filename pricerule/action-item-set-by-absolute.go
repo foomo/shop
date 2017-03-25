@@ -2,6 +2,7 @@ package pricerule
 
 import (
 	"log"
+	"math"
 )
 
 // CalculateDiscountsItemByPercent -
@@ -34,12 +35,14 @@ func calculateItemSetAbsoluteDiscount(priceRuleVoucherPair RuleVoucherPair, orde
 // how many times is the whole set present
 func getOrderItemsThatBelongToSet(priceRule *PriceRule, articleCollection *ArticleCollection) (itemIDs []string, timesSetIncluded float64) {
 	itemIDs = []string{}
-	countItemsForSetIndex := make(map[int]float64)
-	for _, article := range articleCollection.Articles {
-		//if article.ID is in one of the itemset arrays
-		for setIndex, set := range priceRule.ItemSets {
+	countItemsForSetIndex := map[int]float64{}
+	for setIndex, set := range priceRule.ItemSets {
+
+		for _, article := range articleCollection.Articles {
+			//if article.ID is in one of the itemset arrays
 			if _, ok := countItemsForSetIndex[setIndex]; !ok {
 				countItemsForSetIndex[setIndex] = 0.0
+
 			}
 			if contains(article.ID, set) {
 				itemIDs = append(itemIDs, article.ID)
@@ -47,14 +50,15 @@ func getOrderItemsThatBelongToSet(priceRule *PriceRule, articleCollection *Artic
 			}
 		}
 	}
-
-	timesSetIncluded = 0.0
-	for _, count := range countItemsForSetIndex {
-		if timesSetIncluded == 0 {
-			timesSetIncluded = count
-		}
-		if count < timesSetIncluded {
-			timesSetIncluded = count
+	if len(countItemsForSetIndex) == 0 {
+		timesSetIncluded = 0
+		itemIDs = []string{}
+	} else {
+		timesSetIncluded = math.MaxFloat64
+		for _, count := range countItemsForSetIndex {
+			if count < timesSetIncluded {
+				timesSetIncluded = count
+			}
 		}
 	}
 	return itemIDs, timesSetIncluded
