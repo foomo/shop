@@ -342,7 +342,7 @@ func testBestOption(t *testing.T) {
 
 }
 
-func testDiscountFoItemSets(t *testing.T) {
+func TestDiscountFoItemSets(t *testing.T) {
 	RemoveAllGroups()
 	RemoveAllPriceRules()
 	RemoveAllVouchers()
@@ -388,13 +388,13 @@ func testDiscountFoItemSets(t *testing.T) {
 	positionVo := &Article{}
 	positionVo.ID = ProductID1SKU1
 	positionVo.Price = 100
-	positionVo.Quantity = 2
+	positionVo.Quantity = 1
 	orderVo.Articles = append(orderVo.Articles, positionVo)
 
 	positionVo = &Article{}
 	positionVo.ID = ProductID2SKU1
 	positionVo.Price = 300
-	positionVo.Quantity = 1
+	positionVo.Quantity = 2
 	orderVo.Articles = append(orderVo.Articles, positionVo)
 
 	positionVo = &Article{}
@@ -404,9 +404,9 @@ func testDiscountFoItemSets(t *testing.T) {
 	orderVo.Articles = append(orderVo.Articles, positionVo)
 
 	positionVo = &Article{}
-	positionVo.ID = ProductID3SKU1
+	positionVo.ID = ProductID3SKU2
 	positionVo.Price = 100
-	positionVo.Quantity = 5
+	positionVo.Quantity = 1
 	orderVo.Articles = append(orderVo.Articles, positionVo)
 
 	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{}, []string{PaymentMethodID1}, 0.05, nil)
@@ -485,7 +485,7 @@ func testVoucherRuleWithCheckoutAttributes(t *testing.T) {
 
 }
 
-func TestShipping(t *testing.T) {
+func testShipping(t *testing.T) {
 
 	RemoveAllGroups()
 	RemoveAllPriceRules()
