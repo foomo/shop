@@ -221,7 +221,7 @@ func testBestOption(t *testing.T) {
 
 }
 
-func testDiscountFoItemSets(t *testing.T) {
+func TestDiscountFoItemSets(t *testing.T) {
 	RemoveAllGroups()
 	RemoveAllPriceRules()
 	RemoveAllVouchers()
@@ -273,7 +273,7 @@ func testDiscountFoItemSets(t *testing.T) {
 	positionVo = &Article{}
 	positionVo.ID = ProductID2SKU1
 	positionVo.Price = 300
-	positionVo.Quantity = 1
+	positionVo.Quantity = 2
 	orderVo.Articles = append(orderVo.Articles, positionVo)
 
 	positionVo = &Article{}
