@@ -56,6 +56,11 @@ type DiscountApplied struct {
 	Price                float64 //price without reductions
 	CalculationBasePrice float64 //price used for the calculation of the discount
 
+	//helper values for easier rendering
+	AppliedInCatalog        bool // applied in catalog calculation
+	ApplicableInCatalog     bool //could have been applied in catalog
+	IsTypePromotionCustomer bool // is the type TypePromotionCustomer
+
 	Custom interface{}
 }
 
