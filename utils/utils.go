@@ -106,14 +106,14 @@ func GetTimeFromYYYYMMDD(date string) (time.Time, error) {
 	if err != nil {
 		return time.Time{}, err
 	}
-	return t.In(CET).Add(-time.Hour), nil
+	return t.In(CET).Add(-time.Hour * 2), nil
 }
 func GetTimeFromYYY_MM_DD(date string) (time.Time, error) {
 	t, err := time.Parse("2006-01-02", date)
 	if err != nil {
 		return time.Time{}, err
 	}
-	return t.In(CET).Add(-time.Hour), nil
+	return t.In(CET).Add(-time.Hour * 2), nil
 }
 
 func TimeNow() time.Time {
