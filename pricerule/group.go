@@ -3,6 +3,8 @@ package pricerule
 import (
 	"time"
 
+	"log"
+
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -11,8 +13,9 @@ import (
 // ~ CONSTANTS
 //------------------------------------------------------------------
 const (
-	CustomerGroup GroupType = "customer-group"
-	ProductGroup  GroupType = "product-group"
+	CustomerGroup  GroupType = "customer-group"
+	ProductGroup   GroupType = "product-group"
+	BlacklistGroup GroupType = "blacklist-group"
 )
 
 // GroupType - product group or customer group
@@ -217,4 +220,25 @@ func RemoveDuplicates(elements []string) []string {
 	}
 	// Return the new slice.
 	return result
+}
+
+// GetBlacklistedItemIds -
+func GetBlacklistedItemIds() (itemIDs []string, err error) {
+	itemIDs = []string{}
+	p := GetPersistorForObject(&Group{})
+	query := bson.M{"type": BlacklistGroup}
+	var result = []Group{}
+	findErr := p.GetCollection().Find(query).Sort("priority").All(&result)
+	if findErr != nil {
+		log.Println(findErr)
+		err = findErr
+		return
+	}
+	for _, group := range result {
+		if len(group.ItemIDs) > 0 {
+			itemIDs = append(itemIDs, group.ItemIDs...)
+		}
+	}
+	itemIDs = RemoveDuplicates(itemIDs)
+	return
 }
