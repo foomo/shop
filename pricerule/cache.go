@@ -1,11 +1,10 @@
 package pricerule
 
 import (
-	"sync"
-
-	"time"
-
 	"fmt"
+	"log"
+	"sync"
+	"time"
 
 	"gopkg.in/mgo.v2/bson"
 )
@@ -15,6 +14,7 @@ type Cache struct {
 	groupsCache            map[GroupType]map[string][]string
 	catalogValidRulesCache []PriceRule
 	cacheMutex             *sync.Mutex
+	blacklistedItemIDs     []string
 
 	enabled bool
 }
@@ -33,26 +33,36 @@ func (c *Cache) GetGroupsCache() map[GroupType]map[string][]string {
 }
 
 // InitCatalogCalculationCache - load groups data into memory
-func (c *Cache) InitCatalogCalculationCache() error {
+func (c *Cache) InitCatalogCalculationCache() (err error) {
 	now := time.Now()
 	//synchronize code code
 	c.cacheMutex.Lock()
 	defer c.cacheMutex.Unlock()
-
-	err := c.loadGroupCacheByItem()
+	err = c.loadGroupCacheByItem()
 	if err != nil {
-		return err
+		return
 	}
 
-	catalogValidRulesCache, err := GetValidPriceRulesForPromotions([]Type{TypePromotionCustomer, TypePromotionProduct, TypePromotionOrder}, nil)
-	if err != nil {
-		return err
+	catalogValidRulesCache, getPromotionsErr := GetValidPriceRulesForPromotions([]Type{TypePromotionCustomer, TypePromotionProduct, TypePromotionOrder}, nil)
+	if getPromotionsErr != nil {
+		err = getPromotionsErr
+		return
 	}
 	c.catalogValidRulesCache = catalogValidRulesCache
 
+	//load the blacklisted products
+	blacklistedItems, blacklistLoadErr := GetBlacklistedItemIds()
+	if blacklistLoadErr != nil {
+		err = blacklistLoadErr
+		log.Println(err)
+		return
+	}
+	c.blacklistedItemIDs = blacklistedItems
+	// done all
 	c.enabled = true
 	timeTrack(now, "[InitCatalogCalculationCache] cache loading took ")
-	return err
+
+	return
 }
 
 // ClearCache - will force the use of data from db
@@ -85,6 +95,19 @@ func (c *Cache) CachedGetValidProductAndCustomerPriceRules(customProvider PriceR
 		return c.catalogValidRulesCache, nil
 	}
 	return GetValidPriceRulesForPromotions([]Type{TypePromotionCustomer, TypePromotionProduct}, customProvider)
+}
+
+func (c *Cache) GetBlacklistedItemIDs() (itemIDs []string) {
+	itemIDs = []string{}
+	if c.enabled {
+		return c.blacklistedItemIDs
+	}
+	itemIDs, err := GetBlacklistedItemIds()
+	if err != nil {
+		log.Println(err)
+		itemIDs = []string{}
+	}
+	return
 }
 
 // remove value from array - by value not index

@@ -15,6 +15,17 @@ func calculateDiscountsItemByPercent(priceRuleVoucherPair RuleVoucherPair, order
 			discountApplied.DiscountAmount = roundToStep(priceRuleVoucherPair.Rule.Amount/100*discountApplied.CalculationBasePrice*orderDiscounts[article.ID].Quantity, calculationParameters.roundTo)
 			discountApplied.DiscountSingle = roundToStep(priceRuleVoucherPair.Rule.Amount/100*discountApplied.CalculationBasePrice, calculationParameters.roundTo)
 			discountApplied.Quantity = orderDiscounts[article.ID].Quantity
+
+			discountApplied.AppliedInCatalog = calculationParameters.isCatalogCalculation
+			discountApplied.ApplicableInCatalog = false
+			if priceRuleVoucherPair.Rule.Type == TypePromotionProduct || calculationParameters.isCatalogCalculation {
+				discountApplied.ApplicableInCatalog = true
+			}
+			discountApplied.IsTypePromotionCustomer = false
+			if priceRuleVoucherPair.Rule.Type == TypePromotionCustomer {
+				discountApplied.IsTypePromotionCustomer = true
+			}
+
 			orderDiscountsForPosition := orderDiscounts[article.ID]
 			orderDiscountsForPosition = calculateCurrentPriceAndApplicableDiscountsEnforceRules(*discountApplied, article.ID, orderDiscountsForPosition, orderDiscounts, *priceRuleVoucherPair.Rule, calculationParameters.roundTo)
 			orderDiscounts[article.ID] = orderDiscountsForPosition

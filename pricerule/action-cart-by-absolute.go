@@ -53,6 +53,13 @@ func calculateDiscountsCartByAbsolute(priceRuleVoucherPair RuleVoucherPair, orde
 					discountApplied.DiscountSingle = discountAmount / orderDiscounts[article.ID].Quantity
 					discountApplied.Quantity = orderDiscounts[article.ID].Quantity
 
+					discountApplied.AppliedInCatalog = calculationParameters.isCatalogCalculation
+					discountApplied.ApplicableInCatalog = false
+					discountApplied.IsTypePromotionCustomer = false
+					if priceRuleVoucherPair.Rule.Type == TypePromotionCustomer {
+						discountApplied.IsTypePromotionCustomer = true
+					}
+
 					//pointer assignment WTF !!!
 					orderDiscountsForPosition := orderDiscounts[article.ID]
 					orderDiscountsForPosition = calculateCurrentPriceAndApplicableDiscountsEnforceRules(*discountApplied, article.ID, orderDiscountsForPosition, orderDiscounts, *priceRuleVoucherPair.Rule, calculationParameters.roundTo)
@@ -73,7 +80,6 @@ func getMapValues(mapVal map[string]float64) ([]string, []float64) {
 		keys = append(keys, key)
 		vals = append(vals, val)
 	}
-
 	return keys, vals
 }
 

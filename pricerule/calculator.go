@@ -26,6 +26,7 @@ type CalculationParameters struct {
 	isCatalogCalculation                bool
 	checkoutAttributes                  []string
 	bestOptionCustomeProductRulePerItem map[string]string // which is the product or customer type rule that is applied on item
+	blacklistedItemIDs                  []string
 }
 
 type ArticleCollection struct {
@@ -55,6 +56,11 @@ type DiscountApplied struct {
 	Quantity             float64
 	Price                float64 //price without reductions
 	CalculationBasePrice float64 //price used for the calculation of the discount
+
+	//helper values for easier rendering
+	AppliedInCatalog        bool // applied in catalog calculation
+	ApplicableInCatalog     bool //could have been applied in catalog
+	IsTypePromotionCustomer bool // is the type TypePromotionCustomer
 
 	Custom interface{}
 }
@@ -127,6 +133,7 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 	calculationParameters.roundTo = roundTo
 	calculationParameters.isCatalogCalculation = false
 	calculationParameters.checkoutAttributes = checkoutAttributes
+
 	now := time.Now()
 	//find the groupIds for articleCollection items
 
@@ -137,6 +144,14 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 		groupIDsForCustomer = []string{}
 	}
 	calculationParameters.groupIDsForCustomer = groupIDsForCustomer
+
+	//find blacklisted items
+	blacklistedItemIDs, blacklistedItemsErr := GetBlacklistedItemIds()
+	if blacklistedItemsErr != nil {
+		return nil, nil, blacklistedItemsErr
+	}
+	calculationParameters.blacklistedItemIDs = blacklistedItemIDs
+
 	// ----------------------------------------------------------------------------------------------------------
 	// promotions - step 1
 	timeTrack(now, "groups data took ")
@@ -330,6 +345,7 @@ func ApplyDiscountsOnCatalog(articleCollection *ArticleCollection, existingDisco
 	calculationParameters.groupIDsForCustomer = groupIDsForCustomer
 	timeTrack(now, "[ApplyDiscountsOnCatalog] loading of groupIDsForCustomer took ")
 
+	calculationParameters.blacklistedItemIDs = cache.GetBlacklistedItemIDs()
 	now = time.Now()
 	// find applicable pricerules - auto promotions
 	promotionPriceRules, err := cache.CachedGetValidProductAndCustomerPriceRules(customProvider)
@@ -638,6 +654,7 @@ func validatePriceRule(priceRule PriceRule, checkedPosition *Article, calculatio
 	var productGroupExcludeMatchOK = false
 	var customerGroupIncludeMatchOK = false
 	var customerGroupExcludeMatchOK = false
+	var blacklistOK = false
 
 	if checkedPosition == nil {
 		for _, article := range calculationParameters.articleCollection.Articles {
@@ -654,6 +671,9 @@ func validatePriceRule(priceRule PriceRule, checkedPosition *Article, calculatio
 			if IsNoProductOrGroupInExcludeGroups(priceRule.ExcludedCustomerGroupIDS, calculationParameters.groupIDsForCustomer) {
 				customerGroupExcludeMatchOK = true
 			}
+			if !contains(article.ID, calculationParameters.blacklistedItemIDs) {
+				blacklistOK = true
+			}
 		}
 	} else {
 		// if only checking for one item, do not go through loop
@@ -669,6 +689,10 @@ func validatePriceRule(priceRule PriceRule, checkedPosition *Article, calculatio
 
 		if IsNoProductOrGroupInExcludeGroups(priceRule.ExcludedCustomerGroupIDS, calculationParameters.groupIDsForCustomer) {
 			customerGroupExcludeMatchOK = true
+		}
+
+		if !contains(checkedPosition.ID, calculationParameters.blacklistedItemIDs) {
+			blacklistOK = true
 		}
 	}
 
@@ -690,6 +714,10 @@ func validatePriceRule(priceRule PriceRule, checkedPosition *Article, calculatio
 
 	if !customerGroupExcludeMatchOK {
 		return false, ValidationPriceRuleExcludeCustomerGroupsNotMatching
+	}
+
+	if !blacklistOK {
+		return false, ValidationPriceRuleBlacklist
 	}
 	return true, ValidationPriceRuleOK
 }

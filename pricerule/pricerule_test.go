@@ -92,6 +92,92 @@ func Init(t *testing.T) {
 	checkVouchersExists(t)
 }
 
+func testBlacklist(t *testing.T) {
+	RemoveAllGroups()
+	RemoveAllPriceRules()
+	RemoveAllVouchers()
+
+	group := new(Group)
+	group.Type = ProductGroup
+	group.ID = "sale"
+	group.Name = "sale"
+	group.AddGroupItemIDs([]string{ProductID1SKU1, ProductID1SKU2, ProductID2SKU1, ProductID2SKU2})
+	err := group.Upsert()
+	if err != nil {
+		t.Fatal("Could not upsert shipping product group ")
+	}
+	//create pricerule
+	priceRule := NewPriceRule("sale")
+	priceRule.Name = map[string]string{
+		"de": "sale",
+		"fr": "sale",
+		"it": "sale",
+	}
+	priceRule.Type = TypePromotionProduct
+	priceRule.Description = priceRule.Name
+	priceRule.Action = ActionItemByPercent
+	priceRule.Amount = 10
+	priceRule.MinOrderAmount = 0
+	priceRule.MinOrderAmountApplicableItemsOnly = false
+	priceRule.IncludedProductGroupIDS = []string{"sale"}
+	priceRule.Upsert()
+
+	//create pricerule with blacklist
+
+	//create blacklist
+	group = new(Group)
+	group.Type = BlacklistGroup
+	group.ID = "blacklist"
+	group.Name = "blacklist"
+	group.AddGroupItemIDs([]string{ProductID3SKU1})
+	err = group.Upsert()
+	if err != nil {
+		t.Fatal("Could not upsert blacklist product group ")
+	}
+
+	group = new(Group)
+	group.Type = BlacklistGroup
+	group.ID = "blacklist1"
+	group.Name = "blacklist1"
+	group.AddGroupItemIDs([]string{ProductID2SKU1, ProductID1SKU2})
+	err = group.Upsert()
+	if err != nil {
+		t.Fatal("Could not upsert blacklist product group ")
+	}
+
+	// Order -------------------------------------------------------------------------------
+	orderVo := &ArticleCollection{}
+	orderVo.CustomerID = CustomerID1
+
+	positionVo := &Article{}
+	positionVo.ID = ProductID1SKU1
+	positionVo.Price = 100
+	positionVo.Quantity = 1
+	orderVo.Articles = append(orderVo.Articles, positionVo)
+
+	positionVo = &Article{}
+	positionVo.ID = ProductID2SKU1
+	positionVo.Price = 300
+	positionVo.Quantity = 2
+	orderVo.Articles = append(orderVo.Articles, positionVo)
+
+	positionVo = &Article{}
+	positionVo.ID = ProductID3SKU2
+	positionVo.Price = 500
+	positionVo.Quantity = 5
+	orderVo.Articles = append(orderVo.Articles, positionVo)
+
+	positionVo = &Article{}
+	positionVo.ID = ProductID3SKU2
+	positionVo.Price = 100
+	positionVo.Quantity = 1
+	orderVo.Articles = append(orderVo.Articles, positionVo)
+
+	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{}, []string{PaymentMethodID1}, 0.05, nil)
+	spew.Dump(discountsVo, summary, err)
+
+}
+
 func testDiscountDistribution(t *testing.T) {
 	RemoveAllGroups()
 	RemoveAllPriceRules()
@@ -388,13 +474,13 @@ func testDiscountFoItemSets(t *testing.T) {
 	positionVo := &Article{}
 	positionVo.ID = ProductID1SKU1
 	positionVo.Price = 100
-	positionVo.Quantity = 2
+	positionVo.Quantity = 1
 	orderVo.Articles = append(orderVo.Articles, positionVo)
 
 	positionVo = &Article{}
 	positionVo.ID = ProductID2SKU1
 	positionVo.Price = 300
-	positionVo.Quantity = 1
+	positionVo.Quantity = 2
 	orderVo.Articles = append(orderVo.Articles, positionVo)
 
 	positionVo = &Article{}
@@ -404,9 +490,9 @@ func testDiscountFoItemSets(t *testing.T) {
 	orderVo.Articles = append(orderVo.Articles, positionVo)
 
 	positionVo = &Article{}
-	positionVo.ID = ProductID3SKU1
+	positionVo.ID = ProductID3SKU2
 	positionVo.Price = 100
-	positionVo.Quantity = 5
+	positionVo.Quantity = 1
 	orderVo.Articles = append(orderVo.Articles, positionVo)
 
 	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{}, []string{PaymentMethodID1}, 0.05, nil)
@@ -485,7 +571,7 @@ func testVoucherRuleWithCheckoutAttributes(t *testing.T) {
 
 }
 
-func TestShipping(t *testing.T) {
+func testShipping(t *testing.T) {
 
 	RemoveAllGroups()
 	RemoveAllPriceRules()
