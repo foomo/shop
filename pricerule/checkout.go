@@ -28,7 +28,8 @@ const (
 	ValidationPriceRuleOK                TypeRuleValidationMsg = "price_rule_ok"
 
 	ValidationPriceRuleCheckoutAttributesMismatch TypeRuleValidationMsg = "pricerule_checkout_attributes_missmatch"
-	ValidationPriceRuleQuantityThresholdNotMet                          = "qty_below_pricerule_quantity_threshold"
+	ValidationPriceRuleQuantityThresholdNotMet    TypeRuleValidationMsg = "qty_below_pricerule_quantity_threshold"
+	ValidationPriceRuleNotForCatalogueCalculation TypeRuleValidationMsg = "not_for_catalogue_calculation"
 )
 
 //------------------------------------------------------------------

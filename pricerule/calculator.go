@@ -547,6 +547,12 @@ func validatePriceRule(priceRule PriceRule, checkedPosition *Article, calculatio
 		}
 	}
 
+	if calculationParameters.isCatalogCalculation {
+		if priceRule.QtyThreshold > 0 || priceRule.MinOrderAmount > 0 {
+			return false, ValidationPriceRuleNotForCatalogueCalculation
+		}
+	}
+
 	if !calculationParameters.isCatalogCalculation {
 		if priceRule.MaxUses <= priceRule.UsageHistory.TotalUsages {
 			return false, ValidationPriceRuleMaxUsages
