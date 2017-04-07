@@ -92,7 +92,7 @@ func Init(t *testing.T) {
 	checkVouchersExists(t)
 }
 
-func testBestOption(t *testing.T) {
+func TestBestOption(t *testing.T) {
 	RemoveAllGroups()
 	RemoveAllPriceRules()
 	RemoveAllVouchers()
@@ -137,7 +137,7 @@ func testBestOption(t *testing.T) {
 	priceRule.Type = TypePromotionProduct
 	priceRule.Description = priceRule.Name
 	priceRule.Action = ActionItemByPercent
-	priceRule.Amount = 10
+	priceRule.Amount = 60
 	priceRule.MinOrderAmount = 0
 	priceRule.MinOrderAmountApplicableItemsOnly = false
 	priceRule.IncludedProductGroupIDS = []string{"group1"}
@@ -157,7 +157,7 @@ func testBestOption(t *testing.T) {
 	priceRule.Type = TypePromotionProduct
 	priceRule.Description = priceRule.Name
 	priceRule.Action = ActionItemByPercent
-	priceRule.Amount = 10
+	priceRule.Amount = 50
 	priceRule.MinOrderAmount = 0
 	priceRule.MinOrderAmountApplicableItemsOnly = false
 	priceRule.IncludedProductGroupIDS = []string{"group2"}
@@ -221,7 +221,7 @@ func testBestOption(t *testing.T) {
 
 }
 
-func TestDiscountFoItemSets(t *testing.T) {
+func testDiscountFoItemSets(t *testing.T) {
 	RemoveAllGroups()
 	RemoveAllPriceRules()
 	RemoveAllVouchers()

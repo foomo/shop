@@ -697,11 +697,11 @@ func getBestOptionCustomerProductRulePerItem(ruleVoucherPairs []RuleVoucherPair,
 	start := time.Now()
 	ret = make(map[string]string)
 	currentDiscounts := make(map[string]float64)
+	currentBestDiscountType := make(map[string]Type)
 
 	for _, priceRulePair := range ruleVoucherPairs {
 		tempDiscounts := NewOrderDiscounts(calculationParameters.articleCollection)
 		tempDiscounts = calculateRule(tempDiscounts, priceRulePair, calculationParameters)
-
 		//go over applied discounts an select the better one
 		for _, article := range calculationParameters.articleCollection.Articles {
 			itemID := article.ID
@@ -710,9 +710,15 @@ func getBestOptionCustomerProductRulePerItem(ruleVoucherPairs []RuleVoucherPair,
 			if _, ok := currentDiscounts[itemID]; !ok {
 				currentDiscounts[itemID] = 0
 			}
-			//do the comparision
-			if discount > currentDiscounts[itemID] {
+			//init map if necessary
+			if _, ok := currentBestDiscountType[itemID]; !ok {
+				currentBestDiscountType[itemID] = TypePromotionCustomer // we can always overrider
+			}
+
+			if (discount > currentDiscounts[itemID] && currentBestDiscountType[itemID] == TypePromotionCustomer) ||
+				(discount > currentDiscounts[itemID] && currentBestDiscountType[itemID] == TypePromotionProduct && priceRulePair.Rule.Type != TypePromotionCustomer) {
 				currentDiscounts[itemID] = discount
+				currentBestDiscountType[itemID] = priceRulePair.Rule.Type
 				ret[itemID] = tempDiscounts[itemID].AppliedDiscounts[0].PriceRuleID
 			}
 		}
