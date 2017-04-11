@@ -92,7 +92,6 @@ func Init(t *testing.T) {
 	checkVouchersExists(t)
 }
 
-<<<<<<< HEAD
 func testBlacklist(t *testing.T) {
 	RemoveAllGroups()
 	RemoveAllPriceRules()
