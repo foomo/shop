@@ -31,6 +31,7 @@ const (
 	ValidationPriceRuleQuantityThresholdNotMet    TypeRuleValidationMsg = "qty_below_pricerule_quantity_threshold"
 
 	ValidationPriceRuleBlacklist TypeRuleValidationMsg = "products_blacklisted"
+	ValidationPriceRuleNotForCatalogueCalculation TypeRuleValidationMsg = "not_for_catalogue_calculation"
 )
 
 //------------------------------------------------------------------
