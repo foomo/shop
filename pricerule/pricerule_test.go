@@ -92,7 +92,147 @@ func Init(t *testing.T) {
 	checkVouchersExists(t)
 }
 
-<<<<<<< HEAD
+func TestShipping(t *testing.T) {
+
+	RemoveAllGroups()
+	RemoveAllPriceRules()
+	RemoveAllVouchers()
+
+	group := new(Group)
+	group.Type = ProductGroup
+	group.ID = "shipping"
+	group.Name = "shipping"
+	group.AddGroupItemIDs([]string{"shipping-item-id"})
+	err := group.Upsert()
+	if err != nil {
+		t.Fatal("Could not upsert shipping product group ")
+	}
+
+	group = new(Group)
+	group.Type = CustomerGroup
+	group.ID = "customer-group"
+	group.Name = "customer"
+	group.AddGroupItemIDs([]string{CustomerID1})
+	err = group.Upsert()
+	if err != nil {
+		t.Fatal("Could not upsert shipping product group ")
+	}
+
+	group = new(Group)
+	group.Type = ProductGroup
+	group.ID = "product1-group"
+	group.Name = "product1-group"
+	group.AddGroupItemIDs([]string{"product1"})
+	err = group.Upsert()
+	if err != nil {
+		t.Fatal("Could not upsert  product1 group ")
+	}
+
+	group = new(Group)
+	group.Type = ProductGroup
+	group.ID = "product2-group"
+	group.Name = "product2-group"
+	group.AddGroupItemIDs([]string{"product2"})
+	err = group.Upsert()
+	if err != nil {
+		t.Fatal("Could not upsert product2 group ")
+	}
+
+	// --------------------------------------------------------
+	//create pricerule
+	priceRule := NewPriceRule("shipping")
+	priceRule.Name = map[string]string{
+		"de": "shipping",
+		"fr": "shipping",
+		"it": "shipping",
+	}
+	priceRule.Type = TypeShipping
+	priceRule.Description = priceRule.Name
+	priceRule.Action = ActionItemByPercent
+	priceRule.Amount = 100
+	priceRule.MinOrderAmount = 311.10 - 4.9
+	priceRule.CalculateDiscountedOrderAmount = true
+	priceRule.ExcludedItemIDsFromOrderAmountCalculation = []string{"shipping-item-id"}
+	priceRule.IncludedProductGroupIDS = []string{"shipping"}
+	priceRule.IncludedCustomerGroupIDS = []string{}
+	priceRule.Upsert()
+
+	//customer promo 1
+
+	priceRule = NewPriceRule("customer-promo30")
+	priceRule.Name = map[string]string{
+		"de": "customer-promo30",
+		"fr": "customer-promo30",
+		"it": "customer-promo30",
+	}
+	priceRule.Type = TypePromotionCustomer
+	priceRule.Description = priceRule.Name
+	priceRule.Action = ActionItemByPercent
+	priceRule.Amount = 30
+	priceRule.ExcludedProductGroupIDS = []string{"shipping"}
+	priceRule.IncludedProductGroupIDS = []string{"product1-group"}
+	priceRule.IncludedCustomerGroupIDS = []string{"customer-group"}
+	priceRule.Upsert()
+
+	priceRule = NewPriceRule("customer-promo15")
+	priceRule.Name = map[string]string{
+		"de": "customer-promo15",
+		"fr": "customer-promo15",
+		"it": "customer-promo15",
+	}
+	priceRule.Type = TypePromotionCustomer
+	priceRule.Description = priceRule.Name
+	priceRule.Action = ActionItemByPercent
+	priceRule.Amount = 15
+	priceRule.ExcludedProductGroupIDS = []string{"shipping"}
+	priceRule.IncludedProductGroupIDS = []string{"product2-group"}
+	priceRule.IncludedCustomerGroupIDS = []string{"customer-group"}
+	priceRule.Upsert()
+
+	priceRule = NewPriceRule("product2-promo")
+	priceRule.Name = map[string]string{
+		"de": "product2-promo",
+		"fr": "product2-promo",
+		"it": "product2-promo",
+	}
+	priceRule.Type = TypePromotionProduct
+	priceRule.Description = priceRule.Name
+	priceRule.Action = ActionItemByPercent
+	priceRule.Amount = 10
+	priceRule.ExcludedProductGroupIDS = []string{"shipping"}
+	priceRule.IncludedProductGroupIDS = []string{"product2-group"}
+	priceRule.IncludedCustomerGroupIDS = []string{"customer-group"}
+	priceRule.Upsert()
+
+	//create order
+
+	// order = articleCollection
+	orderVo := &ArticleCollection{}
+	orderVo.CustomerID = CustomerID1
+	orderVo.CustomerType = CustomerID1
+	positionVo := &Article{}
+	positionVo.ID = "shipping-item-id"
+	positionVo.Price = 4.90
+	positionVo.Quantity = 1
+	orderVo.Articles = append(orderVo.Articles, positionVo)
+
+	positionVo = &Article{}
+	positionVo.ID = "product1"
+	positionVo.Price = 399.0
+	positionVo.Quantity = 1
+	orderVo.Articles = append(orderVo.Articles, positionVo)
+
+	positionVo = &Article{}
+	positionVo.ID = "product2"
+	positionVo.Price = 29.90
+	positionVo.Quantity = 1
+	orderVo.Articles = append(orderVo.Articles, positionVo)
+
+	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{""}, []string{}, 0.05, nil)
+	spew.Dump(discountsVo, summary, err)
+
+}
+
 func testBlacklist(t *testing.T) {
 	RemoveAllGroups()
 	RemoveAllPriceRules()
@@ -597,7 +737,7 @@ func testShipping(t *testing.T) {
 	}
 	priceRule.Type = TypeShipping
 	priceRule.Description = priceRule.Name
-	priceRule.Action = ActionItemByAbsolute
+	priceRule.Action = ActionCartByPercent
 	priceRule.Amount = 5
 	priceRule.MinOrderAmount = 50
 	priceRule.MinOrderAmountApplicableItemsOnly = false

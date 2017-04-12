@@ -531,7 +531,6 @@ func IsOneProductOrCustomerGroupInIncludedGroups(ruleIncludeGroups []string, pro
 	}
 	for _, p := range productAndCustomerGroups {
 		if isValueInList(p, ruleIncludeGroups) {
-
 			return true
 		}
 	}
@@ -796,8 +795,19 @@ func getBestOptionCustomerProductRulePerItem(ruleVoucherPairs []RuleVoucherPair,
 				currentBestDiscountType[itemID] = TypePromotionCustomer // we can always overrider
 			}
 
-			if (discount > currentDiscounts[itemID] && currentBestDiscountType[itemID] == TypePromotionCustomer) ||
-				(discount > currentDiscounts[itemID] && currentBestDiscountType[itemID] == TypePromotionProduct && priceRulePair.Rule.Type != TypePromotionCustomer) {
+			overwrite := false
+			if currentBestDiscountType[itemID] == TypePromotionCustomer || priceRulePair.Rule.Type != TypePromotionCustomer {
+				//overwrite
+				overwrite = true
+			} else {
+				if discount > currentDiscounts[itemID] {
+					overwrite = true
+				} else {
+					overwrite = false
+				}
+			}
+
+			if overwrite && discount > 0 {
 				currentDiscounts[itemID] = discount
 				currentBestDiscountType[itemID] = priceRulePair.Rule.Type
 				ret[itemID] = tempDiscounts[itemID].AppliedDiscounts[0].PriceRuleID
