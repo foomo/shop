@@ -256,7 +256,10 @@ func (customer *Customer) AddAddress(addr *address.Address) (string, error) {
 
 	// If Person of Customer is still empty and this is the first address
 	// added to the customer, Person of Address is adopted for Customer
-	if len(customer.Addresses) == 0 && customer.Person.LastName == "" {
+	if customer.Person == nil {
+		log.Println("WARNING: customer.Person must not be nil: customerID: " + customer.GetID() + ", AddressID: " + addr.Id)
+		*customer.Person = *addr.Person
+	} else if len(customer.Addresses) == 0 && customer.Person.LastName == "" {
 		*customer.Person = *addr.Person
 	}
 
