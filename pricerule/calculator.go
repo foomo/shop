@@ -4,8 +4,6 @@ import (
 	"log"
 	"sort"
 	"time"
-
-	"github.com/davecgh/go-spew/spew"
 )
 
 //------------------------------------------------------------------
@@ -27,6 +25,7 @@ type CalculationParameters struct {
 	checkoutAttributes                  []string
 	bestOptionCustomeProductRulePerItem map[string]string // which is the product or customer type rule that is applied on item
 	blacklistedItemIDs                  []string
+	shippingGroupIDs                    []string
 }
 
 type ArticleCollection struct {
@@ -133,7 +132,12 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 	calculationParameters.roundTo = roundTo
 	calculationParameters.isCatalogCalculation = false
 	calculationParameters.checkoutAttributes = checkoutAttributes
+	shippingGroupIDs, shippingItemErr := getShippingGroupIDs()
+	if shippingItemErr != nil {
+		shippingGroupIDs = []string{}
+	}
 
+	calculationParameters.shippingGroupIDs = shippingGroupIDs
 	now := time.Now()
 	//find the groupIds for articleCollection items
 
@@ -200,7 +204,7 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 
 	bestOptionCustomerProductRulePerItem := getBestOptionCustomerProductRulePerItem(ruleVoucherPairs, calculationParameters)
 	calculationParameters.bestOptionCustomeProductRulePerItem = bestOptionCustomerProductRulePerItem
-	spew.Dump(bestOptionCustomerProductRulePerItem)
+	//spew.Dump(bestOptionCustomerProductRulePerItem)
 
 	for _, priceRulePair := range ruleVoucherPairs {
 		pair := RuleVoucherPair{}
@@ -403,10 +407,15 @@ func ApplyDiscountsOnCatalog(articleCollection *ArticleCollection, existingDisco
 func calculateRule(orderDiscounts OrderDiscounts, priceRulePair RuleVoucherPair, calculationParameters *CalculationParameters) OrderDiscounts {
 	ok := true
 	if calculationParameters.isCatalogCalculation == false {
+		// prevent applyting discounts on shipping items
+		if len(calculationParameters.shippingGroupIDs) > 0 && priceRulePair.Rule.Type != TypeShipping {
+			priceRulePair.Rule.ExcludedProductGroupIDS = RemoveDuplicates(append(priceRulePair.Rule.ExcludedProductGroupIDS, calculationParameters.shippingGroupIDs...))
+		}
 		ok, _ = validatePriceRuleForOrder(*priceRulePair.Rule, calculationParameters, orderDiscounts)
 	} else {
 		//bypass order check if catalog computation
 		ok = true
+
 	}
 
 	if ok == true {
@@ -453,7 +462,6 @@ func getOrderTotalForPriceRule(priceRule *PriceRule, calculationParameters *Calc
 					total = total - itemDiscount
 				}
 			}
-
 		} else {
 			//only sum up if limitations are matched
 			if IsOneProductOrCustomerGroupInIncludedGroups(priceRule.IncludedProductGroupIDS, productGroupIDs) &&
@@ -816,4 +824,23 @@ func getBestOptionCustomerProductRulePerItem(ruleVoucherPairs []RuleVoucherPair,
 	}
 	timeTrack(start, "getBestOptionCustomerProductRulePerItem took")
 	return ret
+}
+
+func getShippingGroupIDs() (itemIDs []string, err error) {
+	itemIDs = []string{}
+	shippingPriceRules, errRules := GetValidPriceRulesForPromotions([]Type{TypeShipping}, nil)
+	if errRules != nil {
+		err = errRules
+		log.Println(err)
+		return
+	}
+
+	for _, rule := range shippingPriceRules {
+		shippingGroupIDs := rule.IncludedProductGroupIDS
+		for _, shippingGroupID := range shippingGroupIDs {
+			itemIDs = append(itemIDs, shippingGroupID)
+		}
+	}
+	itemIDs = RemoveDuplicates(itemIDs)
+	return
 }

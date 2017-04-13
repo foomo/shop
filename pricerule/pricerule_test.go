@@ -169,8 +169,8 @@ func TestShipping(t *testing.T) {
 	priceRule.Description = priceRule.Name
 	priceRule.Action = ActionItemByPercent
 	priceRule.Amount = 30
-	priceRule.ExcludedProductGroupIDS = []string{"shipping"}
-	priceRule.IncludedProductGroupIDS = []string{"product1-group"}
+	//priceRule.ExcludedProductGroupIDS = []string{"shipping"}
+	priceRule.IncludedProductGroupIDS = []string{"product1-group", "shipping"}
 	priceRule.IncludedCustomerGroupIDS = []string{"customer-group"}
 	priceRule.Upsert()
 
@@ -184,7 +184,7 @@ func TestShipping(t *testing.T) {
 	priceRule.Description = priceRule.Name
 	priceRule.Action = ActionItemByPercent
 	priceRule.Amount = 15
-	priceRule.ExcludedProductGroupIDS = []string{"shipping"}
+	//priceRule.ExcludedProductGroupIDS = []string{"shipping"}
 	priceRule.IncludedProductGroupIDS = []string{"product2-group"}
 	priceRule.IncludedCustomerGroupIDS = []string{"customer-group"}
 	priceRule.Upsert()
@@ -199,7 +199,7 @@ func TestShipping(t *testing.T) {
 	priceRule.Description = priceRule.Name
 	priceRule.Action = ActionItemByPercent
 	priceRule.Amount = 10
-	priceRule.ExcludedProductGroupIDS = []string{"shipping"}
+	//priceRule.ExcludedProductGroupIDS = []string{"shipping"}
 	priceRule.IncludedProductGroupIDS = []string{"product2-group"}
 	priceRule.IncludedCustomerGroupIDS = []string{"customer-group"}
 	priceRule.Upsert()

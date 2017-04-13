@@ -224,9 +224,12 @@ func RemoveDuplicates(elements []string) []string {
 
 // GetBlacklistedItemIds -
 func GetBlacklistedItemIds() (itemIDs []string, err error) {
-	itemIDs = []string{}
+	return getItemIDsFroGroupType(BlacklistGroup)
+}
+
+func getItemIDsFroGroupType(groupType GroupType) (itemIDs []string, err error) {
 	p := GetPersistorForObject(&Group{})
-	query := bson.M{"type": BlacklistGroup}
+	query := bson.M{"type": groupType}
 	var result = []Group{}
 	findErr := p.GetCollection().Find(query).Sort("priority").All(&result)
 	if findErr != nil {
