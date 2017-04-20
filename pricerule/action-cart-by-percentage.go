@@ -1,6 +1,8 @@
 package pricerule
 
-import "log"
+import (
+	"log"
+)
 
 // CalculateDiscountsCartByPercentage -
 func calculateDiscountsCartByPercentage(priceRuleVoucherPair RuleVoucherPair, orderDiscounts OrderDiscounts, calculationParameters *CalculationParameters) OrderDiscounts {
@@ -19,7 +21,10 @@ func calculateDiscountsCartByPercentage(priceRuleVoucherPair RuleVoucherPair, or
 	orderTotal := getOrderTotalForPriceRule(priceRuleVoucherPair.Rule, calculationParameters, orderDiscounts)
 	//the discount amount calculation
 	totalDiscountAmount := roundToStep(orderTotal*priceRuleVoucherPair.Rule.Amount/100.0, calculationParameters.roundTo)
-
+	//nothing to do if no discount
+	if totalDiscountAmount == 0 {
+		return orderDiscounts
+	}
 	//from here we call existing methods with a hacked priceRule that will keep the name and ID but different action and amount
 	tempPriceRule := *priceRuleVoucherPair.Rule
 	tempPriceRule.Action = ActionCartByAbsolute

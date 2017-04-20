@@ -17,6 +17,7 @@ const (
 	TypePromotionOrder        Type = "promotion_order"         // multiple can be applied
 	TypeVoucher               Type = "voucher"                 // rule associated to a voucher
 	TypePaymentMethodDiscount Type = "payment_method_discount" // rule associated to a payment method
+	TypeShipping              Type = "shipping"                // rule used to calculate shipping price
 
 	ActionItemByPercent ActionType = "item_by_percent"
 	ActionCartByPercent ActionType = "cart_by_percent"
@@ -107,6 +108,10 @@ type PriceRule struct {
 
 	MinOrderAmountApplicableItemsOnly bool // must the min amount be calculated only over the applicable items
 
+	CalculateDiscountedOrderAmount bool // shall we use net prices without discount in order total calc(excl tax from item price)
+
+	ExcludedItemIDsFromOrderAmountCalculation []string //items that are not summed up ay order amount calculation
+
 	MaxUses int //maximum times a pricerule can be applied globally
 
 	MaxUsesPerCustomer int //maximum number of usages per customer
@@ -159,6 +164,8 @@ func NewPriceRule(ID string) *PriceRule {
 	priceRule.Amount = 0
 	priceRule.IsAmountIndependentOfQty = false
 	priceRule.MinOrderAmount = 0
+	priceRule.CalculateDiscountedOrderAmount = false
+	priceRule.ExcludedItemIDsFromOrderAmountCalculation = []string{}
 	priceRule.QtyThreshold = 0
 	priceRule.MaxUses = MaxInt
 	priceRule.MaxUsesPerCustomer = MaxInt

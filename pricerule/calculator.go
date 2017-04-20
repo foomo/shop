@@ -4,8 +4,6 @@ import (
 	"log"
 	"sort"
 	"time"
-
-	"github.com/davecgh/go-spew/spew"
 )
 
 //------------------------------------------------------------------
@@ -26,6 +24,8 @@ type CalculationParameters struct {
 	isCatalogCalculation                bool
 	checkoutAttributes                  []string
 	bestOptionCustomeProductRulePerItem map[string]string // which is the product or customer type rule that is applied on item
+	blacklistedItemIDs                  []string
+	shippingGroupIDs                    []string
 }
 
 type ArticleCollection struct {
@@ -132,6 +132,12 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 	calculationParameters.roundTo = roundTo
 	calculationParameters.isCatalogCalculation = false
 	calculationParameters.checkoutAttributes = checkoutAttributes
+	shippingGroupIDs, shippingItemErr := getShippingGroupIDs()
+	if shippingItemErr != nil {
+		shippingGroupIDs = []string{}
+	}
+
+	calculationParameters.shippingGroupIDs = shippingGroupIDs
 	now := time.Now()
 	//find the groupIds for articleCollection items
 
@@ -143,6 +149,15 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 	}
 	calculationParameters.groupIDsForCustomer = groupIDsForCustomer
 
+	//find blacklisted items
+	blacklistedItemIDs, blacklistedItemsErr := GetBlacklistedItemIds()
+	if blacklistedItemsErr != nil {
+		return nil, nil, blacklistedItemsErr
+	}
+	calculationParameters.blacklistedItemIDs = blacklistedItemIDs
+
+	// ----------------------------------------------------------------------------------------------------------
+	// promotions - step 1
 	timeTrack(now, "groups data took ")
 	// find applicable pricerules - auto promotions
 	promotionPriceRules, err := GetValidPriceRulesForPromotions([]Type{TypePromotionCustomer, TypePromotionProduct, TypePromotionOrder}, customProvider)
@@ -189,7 +204,7 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 
 	bestOptionCustomerProductRulePerItem := getBestOptionCustomerProductRulePerItem(ruleVoucherPairs, calculationParameters)
 	calculationParameters.bestOptionCustomeProductRulePerItem = bestOptionCustomerProductRulePerItem
-	spew.Dump(bestOptionCustomerProductRulePerItem)
+	//spew.Dump(bestOptionCustomerProductRulePerItem)
 
 	for _, priceRulePair := range ruleVoucherPairs {
 		pair := RuleVoucherPair{}
@@ -198,8 +213,10 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 		orderDiscounts = calculateRule(orderDiscounts, pair, calculationParameters)
 	}
 
-	//find the vouchers and voucher rules
-	//find applicable pricerules of type TypeVoucher for
+	// ----------------------------------------------------------------------------------------------------------
+	// vouchers: step 2
+	// find the vouchers and voucher rules
+	// find applicable pricerules of type TypeVoucher for
 
 	if len(voucherCodes) > 0 {
 		var ruleVoucherPairsStep2 []RuleVoucherPair
@@ -247,6 +264,31 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 			orderDiscounts = calculateRule(orderDiscounts, priceRulePair, calculationParameters)
 		}
 	}
+
+	// ----------------------------------------------------------------------------------------------------------
+	// shipping - step 3
+	// shipping costs handling
+	// find applicable pricerules - auto promotions
+	shippingPriceRules, err := GetValidPriceRulesForPromotions([]Type{TypeShipping}, customProvider)
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var ruleVoucherPairsShipping []RuleVoucherPair
+	for _, promotionRule := range shippingPriceRules {
+		rule := &PriceRule{}
+		*rule = promotionRule
+		ruleVoucherPairsShipping = append(ruleVoucherPairsShipping, RuleVoucherPair{Rule: rule, Voucher: nil})
+	}
+
+	//apply them
+	for _, priceRulePair := range ruleVoucherPairsShipping {
+		orderDiscounts = calculateRule(orderDiscounts, priceRulePair, calculationParameters)
+	}
+
+	// ----------------------------------------------------------------------------------------------------------
+
 	timeTrack(nowAll, "All rules together")
 	for _, orderDiscount := range orderDiscounts {
 		summary.TotalDiscount += orderDiscount.TotalDiscountAmount
@@ -260,7 +302,6 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 					log.Println("#### voucherCode: ", appliedDiscount.VoucherCode)
 					log.Println("#### voucherID: ", appliedDiscount.VoucherID)
 				}
-
 				voucherDiscounts, ok := summary.VoucherDiscounts[appliedDiscount.VoucherCode]
 				if !ok {
 					summary.VoucherDiscounts[appliedDiscount.VoucherCode] = VoucherDiscount{
@@ -275,8 +316,9 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 			}
 		}
 	}
-	summary.TotalDiscountPercentage = summary.TotalDiscount / getOrderTotal(articleCollection) * 100.0
-	summary.TotalDiscountApplicablePercentage = summary.TotalDiscountApplicable / getOrderTotal(articleCollection) * 100.0
+
+	summary.TotalDiscountPercentage = summary.TotalDiscount / getOrderTotal(articleCollection, []string{}) * 100.0
+	summary.TotalDiscountApplicablePercentage = summary.TotalDiscountApplicable / getOrderTotal(articleCollection, []string{}) * 100.0
 	summary.AppliedPriceRuleIDs = RemoveDuplicates(summary.AppliedPriceRuleIDs)
 	summary.AppliedVoucherIDs = RemoveDuplicates(summary.AppliedVoucherIDs)
 	summary.AppliedVoucherCodes = RemoveDuplicates(summary.AppliedVoucherCodes)
@@ -307,6 +349,7 @@ func ApplyDiscountsOnCatalog(articleCollection *ArticleCollection, existingDisco
 	calculationParameters.groupIDsForCustomer = groupIDsForCustomer
 	timeTrack(now, "[ApplyDiscountsOnCatalog] loading of groupIDsForCustomer took ")
 
+	calculationParameters.blacklistedItemIDs = cache.GetBlacklistedItemIDs()
 	now = time.Now()
 	// find applicable pricerules - auto promotions
 	promotionPriceRules, err := cache.CachedGetValidProductAndCustomerPriceRules(customProvider)
@@ -349,14 +392,10 @@ func ApplyDiscountsOnCatalog(articleCollection *ArticleCollection, existingDisco
 
 	timeTrack(now, "[ApplyDiscountsOnCatalog] CALCULATIONS and CHECKS took ")
 	for _, orderDiscount := range orderDiscounts {
-		//summary.TotalDiscount += orderDiscount.TotalDiscountAmount
-		//summary.TotalDiscountApplicable += orderDiscount.TotalDiscountAmountApplicable
 		for _, appliedDiscount := range orderDiscount.AppliedDiscounts {
 			summary.AppliedPriceRuleIDs = append(summary.AppliedPriceRuleIDs, appliedDiscount.PriceRuleID)
 		}
 	}
-	//summary.TotalDiscountPercentage = summary.TotalDiscount / getOrderTotal(articleCollection) * 100.0
-	//summary.TotalDiscountApplicablePercentage = summary.TotalDiscountApplicable / getOrderTotal(articleCollection) * 100.0
 
 	summary.AppliedPriceRuleIDs = RemoveDuplicates(summary.AppliedPriceRuleIDs)
 	summary.AppliedVoucherIDs = []string{}
@@ -368,10 +407,15 @@ func ApplyDiscountsOnCatalog(articleCollection *ArticleCollection, existingDisco
 func calculateRule(orderDiscounts OrderDiscounts, priceRulePair RuleVoucherPair, calculationParameters *CalculationParameters) OrderDiscounts {
 	ok := true
 	if calculationParameters.isCatalogCalculation == false {
+		// prevent applyting discounts on shipping items
+		if len(calculationParameters.shippingGroupIDs) > 0 && priceRulePair.Rule.Type != TypeShipping {
+			priceRulePair.Rule.ExcludedProductGroupIDS = RemoveDuplicates(append(priceRulePair.Rule.ExcludedProductGroupIDS, calculationParameters.shippingGroupIDs...))
+		}
 		ok, _ = validatePriceRuleForOrder(*priceRulePair.Rule, calculationParameters, orderDiscounts)
 	} else {
 		//bypass order check if catalog computation
 		ok = true
+
 	}
 
 	if ok == true {
@@ -402,27 +446,46 @@ func getOrderTotalForPriceRule(priceRule *PriceRule, calculationParameters *Calc
 
 	for _, article := range calculationParameters.articleCollection.Articles {
 		productGroupIDs := calculationParameters.productGroupIDsPerPosition[article.ID]
-
+		if contains(article.ID, priceRule.ExcludedItemIDsFromOrderAmountCalculation) {
+			continue
+		}
 		// rule has no customer or product group limitations
 		if len(priceRule.IncludedProductGroupIDS) == 0 &&
 			len(priceRule.ExcludedProductGroupIDS) == 0 &&
 			len(priceRule.IncludedCustomerGroupIDS) == 0 &&
 			len(priceRule.ExcludedCustomerGroupIDS) == 0 {
 			total += article.Price * article.Quantity
+
+			if priceRule.CalculateDiscountedOrderAmount == true {
+				if orderDiscount, ok := orderDiscounts[article.ID]; ok {
+					itemDiscount := orderDiscount.TotalDiscountAmountApplicable
+					total = total - itemDiscount
+				}
+			}
 		} else {
 			//only sum up if limitations are matched
 			if IsOneProductOrCustomerGroupInIncludedGroups(priceRule.IncludedProductGroupIDS, productGroupIDs) &&
 				IsNoProductOrGroupInExcludeGroups(priceRule.ExcludedProductGroupIDS, productGroupIDs) &&
 				IsOneProductOrCustomerGroupInIncludedGroups(priceRule.IncludedCustomerGroupIDS, calculationParameters.groupIDsForCustomer) &&
 				IsNoProductOrGroupInExcludeGroups(priceRule.ExcludedCustomerGroupIDS, calculationParameters.groupIDsForCustomer) {
-				sub := 0.0
+
+				if priceRule.CalculateDiscountedOrderAmount == true {
+					if orderDiscount, ok := orderDiscounts[article.ID]; ok {
+						itemDiscount := orderDiscount.TotalDiscountAmountApplicable
+						total = total - itemDiscount
+					}
+				}
+				//--------------------------------------------------
+				/*sub := 0.0
 				if orderDiscounts != nil {
 					previouslyAppliedDiscounts, ok := orderDiscounts[article.ID]
 					if ok {
 						sub = previouslyAppliedDiscounts.TotalDiscountAmount
 					}
 				}
+
 				total += article.Price*article.Quantity - sub
+				*/
 			}
 		}
 	}
@@ -430,9 +493,12 @@ func getOrderTotalForPriceRule(priceRule *PriceRule, calculationParameters *Calc
 }
 
 // find what is the articleCollection value of positions that belong to group
-func getOrderTotal(articleCollection *ArticleCollection) float64 {
+func getOrderTotal(articleCollection *ArticleCollection, excludedItemIDsFromOrderAmountCalculation []string) float64 {
 	var total float64
 	for _, article := range articleCollection.Articles {
+		if contains(article.ID, excludedItemIDsFromOrderAmountCalculation) {
+			continue
+		}
 		total += article.Price * article.Quantity
 	}
 	return total
@@ -473,7 +539,6 @@ func IsOneProductOrCustomerGroupInIncludedGroups(ruleIncludeGroups []string, pro
 	}
 	for _, p := range productAndCustomerGroups {
 		if isValueInList(p, ruleIncludeGroups) {
-
 			return true
 		}
 	}
@@ -570,7 +635,18 @@ func validatePriceRule(priceRule PriceRule, checkedPosition *Article, calculatio
 					return false, ValidationPriceRuleMinimumAmount
 				}
 			} else {
-				if priceRule.MinOrderAmount > getOrderTotal(calculationParameters.articleCollection) {
+				orderTotal := getOrderTotal(calculationParameters.articleCollection, priceRule.ExcludedItemIDsFromOrderAmountCalculation)
+
+				//remove previously discounted amount if rule config says so
+				if priceRule.CalculateDiscountedOrderAmount {
+					for itemID, dicountCalculationData := range orderDiscounts {
+						if !contains(itemID, priceRule.ExcludedItemIDsFromOrderAmountCalculation) {
+							orderTotal -= dicountCalculationData.TotalDiscountAmount
+						}
+					}
+				}
+
+				if priceRule.MinOrderAmount > orderTotal {
 					return false, ValidationPriceRuleMinimumAmount
 				}
 			}
@@ -591,6 +667,7 @@ func validatePriceRule(priceRule PriceRule, checkedPosition *Article, calculatio
 	var productGroupExcludeMatchOK = false
 	var customerGroupIncludeMatchOK = false
 	var customerGroupExcludeMatchOK = false
+	var blacklistOK = false
 
 	if checkedPosition == nil {
 		for _, article := range calculationParameters.articleCollection.Articles {
@@ -607,6 +684,9 @@ func validatePriceRule(priceRule PriceRule, checkedPosition *Article, calculatio
 			if IsNoProductOrGroupInExcludeGroups(priceRule.ExcludedCustomerGroupIDS, calculationParameters.groupIDsForCustomer) {
 				customerGroupExcludeMatchOK = true
 			}
+			if !contains(article.ID, calculationParameters.blacklistedItemIDs) {
+				blacklistOK = true
+			}
 		}
 	} else {
 		// if only checking for one item, do not go through loop
@@ -622,6 +702,10 @@ func validatePriceRule(priceRule PriceRule, checkedPosition *Article, calculatio
 
 		if IsNoProductOrGroupInExcludeGroups(priceRule.ExcludedCustomerGroupIDS, calculationParameters.groupIDsForCustomer) {
 			customerGroupExcludeMatchOK = true
+		}
+
+		if !contains(checkedPosition.ID, calculationParameters.blacklistedItemIDs) {
+			blacklistOK = true
 		}
 	}
 
@@ -643,6 +727,10 @@ func validatePriceRule(priceRule PriceRule, checkedPosition *Article, calculatio
 
 	if !customerGroupExcludeMatchOK {
 		return false, ValidationPriceRuleExcludeCustomerGroupsNotMatching
+	}
+
+	if !blacklistOK {
+		return false, ValidationPriceRuleBlacklist
 	}
 	return true, ValidationPriceRuleOK
 }
@@ -715,8 +803,19 @@ func getBestOptionCustomerProductRulePerItem(ruleVoucherPairs []RuleVoucherPair,
 				currentBestDiscountType[itemID] = TypePromotionCustomer // we can always overrider
 			}
 
-			if (discount > currentDiscounts[itemID] && currentBestDiscountType[itemID] == TypePromotionCustomer) ||
-				(discount > currentDiscounts[itemID] && currentBestDiscountType[itemID] == TypePromotionProduct && priceRulePair.Rule.Type != TypePromotionCustomer) {
+			overwrite := false
+			if currentBestDiscountType[itemID] == TypePromotionCustomer || priceRulePair.Rule.Type != TypePromotionCustomer {
+				//overwrite
+				overwrite = true
+			} else {
+				if discount > currentDiscounts[itemID] {
+					overwrite = true
+				} else {
+					overwrite = false
+				}
+			}
+
+			if overwrite && discount > 0 {
 				currentDiscounts[itemID] = discount
 				currentBestDiscountType[itemID] = priceRulePair.Rule.Type
 				ret[itemID] = tempDiscounts[itemID].AppliedDiscounts[0].PriceRuleID
@@ -725,4 +824,23 @@ func getBestOptionCustomerProductRulePerItem(ruleVoucherPairs []RuleVoucherPair,
 	}
 	timeTrack(start, "getBestOptionCustomerProductRulePerItem took")
 	return ret
+}
+
+func getShippingGroupIDs() (itemIDs []string, err error) {
+	itemIDs = []string{}
+	shippingPriceRules, errRules := GetValidPriceRulesForPromotions([]Type{TypeShipping}, nil)
+	if errRules != nil {
+		err = errRules
+		log.Println(err)
+		return
+	}
+
+	for _, rule := range shippingPriceRules {
+		shippingGroupIDs := rule.IncludedProductGroupIDS
+		for _, shippingGroupID := range shippingGroupIDs {
+			itemIDs = append(itemIDs, shippingGroupID)
+		}
+	}
+	itemIDs = RemoveDuplicates(itemIDs)
+	return
 }
