@@ -92,7 +92,7 @@ func Init(t *testing.T) {
 	checkVouchersExists(t)
 }
 
-func TestShipping(t *testing.T) {
+func testShipping1(t *testing.T) {
 
 	RemoveAllGroups()
 	RemoveAllPriceRules()
@@ -199,6 +199,7 @@ func TestShipping(t *testing.T) {
 	priceRule.Description = priceRule.Name
 	priceRule.Action = ActionItemByPercent
 	priceRule.Amount = 10
+
 	//priceRule.ExcludedProductGroupIDS = []string{"shipping"}
 	priceRule.IncludedProductGroupIDS = []string{"product2-group"}
 	priceRule.IncludedCustomerGroupIDS = []string{"customer-group"}
@@ -1091,7 +1092,7 @@ func testMaxOrder(t *testing.T) {
 	priceRule.Priority = 90
 	priceRule.IncludedProductGroupIDS = []string{GroupIDSale}
 	priceRule.IncludedCustomerGroupIDS = []string{CustomerGroupID1}
-	priceRule.MinOrderAmount = 100
+	priceRule.MinOrderAmount = 0
 	priceRule.MinOrderAmountApplicableItemsOnly = true
 	err = priceRule.Upsert()
 	if err != nil {
@@ -1110,10 +1111,13 @@ func testMaxOrder(t *testing.T) {
 	priceRule.Action = ActionItemByPercent
 	priceRule.Amount = 20.0
 	priceRule.Priority = 800
-	priceRule.MinOrderAmount = 1000
+	priceRule.MinOrderAmount = 0
+	priceRule.ValidFrom = time.Date(1999, 12, 1, 12, 0, 0, 0, time.UTC)
+	priceRule.ValidTo = time.Date(2016, 12, 1, 12, 0, 0, 0, time.UTC)
+
 	priceRule.MinOrderAmountApplicableItemsOnly = false
-	priceRule.IncludedProductGroupIDS = []string{GroupIDSale}
-	priceRule.IncludedCustomerGroupIDS = []string{CustomerGroupID1}
+	priceRule.IncludedProductGroupIDS = []string{}
+	priceRule.IncludedCustomerGroupIDS = []string{}
 	err = priceRule.Upsert()
 	if err != nil {
 		panic(err)
@@ -1132,7 +1136,7 @@ func testMaxOrder(t *testing.T) {
 
 	// PRICERULES --------------------------------------------------------------------------------------
 	now := time.Now()
-	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{}, []string{PaymentMethodID1}, 0.05, nil)
+	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{VoucherCode1}, []string{PaymentMethodID1}, 0.05, nil)
 	timeTrack(now, "Apply multiple price rules")
 	// defer removeOrder(orderVo)
 	if err != nil {
@@ -1142,6 +1146,11 @@ func testMaxOrder(t *testing.T) {
 	fmt.Println("discounts")
 	spew.Dump(discountsVo)
 	spew.Dump(*summary)
+
+	//validate the voucher
+
+	_, message := ValidateVoucher(VoucherCode1, orderVo, []string{})
+	fmt.Println(message)
 
 }
 

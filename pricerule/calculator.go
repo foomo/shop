@@ -231,6 +231,12 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 					continue
 				}
 
+				//check if rule is valid
+				if time.Now().Before(voucherPriceRule.ValidFrom) || time.Now().After(voucherPriceRule.ValidTo) {
+					log.Println("skipping vocucher" + voucherCode + " VlidFrom/ValidTo mismatch")
+					continue
+				}
+
 				//filter out the vouchers that can not be applied due to a mismatch with checkoutAttributes
 				if len(voucherPriceRule.CheckoutAttributes) > 0 {
 					match := false

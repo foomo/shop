@@ -1,6 +1,7 @@
 package pricerule
 
 import "sort"
+import "time"
 
 //------------------------------------------------------------------
 // ~ PUBLIC TYPES
@@ -30,7 +31,7 @@ const (
 	ValidationPriceRuleCheckoutAttributesMismatch TypeRuleValidationMsg = "pricerule_checkout_attributes_missmatch"
 	ValidationPriceRuleQuantityThresholdNotMet    TypeRuleValidationMsg = "qty_below_pricerule_quantity_threshold"
 
-	ValidationPriceRuleBlacklist TypeRuleValidationMsg = "products_blacklisted"
+	ValidationPriceRuleBlacklist                  TypeRuleValidationMsg = "products_blacklisted"
 	ValidationPriceRuleNotForCatalogueCalculation TypeRuleValidationMsg = "not_for_catalogue_calculation"
 )
 
@@ -93,6 +94,14 @@ func ValidateVoucher(voucherCode string, articleCollection *ArticleCollection, c
 	//check if voucher was redeemed already
 	if !voucher.TimeRedeemed.IsZero() && voucher.VoucherType == VoucherTypePersonalized {
 		return false, ValidationVoucherAlreadyUsed
+	}
+
+	if time.Now().After(voucherPriceRule.ValidTo) {
+		return false, ValidationPriceRuleExpired
+	}
+
+	if time.Now().Before(voucherPriceRule.ValidFrom) {
+		return false, ValidationPriceRuleNotValidYet
 	}
 
 	//--------------------------------------------------------------
