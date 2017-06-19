@@ -18,7 +18,7 @@ func calculateDiscountsItemByPercent(priceRuleVoucherPair RuleVoucherPair, order
 
 			discountApplied.AppliedInCatalog = calculationParameters.isCatalogCalculation
 			discountApplied.ApplicableInCatalog = false
-			if priceRuleVoucherPair.Rule.Type == TypePromotionProduct || calculationParameters.isCatalogCalculation {
+			if len(priceRuleVoucherPair.Rule.CheckoutAttributes) == 0 && (priceRuleVoucherPair.Rule.Type == TypePromotionProduct || calculationParameters.isCatalogCalculation) {
 				discountApplied.ApplicableInCatalog = true
 			}
 			discountApplied.IsTypePromotionCustomer = false
