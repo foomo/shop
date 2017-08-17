@@ -39,6 +39,25 @@ const (
 // ~ PUBLIC FUNCTIONS
 //------------------------------------------------------------------
 
+// PickApplicableVouchers -
+func PickApplicableVouchers(candidateVoucherCodes []string, articleCollection *ArticleCollection, checkoutAttributes []string, customProvider PriceRuleCustomProvider) (applicablePriceRules map[string]*PriceRule, err error) {
+	applicablePriceRules = make(map[string]*PriceRule)
+	for _, code := range candidateVoucherCodes {
+
+		ok, _ := ValidateVoucher(code, articleCollection, checkoutAttributes)
+		if ok == true {
+			voucher, voucherPriceRule, getErr := GetVoucherAndPriceRule(code, customProvider)
+			//check if exists
+			if getErr != nil || voucher.VoucherCode != code {
+				err = getErr
+				return
+			}
+			applicablePriceRules[code] = voucherPriceRule
+		}
+	}
+	return
+}
+
 // ValidateVoucher - validates a voucher code and returns o = true or a validation message when ok = false
 // if articleCollection is not provided it will only check non-articleCollection related conditions
 // if customerID == "" we assume not-logged in or guest

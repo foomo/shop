@@ -92,6 +92,93 @@ func Init(t *testing.T) {
 	checkVouchersExists(t)
 }
 
+// Test groups creation
+func testGetApplicableVouchers(t *testing.T) {
+	//remove all and add again
+	productsInGroups = make(map[string][]string)
+	productsInGroups[GroupIDSale] = []string{ProductID1, ProductID2, ProductID1SKU1, ProductID1SKU2, ProductID2SKU1, ProductID2SKU2}
+	productsInGroups[GroupIDNormal] = []string{ProductID4, ProductID5, ProductID4SKU1, ProductID4SKU2, ProductID5SKU1, ProductID5SKU2}
+	productsInGroups[GroupIDShirts] = []string{ProductID3, ProductID4, ProductID5, ProductID3SKU1, ProductID4SKU1, ProductID5SKU1, ProductID3SKU2, ProductID4SKU2, ProductID5SKU2}
+
+	RemoveAllGroups()
+	RemoveAllPriceRules()
+	RemoveAllVouchers()
+	checkGroupsNotExists(t)
+	createMockCustomerGroups(t)
+	createMockProductGroups(t)
+	checkGroupsExists(t)
+	orderVo, err := createMockOrder(t)
+	if err != nil {
+		panic(err)
+	}
+
+	// VOUCHERS ------------``
+	priceRule := NewPriceRule(PriceRuleIDSaleVoucher)
+	priceRule.Name = map[string]string{
+		"de": PriceRuleIDSaleVoucher,
+		"fr": PriceRuleIDSaleVoucher,
+		"it": PriceRuleIDSaleVoucher,
+	}
+	priceRule.Type = TypeVoucher
+	priceRule.Description = priceRule.Name
+	priceRule.Action = ActionItemByPercent
+	priceRule.Amount = 20.0
+	priceRule.Priority = 800
+	priceRule.IncludedProductGroupIDS = []string{GroupIDSale}
+	priceRule.IncludedCustomerGroupIDS = []string{CustomerGroupID1}
+	err = priceRule.Upsert()
+	if err != nil {
+		panic(err)
+	}
+
+	priceRule, err = GetPriceRuleByID(PriceRuleIDSaleVoucher, nil)
+	if err != nil {
+		panic(err)
+	}
+	voucher := NewVoucher(VoucherID1, VoucherCode1, priceRule, "")
+
+	err = voucher.Upsert()
+	if err != nil {
+		panic(err)
+	}
+
+	// ------------
+
+	priceRule = NewPriceRule(PriceRuleIDVoucher)
+	priceRule.Name = map[string]string{
+		"de": PriceRuleIDVoucher,
+		"fr": PriceRuleIDVoucher,
+		"it": PriceRuleIDVoucher,
+	}
+	priceRule.Type = TypeVoucher
+	priceRule.Description = priceRule.Name
+	priceRule.Action = ActionItemByPercent
+	priceRule.Amount = 10.0
+	priceRule.Priority = 80
+	priceRule.IncludedProductGroupIDS = []string{}
+	priceRule.IncludedCustomerGroupIDS = []string{}
+	err = priceRule.Upsert()
+	if err != nil {
+		panic(err)
+	}
+
+	priceRule, err = GetPriceRuleByID(PriceRuleIDVoucher, nil)
+	if err != nil {
+		panic(err)
+	}
+	voucher = NewVoucher(VoucherID2, VoucherCode2, priceRule, CustomerID2)
+
+	err = voucher.Upsert()
+	if err != nil {
+		panic(err)
+	}
+
+	// PRICERULES --------------------------------------------------------------------------------------
+	applicableRules, err := PickApplicableVouchers([]string{VoucherCode1, VoucherCode2}, orderVo, []string{}, nil)
+	spew.Dump(applicableRules)
+
+}
+
 func testShipping1(t *testing.T) {
 
 	RemoveAllGroups()
