@@ -14,6 +14,11 @@ import (
 	"github.com/skratchdot/open-golang/open"
 )
 
+const UTCOffsetSummer = time.Duration(2)
+const UTCOffsetWinter = time.Duration(1)
+
+var UTCOffset time.Duration = UTCOffsetSummer
+
 func GetTimeHHMMSS(t time.Time) string {
 	return t.Format("150405")
 }
@@ -106,14 +111,14 @@ func GetTimeFromYYYYMMDD(date string) (time.Time, error) {
 	if err != nil {
 		return time.Time{}, err
 	}
-	return t.In(CET).Add(-time.Hour * 2), nil
+	return t.In(CET).Add(-time.Hour * UTCOffset), nil
 }
 func GetTimeFromYYY_MM_DD(date string) (time.Time, error) {
 	t, err := time.Parse("2006-01-02", date)
 	if err != nil {
 		return time.Time{}, err
 	}
-	return t.In(CET).Add(-time.Hour * 2), nil
+	return t.In(CET).Add(-time.Hour * UTCOffset), nil
 }
 
 func TimeNow() time.Time {
