@@ -1,10 +1,18 @@
 package pricerule
 
+import "log"
+
 // CalculateDiscountsItemByPercent -
 func calculateDiscountsItemByPercent(priceRuleVoucherPair RuleVoucherPair, orderDiscounts OrderDiscounts, calculationParameters *CalculationParameters) OrderDiscounts {
 	if priceRuleVoucherPair.Rule.Action != ActionItemByPercent {
 		panic("CalculateDiscountsItemByPercent called with pricerule of action " + priceRuleVoucherPair.Rule.Action)
 	}
+
+	if (priceRuleVoucherPair.Rule.QtyThreshold > 0 || priceRuleVoucherPair.Rule.MinOrderAmount > 0) && calculationParameters.isCatalogCalculation == true {
+		log.Println("catalog calculations can not handle qty threshold > 0")
+		return orderDiscounts
+	}
+
 	for _, article := range calculationParameters.articleCollection.Articles {
 		ok, _ := validatePriceRuleForPosition(*priceRuleVoucherPair.Rule, article, calculationParameters, orderDiscounts)
 		orderDiscountsForPosition := orderDiscounts[article.ID]
