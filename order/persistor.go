@@ -238,6 +238,7 @@ func GetOrdersOfCustomer(customerId string, customProvider OrderCustomProvider) 
 			bson.M{"customerdata.customerid": customerId},
 			bson.M{"state.key": bson.M{"$ne": OrderStatusTechnical}},
 			bson.M{"state.key": bson.M{"$ne": OrderStatusCart}},
+			bson.M{"state.key": bson.M{"$ne": OrderStatusInvalid}},
 		},
 	}
 	orderIter, err := Find(query, customProvider)
