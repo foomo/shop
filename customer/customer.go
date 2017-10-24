@@ -97,7 +97,6 @@ func NewGuestCustomer(email string, customProvider CustomerCustomProvider) (*Cus
 // Email must be unique for a customer. customerProvider may be nil at this point.
 func NewCustomer(email, password string, customProvider CustomerCustomProvider) (*Customer, error) {
 	log.Println("=== Creating new customer ", email)
-	isGuest := password == ""
 	if email == "" {
 		return nil, errors.New(shop_error.ErrorRequiredFieldMissing)
 	}
@@ -125,7 +124,7 @@ func NewCustomer(email, password string, customProvider CustomerCustomProvider) 
 		Flags:          &Flags{},
 		Version:        version.NewVersion(),
 		Id:             unique.GetNewID(),
-		Email:          utils.IteString(isGuest, "", lc(email)), // If Customer is a guest, we do not set the email address. This field should be unique in the database (and would not be if the guest ordered twice).
+		Email:          lc(email),
 		CreatedAt:      utils.TimeNow(),
 		LastModifiedAt: utils.TimeNow(),
 		Person: &address.Person{
@@ -142,11 +141,7 @@ func NewCustomer(email, password string, customProvider CustomerCustomProvider) 
 		return nil, err
 	}
 	customer.Tracking.TrackingID = "tid" + trackingId
-
-	if isGuest {
-		customer.IsGuest = true
-	}
-
+	customer.IsGuest = false
 	if customProvider != nil {
 		customer.Custom = customProvider.NewCustomerCustom()
 	}
