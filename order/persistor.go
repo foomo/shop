@@ -276,6 +276,7 @@ func GetOrderIdsOfCustomer(customerId string) ([]string, error) {
 			bson.M{"customerdata.customerid": customerId},
 			bson.M{"state.key": bson.M{"$ne": OrderStatusTechnical}},
 			bson.M{"state.key": bson.M{"$ne": OrderStatusCart}},
+			bson.M{"state.key": bson.M{"$ne": OrderStatusInvalid}},
 		},
 	}
 	orderIter, err := Find(query, nil) // @TODO this could use a select as we only want the id's
