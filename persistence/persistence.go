@@ -24,12 +24,16 @@ type Persistor struct {
 // ~ CONSTRUCTOR
 //------------------------------------------------------------------
 
-func NewPersistorWithIndex(mongoURL string, collection string, index mgo.Index) (p *Persistor, err error) {
-	p, err = NewPersistor(mongoURL, collection)
+func NewPersistorWithIndex(mongoURL string, collectionName string, index mgo.Index) (p *Persistor, err error) {
+	p, err = NewPersistor(mongoURL, collectionName)
 	if err != nil {
 		return
 	}
-	err = p.GetCollection().EnsureIndex(index)
+
+	session, collection := p.GetCollection()
+	defer session.Close()
+
+	err = collection.EnsureIndex(index)
 	if err != nil {
 		return
 	}
@@ -65,9 +69,12 @@ func NewPersistor(mongoURL string, collection string) (p *Persistor, err error) 
 // ~ PUBLIC METHODS
 //------------------------------------------------------------------
 
-func (p *Persistor) GetCollection() *mgo.Collection {
-	return p.session.DB(p.db).C(p.collection)
+func (p *Persistor) GetCollection() (session *mgo.Session, collection *mgo.Collection) {
+	session = p.session.Clone()
+	collection = session.DB(p.db).C(p.collection)
+	return session, collection
 }
+
 func (p *Persistor) GetCollectionName() string {
 	return p.collection
 }
