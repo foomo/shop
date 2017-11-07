@@ -126,7 +126,6 @@ type PriceRule struct {
 	LastModifiedAt time.Time // updated at
 
 	Custom interface{} `bson:",omitempty"` //make it extensible if needed (included, excluded group IDs)
-
 }
 
 //Type the type of the price rule
@@ -227,8 +226,10 @@ func (pricerule *PriceRule) Upsert() error {
 	}
 	pricerule.LastModifiedAt = time.Now()
 
-	p := GetPersistorForObject(pricerule)
-	_, err := p.GetCollection().Upsert(bson.M{"id": pricerule.ID}, pricerule)
+	session, collection := GetPersistorForObject(pricerule).GetCollection()
+	defer session.Close()
+
+	_, err := collection.Upsert(bson.M{"id": pricerule.ID}, pricerule)
 
 	if err != nil {
 		return err
@@ -269,21 +270,29 @@ func (pricerule *PriceRule) UpdateUsageHistory(customerID string) error {
 
 // Delete - delete PriceRule - ID must be set
 func (pricerule *PriceRule) Delete() error {
-	err := GetPersistorForObject(pricerule).GetCollection().Remove(bson.M{"id": pricerule.ID})
+	session, collection := GetPersistorForObject(new(PriceRule)).GetCollection()
+	defer session.Close()
+
+	err := collection.Remove(bson.M{"id": pricerule.ID})
 	pricerule = nil
 	return err
 }
 
 // DeletePriceRule - delete PriceRule
 func DeletePriceRule(ID string) error {
-	err := GetPersistorForObject(new(PriceRule)).GetCollection().Remove(bson.M{"id": ID})
+	session, collection := GetPersistorForObject(new(PriceRule)).GetCollection()
+	defer session.Close()
+
+	err := collection.Remove(bson.M{"id": ID})
 	return err
 }
 
 // RemoveAllPriceRules -
 func RemoveAllPriceRules() error {
-	p := GetPersistorForObject(new(PriceRule))
-	_, err := p.GetCollection().RemoveAll(bson.M{})
+	session, collection := GetPersistorForObject(new(PriceRule)).GetCollection()
+	defer session.Close()
+
+	_, err := collection.RemoveAll(bson.M{})
 	return err
 }
 
@@ -307,8 +316,10 @@ func getPromotions(query bson.M, customProvider PriceRuleCustomProvider) ([]Pric
 	now := time.Now()
 	var result []*PriceRule
 
-	p := GetPersistorForObject(new(PriceRule))
-	err := p.GetCollection().Find(query).Select(nil).Sort("priority").All(&result)
+	session, collection := GetPersistorForObject(new(PriceRule)).GetCollection()
+	defer session.Close()
+
+	err := collection.Find(query).Select(nil).Sort("priority").All(&result)
 	if err != nil {
 		// handle error
 		return nil, err

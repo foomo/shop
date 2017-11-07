@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/foomo/shop/configuration"
 )
 
 const (
@@ -64,11 +63,6 @@ const (
 
 var productsInGroups map[string][]string
 
-func init() {
-	fmt.Println("Initializing persistors...")
-	configuration.MONGO_URL = "mongodb://" + configuration.LocalUnitTests
-	fmt.Println(configuration.MONGO_URL)
-}
 
 func Init(t *testing.T) {
 

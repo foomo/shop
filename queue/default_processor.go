@@ -241,11 +241,15 @@ func (proc *DefaultProcessor) Find(query *bson.M, p *persistence.Persistor) (ite
 	if proc.Verbose {
 		log.Println("Default Processor Find")
 	}
-	_, err = p.GetCollection().Find(query).Count()
+
+	session, collection := p.GetCollection()
+	defer session.Close()
+
+	_, err = collection.Find(query).Count()
 	if err != nil {
 		log.Println(err)
 	}
-	q := p.GetCollection().Find(query).Sort("_id")
+	q := collection.Find(query).Sort("_id")
 
 	count, err := q.Count()
 	if proc.Verbose {

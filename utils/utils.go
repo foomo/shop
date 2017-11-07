@@ -3,7 +3,6 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"math"
 	"os"
 	"reflect"
@@ -12,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/skratchdot/open-golang/open"
 )
 
 const UTCOffsetSummer = time.Duration(2)
@@ -173,10 +171,7 @@ func OpenInBrowser(name string, html string) error {
 	}
 	tmpFile.WriteString(html)
 	tmpFile.Close()
-	err = open.Start(path)
-	if err != nil {
-		log.Println(err)
-	}
+
 	return err
 
 }

@@ -1,7 +1,6 @@
 package unique
 
 import (
-	"fmt"
 	"log"
 	"sync"
 	"testing"
@@ -9,8 +8,7 @@ import (
 
 func TestCreateUniqueIdsSimple(t *testing.T) {
 	for i := 0; i < 100; i++ {
-		newId := GetNewID()
-		fmt.Println(newId)
+		 GetNewID()
 	}
 }
 func TestCreateUniqueIdsConcurrent(t *testing.T) {
@@ -20,7 +18,6 @@ func TestCreateUniqueIdsConcurrent(t *testing.T) {
 		defer wg.Done()
 		for i := 0; i < 1000; i++ {
 			newId := GetNewID()
-			fmt.Println("Generator: "+id, newId)
 			mutex.Lock()
 			_, ok := generatedIds[newId]
 			if ok {

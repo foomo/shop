@@ -28,7 +28,7 @@ var (
 
 // Returns GLOBAL_PERSISTOR. If GLOBAL_PERSISTOR is nil, a new persistor is created, set as GLOBAL_PERSISTOR and returned
 func GetOrderPersistor() *persistence.Persistor {
-	url := configuration.MONGO_URL
+	url := configuration.GetMongoURL()
 	collection := configuration.MONGO_COLLECTION_ORDERS
 	if globalOrderPersistor == nil {
 		p, err := persistence.NewPersistor(url, collection)
@@ -53,7 +53,7 @@ func GetOrderPersistor() *persistence.Persistor {
 
 // Returns GLOBAL_PERSISTOR. If GLOBAL_PERSISTOR is nil, a new persistor is created, set as GLOBAL_PERSISTOR and returned
 func GetOrderVersionsPersistor() *persistence.Persistor {
-	url := configuration.MONGO_URL
+	url := configuration.GetMongoURL()
 	collection := configuration.MONGO_COLLECTION_ORDERS_HISTORY
 	if globalOrderVersionsPersistor == nil {
 		p, err := persistence.NewPersistor(url, collection)
