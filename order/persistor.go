@@ -17,8 +17,10 @@ import (
 // ~ CONSTANTS / VARS
 //------------------------------------------------------------------
 
-var globalOrderPersistor *persistence.Persistor
-var globalOrderVersionsPersistor *persistence.Persistor
+var (
+	globalOrderPersistor         *persistence.Persistor
+	globalOrderVersionsPersistor *persistence.Persistor
+)
 
 //------------------------------------------------------------------
 // ~ PUBLIC METHODS
