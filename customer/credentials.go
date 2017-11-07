@@ -27,9 +27,11 @@ type CustomerCredentials struct {
 
 // GetCredentials from db
 func GetCredentials(email string) (*CustomerCredentials, error) {
-	p := GetCredentialsPersistor()
+	session, collection := GetCustomerPersistor().GetCollection()
+	defer session.Close()
+
 	credentials := &CustomerCredentials{}
-	err := p.GetCollection().Find(&bson.M{"email": lc(email)}).One(credentials)
+	err := collection.Find(&bson.M{"email": lc(email)}).One(credentials)
 	if err != nil {
 		return nil, err
 	}
@@ -57,15 +59,18 @@ func CreateCustomerCredentials(email, password string) error {
 		Email:   lc(email),
 		Crypto:  crypto,
 	}
-	p := GetCredentialsPersistor()
-	return p.GetCollection().Insert(credentials)
+	session, collection := GetCustomerPersistor().GetCollection()
+	defer session.Close()
+	return collection.Insert(credentials)
 
 }
 
 // CheckLoginAvailable returns true if the email address is available as login credential
 func CheckLoginAvailable(email string) (bool, error) {
-	p := GetCredentialsPersistor()
-	query := p.GetCollection().Find(&bson.M{"email": lc(email)})
+	session, collection := GetCustomerPersistor().GetCollection()
+	defer session.Close()
+
+	query := collection.Find(&bson.M{"email": lc(email)})
 	count, err := query.Count()
 	if err != nil {
 		return false, err
@@ -104,7 +109,11 @@ func ChangePassword(email, password, passwordNew string, force bool) error {
 		}
 		credentials.Crypto = newCrypto
 		credentials.Version.Increment()
-		_, err = GetCredentialsPersistor().GetCollection().UpsertId(credentials.BsonId, credentials)
+
+		session, collection := GetCustomerPersistor().GetCollection()
+		defer session.Close()
+
+		_, err = collection.UpsertId(credentials.BsonId, credentials)
 		return err
 	}
 
@@ -125,12 +134,19 @@ func ChangeEmail(email, newEmail string) error {
 	}
 	credentials.Email = lc(newEmail)
 	credentials.Version.Increment()
-	_, err = GetCredentialsPersistor().GetCollection().UpsertId(credentials.BsonId, credentials)
+
+	session, collection := GetCustomerPersistor().GetCollection()
+	defer session.Close()
+
+	_, err = collection.UpsertId(credentials.BsonId, credentials)
 	return err
 }
 
 func DeleteCredential(email string) error {
-	return GetCredentialsPersistor().GetCollection().Remove(&bson.M{"email": lc(email)})
+	session, collection := GetCustomerPersistor().GetCollection()
+	defer session.Close()
+
+	return collection.Remove(&bson.M{"email": lc(email)})
 }
 
 //------------------------------------------------------------------

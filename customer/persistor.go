@@ -12,16 +12,13 @@ import (
 	"github.com/foomo/shop/version"
 	"github.com/mitchellh/mapstructure"
 	"gopkg.in/mgo.v2/bson"
+	"gopkg.in/mgo.v2"
 )
 
 // !! NOTE: customer must not import order !!
 //------------------------------------------------------------------
 // ~ CONSTANTS / VARS
 //------------------------------------------------------------------
-
-const (
-	VERBOSE = false
-)
 
 var globalCustomerPersistor *persistence.Persistor
 var globalCustomerVersionsPersistor *persistence.Persistor
@@ -33,7 +30,7 @@ var globalCredentialsPersistor *persistence.Persistor
 
 // Returns GLOBAL_PERSISTOR. If GLOBAL_PERSISTOR is nil, a new persistor is created, set as GLOBAL_PERSISTOR and returned
 func GetCustomerPersistor() *persistence.Persistor {
-	url := configuration.MONGO_URL
+	url := configuration.GetMongoURL()
 	collection := configuration.MONGO_COLLECTION_CUSTOMERS
 	if globalCustomerPersistor == nil {
 		p, err := persistence.NewPersistor(url, collection)
@@ -58,7 +55,7 @@ func GetCustomerPersistor() *persistence.Persistor {
 
 // Returns GLOBAL_PERSISTOR. If GLOBAL_PERSISTOR is nil, a new persistor is created, set as GLOBAL_PERSISTOR and returned
 func GetCustomerVersionsPersistor() *persistence.Persistor {
-	url := configuration.MONGO_URL
+	url := configuration.GetMongoURL()
 	collection := configuration.MONGO_COLLECTION_CUSTOMERS_HISTORY
 	if globalCustomerVersionsPersistor == nil {
 		p, err := persistence.NewPersistor(url, collection)
@@ -83,7 +80,7 @@ func GetCustomerVersionsPersistor() *persistence.Persistor {
 
 // Returns GLOBAL_PERSISTOR. If GLOBAL_PERSISTOR is nil, a new persistor is created, set as GLOBAL_PERSISTOR and returned
 func GetCredentialsPersistor() *persistence.Persistor {
-	url := configuration.MONGO_URL
+	url := configuration.GetMongoURL()
 	collection := configuration.MONGO_COLLECTION_CREDENTIALS
 	if globalCredentialsPersistor == nil {
 		p, err := persistence.NewPersistor(url, collection)
@@ -108,8 +105,10 @@ func GetCredentialsPersistor() *persistence.Persistor {
 
 // AlreadyExistsInDB checks if a customer with given customerID already exists in the database
 func AlreadyExistsInDB(customerID string) (bool, error) {
-	p := GetCustomerPersistor()
-	q := p.GetCollection().Find(&bson.M{"id": customerID})
+	session, collection := GetCustomerPersistor().GetCollection()
+	defer session.Close()
+
+	q := collection.Find(&bson.M{"id": customerID})
 	count, err := q.Count()
 	if err != nil {
 		return false, err
@@ -118,17 +117,22 @@ func AlreadyExistsInDB(customerID string) (bool, error) {
 }
 
 func Count(query *bson.M, customProvider CustomerCustomProvider) (count int, err error) {
-	return GetCustomerPersistor().GetCollection().Find(query).Count()
+	session, collection := GetCustomerPersistor().GetCollection()
+	defer session.Close()
+
+	return collection.Find(query).Count()
 }
 
 // Find returns an iterator for all entries found matching on query.
 func Find(query *bson.M, customProvider CustomerCustomProvider) (iter func() (cust *Customer, err error), err error) {
-	p := GetCustomerPersistor()
-	_, err = p.GetCollection().Find(query).Count()
+	session, collection := GetCustomerPersistor().GetCollection()
+	defer session.Close()
+
+	_, err = collection.Find(query).Count()
 	if err != nil {
 		log.Println(err)
 	}
-	q := p.GetCollection().Find(query)
+	q := collection.Find(query)
 
 	_, err = q.Count()
 	if err != nil {
@@ -151,13 +155,14 @@ func UpsertCustomer(c *Customer) error {
 	if c.unlinkDB || c.BsonId == "" {
 		return nil
 	}
-	p := GetCustomerPersistor()
+	session, collection := GetCustomerPersistor().GetCollection()
+	defer session.Close()
 
 	// Get current version from db and check against verssion of c
 	// If they are not identical, there must have been another upsert which would be overwritten by this one.
 	// In this case upsert is skipped and an error is returned,
 	customerLatestFromDb := &Customer{}
-	err := p.GetCollection().Find(&bson.M{"_id": c.BsonId}).Select(&bson.M{"version": 1}).One(customerLatestFromDb)
+	err := collection.Find(&bson.M{"_id": c.BsonId}).Select(&bson.M{"version": 1}).One(customerLatestFromDb)
 
 	if err != nil {
 		log.Println("Upsert failed: Could not find customer with id", c.GetID(), "Error:", err)
@@ -185,18 +190,22 @@ func UpsertCustomer(c *Customer) error {
 		c.Version.Increment()
 	}
 
-	_, err = p.GetCollection().UpsertId(c.BsonId, c)
+	_, err = collection.UpsertId(c.BsonId, c)
 	if err != nil {
 		return err
 	}
 
-	// Store version in history
-	bsonId := c.BsonId
-	c.BsonId = "" // Temporarily reset Mongo ObjectId, so that we can perfrom an Insert.
-	pHistory := GetCustomerVersionsPersistor()
-	pHistory.GetCollection().Insert(c)
-	c.BsonId = bsonId // restore bsonId
+	return saveCustomerVersionHistory(c)
+}
 
+func saveCustomerVersionHistory(c *Customer) error {
+	// Store version in history
+	currentID := c.BsonId
+	c.BsonId = "" // Temporarily reset Mongo ObjectId, so that we can perfrom an Insert.
+	session, collection := GetCustomerVersionsPersistor().GetCollection()
+	defer session.Close()
+	err := collection.Insert(c)
+	c.BsonId = currentID // restore bsonId
 	return err
 }
 
@@ -209,7 +218,10 @@ func UpsertAndGetCustomer(c *Customer, customProvider CustomerCustomProvider) (*
 }
 
 func DeleteCustomer(c *Customer) error {
-	err := GetCustomerPersistor().GetCollection().Remove(bson.M{"_id": c.BsonId})
+	session, collection := GetCustomerPersistor().GetCollection()
+	defer session.Close()
+
+	err := collection.Remove(bson.M{"_id": c.BsonId})
 	if err != nil {
 		return err
 	}
@@ -273,20 +285,24 @@ func Rollback(customerId string, version int) error {
 }
 
 func DropAllCustomers() error {
-	return GetCustomerPersistor().GetCollection().DropCollection()
+	session, collection := GetCustomerPersistor().GetCollection()
+	defer session.Close()
+
+	return collection.DropCollection()
 
 }
 func DropAllCredentials() error {
-	return GetCredentialsPersistor().GetCollection().DropCollection()
+	session, collection := GetCredentialsPersistor().GetCollection()
+	defer session.Close()
+
+	return collection.DropCollection()
 }
 
 func DropAllCustomersAndCredentials() error {
-	err := GetCustomerPersistor().GetCollection().DropCollection()
-	if err != nil {
+	if err := DropAllCustomers(); err != nil {
 		return err
 	}
-	return GetCredentialsPersistor().GetCollection().DropCollection()
-
+	return DropAllCredentials()
 }
 
 //------------------------------------------------------------------
@@ -295,12 +311,16 @@ func DropAllCustomersAndCredentials() error {
 
 // findOneCustomer returns one Customer from the customer database or from the customer history database
 func findOneCustomer(find *bson.M, selection *bson.M, sort string, customProvider CustomerCustomProvider, fromHistory bool) (*Customer, error) {
-	var p *persistence.Persistor
+	var session *mgo.Session
+	var collection *mgo.Collection
+
 	if fromHistory {
-		p = GetCustomerVersionsPersistor()
+		session, collection = GetCustomerVersionsPersistor().GetCollection()
 	} else {
-		p = GetCustomerPersistor()
+		session, collection = GetCustomerPersistor().GetCollection()
 	}
+	defer session.Close()
+
 	customer := &Customer{}
 	if find == nil {
 		find = &bson.M{}
@@ -309,12 +329,12 @@ func findOneCustomer(find *bson.M, selection *bson.M, sort string, customProvide
 		selection = &bson.M{}
 	}
 	if sort != "" {
-		err := p.GetCollection().Find(find).Select(selection).Sort(sort).One(customer)
+		err := collection.Find(find).Select(selection).Sort(sort).One(customer)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		err := p.GetCollection().Find(find).Select(selection).One(customer)
+		err := collection.Find(find).Select(selection).One(customer)
 		if err != nil {
 			return nil, err
 		}
@@ -335,7 +355,8 @@ func findOneCustomer(find *bson.M, selection *bson.M, sort string, customProvide
 
 // insertCustomer inserts a customer into the database
 func insertCustomer(c *Customer) error {
-	p := GetCustomerPersistor()
+	session, collection := GetCustomerPersistor().GetCollection()
+	defer session.Close()
 	alreadyExists, err := AlreadyExistsInDB(c.GetID())
 	if err != nil {
 		return err
@@ -344,12 +365,13 @@ func insertCustomer(c *Customer) error {
 		log.Println("User with id", c.GetID(), "already exists in the database!")
 		return nil
 	}
-	err = p.GetCollection().Insert(c)
+	err = collection.Insert(c)
 	if err != nil {
 		return err
 	}
-	pHistory := GetCustomerVersionsPersistor()
-	err = pHistory.GetCollection().Insert(c)
+	hsession, hcollection := GetCustomerVersionsPersistor().GetCollection()
+	defer hsession.Close()
+	err = hcollection.Insert(c)
 
 	return err
 }

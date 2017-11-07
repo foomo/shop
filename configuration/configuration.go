@@ -1,13 +1,15 @@
 package configuration
 
+import "os"
+
 var (
 	MONGO_DB          string = "shop"
 	MONGO_DB_PRODUCTS string = "products"
-	LocalUnitTests           = "dockerhost/" + MONGO_DB
+	LocalUnitTests           = "localhost/" + MONGO_DB
 
 	WithDocker = "mongo/" + MONGO_DB
 
-	ProductsLocal  = "dockerhost/" + MONGO_DB_PRODUCTS
+	ProductsLocal  = "localhost/" + MONGO_DB_PRODUCTS
 	ProductsDocker = "mongo/" + MONGO_DB_PRODUCTS
 
 	// MONGO_BASE_URL = "mongodb://dockerhost/"
@@ -31,3 +33,10 @@ var (
 
 // AllowedLanguages contains language codes for all allowed languages
 var AllowedLanguages = [...]string{"de", "fr"}
+
+func GetMongoURL() string {
+	if url, exists := os.LookupEnv("MONGO_URL"); exists {
+		return url
+	}
+	return MONGO_URL
+}
