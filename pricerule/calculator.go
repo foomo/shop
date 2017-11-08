@@ -204,7 +204,7 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 
 	bestOptionCustomerProductRulePerItem := getBestOptionCustomerProductRulePerItem(ruleVoucherPairs, calculationParameters)
 	calculationParameters.bestOptionCustomeProductRulePerItem = bestOptionCustomerProductRulePerItem
-	//spew.Dump(bestOptionCustomerProductRulePerItem)
+	//utils.PrintJSON(bestOptionCustomerProductRulePerItem)
 
 	for _, priceRulePair := range ruleVoucherPairs {
 		pair := RuleVoucherPair{}

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
+	"github.com/foomo/shop/utils"
 )
 
 const (
@@ -169,7 +169,7 @@ func testGetApplicableVouchers(t *testing.T) {
 
 	// PRICERULES --------------------------------------------------------------------------------------
 	applicableRules, err := PickApplicableVouchers([]string{VoucherCode1, VoucherCode2}, orderVo, []string{}, nil)
-	spew.Dump(applicableRules)
+	utils.PrintJSON(applicableRules)
 
 }
 
@@ -311,7 +311,7 @@ func testShipping1(t *testing.T) {
 	orderVo.Articles = append(orderVo.Articles, positionVo)
 
 	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{""}, []string{}, 0.05, nil)
-	spew.Dump(discountsVo, summary, err)
+	utils.PrintJSON(discountsVo, summary, err)
 
 }
 
@@ -397,7 +397,7 @@ func testBlacklist(t *testing.T) {
 	orderVo.Articles = append(orderVo.Articles, positionVo)
 
 	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{}, []string{PaymentMethodID1}, 0.05, nil)
-	spew.Dump(discountsVo, summary, err)
+	utils.PrintJSON(discountsVo, summary, err)
 
 }
 
@@ -518,7 +518,7 @@ func testDiscountDistribution(t *testing.T) {
 	orderVo.Articles = append(orderVo.Articles, positionVo)
 
 	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{"vouchercode"}, []string{}, 0.05, nil)
-	spew.Dump(discountsVo, summary, err)
+	utils.PrintJSON(discountsVo, summary, err)
 
 }
 
@@ -647,7 +647,7 @@ func testBestOption(t *testing.T) {
 	orderVo.Articles = append(orderVo.Articles, positionVo)
 
 	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{}, []string{}, 0.05, nil)
-	spew.Dump(discountsVo, summary, err)
+	utils.PrintJSON(discountsVo, summary, err)
 
 }
 
@@ -719,7 +719,7 @@ func testDiscountFoItemSets(t *testing.T) {
 	orderVo.Articles = append(orderVo.Articles, positionVo)
 
 	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{}, []string{PaymentMethodID1}, 0.05, nil)
-	spew.Dump(discountsVo, summary, err)
+	utils.PrintJSON(discountsVo, summary, err)
 
 }
 
@@ -790,7 +790,7 @@ func testVoucherRuleWithCheckoutAttributes(t *testing.T) {
 	orderVo.Articles = append(orderVo.Articles, positionVo)
 
 	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{}, []string{PaymentMethodID1}, 0.05, nil)
-	spew.Dump(discountsVo, summary, err)
+	utils.PrintJSON(discountsVo, summary, err)
 
 }
 
@@ -863,7 +863,7 @@ func testShipping(t *testing.T) {
 	orderVo.Articles = append(orderVo.Articles, positionVo)
 
 	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{""}, []string{}, 0.05, nil)
-	spew.Dump(discountsVo, summary, err)
+	utils.PrintJSON(discountsVo, summary, err)
 
 }
 
@@ -875,7 +875,7 @@ func testCache(t *testing.T) {
 	RemoveAllVouchers()
 
 	//cache.InitCatalogCalculationCache()
-	//spew.Dump(cache.GetGroupsCache())
+	//utils.PrintJSON(cache.GetGroupsCache())
 	//cache.ClearCatalogCalculationCache()
 
 	for _, groupID := range []string{GroupIDSale, GroupIDNormal, GroupIDShirts} {
@@ -920,7 +920,7 @@ func testCache(t *testing.T) {
 	}
 
 	cache.InitCatalogCalculationCache()
-	//spew.Dump(cache.GetGroupsCache())
+	//utils.PrintJSON(cache.GetGroupsCache())
 
 	//create articleCollection
 	orderVo, err := createMockOrderScaled(t)
@@ -928,7 +928,7 @@ func testCache(t *testing.T) {
 		panic(err)
 	}
 	discountsVo, summary, err := ApplyDiscountsOnCatalog(orderVo, nil, 0.05, nil)
-	spew.Dump(discountsVo, summary, err)
+	utils.PrintJSON(discountsVo, summary, err)
 }
 
 // Test groups creation
@@ -1002,8 +1002,8 @@ func testScaled(t *testing.T) {
 		panic(err)
 	}
 	fmt.Println("discounts for scaled percentage")
-	spew.Dump(discountsVo)
-	spew.Dump(*summary)
+	utils.PrintJSON(discountsVo)
+	utils.PrintJSON(*summary)
 }
 
 // Test groups creation
@@ -1074,8 +1074,8 @@ func testBuyXGetY(t *testing.T) {
 	}
 
 	fmt.Println("discounts for buy x get y")
-	spew.Dump(discountsVo)
-	spew.Dump(*summary)
+	utils.PrintJSON(discountsVo)
+	utils.PrintJSON(*summary)
 
 }
 
@@ -1125,15 +1125,15 @@ func testExclude(t *testing.T) {
 	calculationParameters.productGroupIDsPerPosition = productGroupIDsPerPosition
 	calculationParameters.isCatalogCalculation = false
 	calculationParameters.articleCollection = orderVo
-	//spew.Dump(productGroupIDsPerPosition)
+	//utils.PrintJSON(productGroupIDsPerPosition)
 	for _, article := range orderVo.Articles {
 		ok, _ := validatePriceRuleForPosition(*priceRule, article, calculationParameters, nil)
 		log.Println(article.ID + " " + priceRule.ID + " " + strconv.FormatBool(ok))
 	}
 
 	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{}, []string{"blah"}, 0.05, nil)
-	spew.Dump(discountsVo)
-	spew.Dump(*summary)
+	utils.PrintJSON(discountsVo)
+	utils.PrintJSON(*summary)
 
 }
 
@@ -1225,8 +1225,8 @@ func testMaxOrder(t *testing.T) {
 	}
 
 	fmt.Println("discounts")
-	spew.Dump(discountsVo)
-	spew.Dump(*summary)
+	utils.PrintJSON(discountsVo)
+	utils.PrintJSON(*summary)
 
 	//validate the voucher
 
@@ -1365,8 +1365,8 @@ func testTwoStepWorkflow(t *testing.T) {
 	}
 
 	fmt.Println("discounts")
-	spew.Dump(discountsVo)
-	spew.Dump(*summary)
+	utils.PrintJSON(discountsVo)
+	utils.PrintJSON(*summary)
 
 }
 
@@ -1388,8 +1388,8 @@ func testPricerulesWorkflow(t *testing.T) {
 	}
 
 	fmt.Println("discounts")
-	spew.Dump(discountsVo)
-	spew.Dump(*summary)
+	utils.PrintJSON(discountsVo)
+	utils.PrintJSON(*summary)
 
 }
 

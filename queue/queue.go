@@ -199,7 +199,6 @@ func runProcessor(processor Processor) error {
 			select {
 			case data := <-chanReady:
 				// fmt.Println("--- DATA")
-				// fmt.Println(spew.Sdump(data))
 				f := func(data interface{}) {
 					err := processor.Process(data)
 					if err != nil {

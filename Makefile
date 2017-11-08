@@ -14,4 +14,3 @@ install-test-dependencies:
 	go get -u github.com/bwmarrin/snowflake
 	go get -u github.com/sergi/go-diff/...
 	go get -u github.com/nbutton23/zxcvbn-go
-	go get -u github.com/davecgh/go-spew
