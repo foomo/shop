@@ -125,8 +125,7 @@ func Count(query *bson.M, customProvider CustomerCustomProvider) (count int, err
 
 // Find returns an iterator for all entries found matching on query.
 func Find(query *bson.M, customProvider CustomerCustomProvider) (iter func() (cust *Customer, err error), err error) {
-	session, collection := GetCustomerPersistor().GetCollection()
-	defer session.Close()
+	collection := GetCustomerPersistor().GetGlobalSessionCollection()
 
 	_, err = collection.Find(query).Count()
 	if err != nil {

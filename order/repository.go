@@ -47,8 +47,7 @@ func Count(query *bson.M, customProvider OrderCustomProvider) (count int, err er
 
 // Find returns an iterator for the entries matching on query
 func Find(query *bson.M, customProvider OrderCustomProvider) (iter func() (o *Order, err error), err error) {
-	session, collection := GetOrderPersistor().GetCollection()
-	defer session.Close()
+	collection := GetOrderPersistor().GetGlobalSessionCollection()
 
 	_, err = collection.Find(query).Count()
 	if err != nil {

@@ -75,6 +75,16 @@ func (p *Persistor) GetCollection() (session *mgo.Session, collection *mgo.Colle
 	return session, collection
 }
 
+// GetGlobalSessionCollection is used when multiple threads share the same connections (bad idea)
+// and should be used ONLY when necessary. Use get collection and return the connection to the connection
+// pool instead by invoking session.close() instead
+func (p *Persistor) GetGlobalSessionCollection() (collection *mgo.Collection) {
+	if err := p.session.Ping(); err != nil {
+		p.session.Refresh()
+	}
+	return p.session.DB(p.db).C(p.collection)
+}
+
 func (p *Persistor) GetCollectionName() string {
 	return p.collection
 }

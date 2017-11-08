@@ -1,7 +1,6 @@
 package test_utils
 
 import (
-	"log"
 	"path"
 	"runtime"
 	"strings"
@@ -41,12 +40,13 @@ func DropAllShopCollections() error {
 	}
 	return nil
 }
+
 func DropAllCollections() error {
 	err := DropAllCollectionsFromUrl(configuration.GetMongoURL(), configuration.MONGO_DB)
 	if err != nil {
 		return err
 	}
-	err = DropAllCollectionsFromUrl(configuration.MONGO_URL_PRODUCTS, configuration.MONGO_DB_PRODUCTS)
+	err = DropAllCollectionsFromUrl(configuration.GetMongoProductsURL(), configuration.MONGO_DB_PRODUCTS)
 	if err != nil {
 		return err
 	}
@@ -59,35 +59,16 @@ func DropAllCollectionsFromUrl(url string, db string) error {
 	}
 	defer session.Close()
 
-	log.Println("mongo session initialized", url, session)
 
 	collections, err := session.DB(db).CollectionNames()
-	if err != nil {
-		log.Println("unable to find CollectionNames", session)
-	} else {
-		log.Println("collections", collections)
-	}
 
 	for _, collectionName := range collections {
 		_, ok := NoDropList[collectionName]
 		// Only Drop Collections which are not on the no drop list
 		if !ok {
 			collection := session.DB(db).C(collectionName)
-			count, err := collection.Count()
-
-			if err != nil {
-				log.Println("failed to find docs:", collectionName)
-			}
-
 			err = collection.DropCollection()
-			if err != nil {
-				log.Println("failed to drop collection:", collectionName, collection)
-			} else {
-				log.Printf("dropped collection %s with %d docs", collectionName, count)
-			}
 		}
 	}
-
-	log.Println("DropAllCollections finished")
 	return nil
 }

@@ -3,9 +3,9 @@ package configuration
 import "os"
 
 var (
-	MONGO_DB          string = "shop"
-	MONGO_DB_PRODUCTS string = "products"
-	LocalUnitTests           = "localhost/" + MONGO_DB
+	MONGO_DB          = "shop"
+	MONGO_DB_PRODUCTS = "products"
+	LocalUnitTests    = "localhost/" + MONGO_DB
 
 	WithDocker = "mongo/" + MONGO_DB
 
@@ -16,19 +16,19 @@ var (
 	// //MONGO_BASE_URL = "mongodb://mongo/"
 
 	//MONGO_URL string = "mongodb://" + LocalUnitTests
-	MONGO_URL          string = "mongodb://" + WithDocker
-	MONGO_URL_PRODUCTS string = "mongodb://" + ProductsLocal
+	MONGO_URL          = "mongodb://" + WithDocker
+	MONGO_URL_PRODUCTS = "mongodb://" + ProductsLocal
 
-	MONGO_COLLECTION_CREDENTIALS       string = "credentials"
-	MONGO_COLLECTION_ORDERS            string = "orders"
-	MONGO_COLLECTION_ORDERS_HISTORY    string = "orders_history"
-	MONGO_COLLECTION_CUSTOMERS_HISTORY string = "customers_history"
-	MONGO_COLLECTION_CUSTOMERS         string = "customers"
-	MONGO_COLLECTION_WATCHLISTS        string = "watchlists"
+	MONGO_COLLECTION_CREDENTIALS       = "credentials"
+	MONGO_COLLECTION_ORDERS            = "orders"
+	MONGO_COLLECTION_ORDERS_HISTORY    = "orders_history"
+	MONGO_COLLECTION_CUSTOMERS_HISTORY = "customers_history"
+	MONGO_COLLECTION_CUSTOMERS         = "customers"
+	MONGO_COLLECTION_WATCHLISTS        = "watchlists"
 
-	MONGO_COLLECTION_PRICERULES          string = "pricerules"
-	MONGO_COLLECTION_PRICERULES_VOUCHERS string = "pricerules_vouchers"
-	MONGO_COLLECTION_PRICERULES_GROUPS   string = "pricerules_groups"
+	MONGO_COLLECTION_PRICERULES          = "pricerules"
+	MONGO_COLLECTION_PRICERULES_VOUCHERS = "pricerules_vouchers"
+	MONGO_COLLECTION_PRICERULES_GROUPS   = "pricerules_groups"
 )
 
 // AllowedLanguages contains language codes for all allowed languages
@@ -39,4 +39,11 @@ func GetMongoURL() string {
 		return url
 	}
 	return MONGO_URL
+}
+
+func GetMongoProductsURL() string {
+	if url, exists := os.LookupEnv("MONGO_URL_PRODUCTS"); exists {
+		return url
+	}
+	return MONGO_URL_PRODUCTS
 }

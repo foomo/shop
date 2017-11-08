@@ -1,18 +1,13 @@
 SHELL = "/bin/bash"
 
 TEST_PATH = github.com/foomo/shop
-
+# invoke a single test by setting go test -v $(TEST_PATH)/shop
 
 clean:
 	rm -f customer/diff-*
 
-clear-dbs: clean
-	go test -run TestDropAllCollections $(TEST_PATH)/test_utils
-
 test: clean
-	$(eval CONTAINER := $(shell docker run --rm -d -it -p "27017:27017" mongo))
-	MONGO_URL="mongodb://localhost/shop" go test  ./... || echo "Tests failed"
-	docker stop $(CONTAINER)
+	./scripts/test.sh
 
 install-test-dependencies:
 	go get -u github.com/ventu-io/go-shortid
