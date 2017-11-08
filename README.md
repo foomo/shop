@@ -1,5 +1,7 @@
 # Light weight shop processing library
 
+[![Build Status](https://travis-ci.org/foomo/shop.svg?branch=master)](https://travis-ci.org/foomo/shop)
+
 Pure go library to implement e-commerce backends.
 
 - Create and manipulate [Carts]( docs/cart.md)
