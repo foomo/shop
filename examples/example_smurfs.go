@@ -4,11 +4,11 @@ package examples
 import (
 	"time"
 
-	"git.bestbytes.net/Project-Globus-Services/utils"
 	"github.com/foomo/shop/order"
 	"github.com/foomo/shop/queue"
 
 	"gopkg.in/mgo.v2/bson"
+	"strconv"
 )
 
 type SmurfOrderCustom struct {
@@ -48,7 +48,7 @@ var processorIdSmurf int = 0
 // ~ CONSTRUCTORS
 //------------------------------------------------------------------
 func NewSmurfProcessor() *queue.DefaultProcessor {
-	name := "SmurfProcessor " + utils.IntToString(processorIdSmurf)
+	name := "SmurfProcessor " + strconv.Itoa(processorIdSmurf)
 	processorIdSmurf++
 	proc := queue.NewDefaultProcessor(name)
 	proc.ProcessingFunc = processingFunc

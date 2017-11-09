@@ -183,7 +183,9 @@ func runProcessor(processor Processor) error {
 	chanCheckRunning := make(chan int)
 	chanGoCheckRunning := make(chan int)
 
-	iter, err := processor.Find(processor.GetQuery(), processor.GetPersistor())
+	collection := processor.GetPersistor().GetGlobalSessionCollection()
+
+	iter, err := processor.Find(processor.GetQuery(), collection)
 	if err != nil {
 		log.Println(err)
 		processor.GetChanExit() <- 1 // this will be received in schedule() and stop the processor
@@ -197,7 +199,6 @@ func runProcessor(processor Processor) error {
 			select {
 			case data := <-chanReady:
 				// fmt.Println("--- DATA")
-				// fmt.Println(spew.Sdump(data))
 				f := func(data interface{}) {
 					err := processor.Process(data)
 					if err != nil {
@@ -254,17 +255,14 @@ func runProcessor(processor Processor) error {
 			select {
 			case <-chanCheckRunning:
 				if processor.GetStop() {
-					//			fmt.Println("--- chanDone return 1")
 					chanDone <- 1
 					run = false
-					//			fmt.Println("Return 4")
 					return //break Loop
 				}
 				//log.Println("** chanCheckRunning", processor.GetId())
 				if processor.GetJobsStarted() >= processor.GetJobsAssigned() { // We are done
 					//	log.Println("** goChanDone :: JobsAssignedProcessed", processor.GetId())
 					chanDone <- 1
-					//			fmt.Println("--- chanDone return 2")
 					return // break Loop
 				} else if processor.GetRunningJobs() >= processor.GetMaxConcurrency() { // Wait for better times
 
@@ -276,7 +274,6 @@ func runProcessor(processor Processor) error {
 						if err != nil {
 							log.Println("Error: Could not get data", err)
 							chanDone <- 1
-							//			fmt.Println("--- chanDone return 3")
 							return //break
 						}
 						if data != nil {

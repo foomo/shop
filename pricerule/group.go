@@ -5,7 +5,7 @@ import (
 
 	"log"
 
-	mgo "gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -29,22 +29,22 @@ type GroupType string
 type Group struct {
 	Type           GroupType
 	BsonID         bson.ObjectId `bson:"_id,omitempty"`
-	ID             string        `bson:"id"` //group id - referenced by PriceRule (s)
-	Name           string        //group name
+	ID             string        `bson:"id"`      //group id - referenced by PriceRule (s)
+	Name           string                         //group name
 	ItemIDs        []string      `bson:"itemids"` //list of product IDs or customer IDs in assigned to the group
 	CreatedAt      time.Time
 	LastModifiedAt time.Time
-	Custom         interface{} `bson:",omitempty"` //make it extensible if needed
+	Custom         interface{}   `bson:",omitempty"` //make it extensible if needed
 }
 
 type emptyGroupType struct {
 	Type           GroupType
 	BsonID         bson.ObjectId `bson:"_id,omitempty"`
-	ID             string        //group id - referenced by PriceRule (s)
-	Name           string        //group name
+	ID             string //group id - referenced by PriceRule (s)
+	Name           string //group name
 	CreatedAt      time.Time
 	LastModifiedAt time.Time
-	Custom         interface{} `bson:",omitempty"` //make it extensible if needed
+	Custom         interface{}   `bson:",omitempty"` //make it extensible if needed
 }
 
 //------------------------------------------------------------------
@@ -71,8 +71,10 @@ func (group *Group) AddGroupItemIDsAndPersist(itemIDs []string) bool {
 	group.AddGroupItemIDs(itemIDs)
 
 	//addtoset
-	p := GetPersistorForObject(group) //GetGroupPersistor()
-	_, err := p.GetCollection().Upsert(bson.M{"id": group.ID}, group)
+	session, collection := GetPersistorForObject(group).GetCollection() //GetGroupPersistor()
+	defer session.Close()
+
+	_, err := collection.Upsert(bson.M{"id": group.ID}, group)
 	if err != nil {
 		return false
 	}
@@ -103,7 +105,10 @@ func (group *Group) Upsert() error {
 		Background: true,  // See notes.
 		Sparse:     true,
 	}
-	err := GetPersistorForObject(new(Group)).GetCollection().EnsureIndex(index)
+	session, collection := GetPersistorForObject(new(Group)).GetCollection() //GetGroupPersistor()
+	defer session.Close()
+
+	err := collection.EnsureIndex(index)
 	var groupFromDb *Group
 	//set created and modified times
 	if group.CreatedAt.IsZero() {
@@ -115,9 +120,11 @@ func (group *Group) Upsert() error {
 		}
 	}
 	group.LastModifiedAt = time.Now()
-	p := GetPersistorForObject(group)
+	objectSession, objectCollection := GetPersistorForObject(group).GetCollection()
+	defer objectSession.Close()
+
 	if groupFromDb == nil {
-		_, err = p.GetCollection().Upsert(bson.M{"id": group.ID}, group)
+		_, err = objectCollection.Upsert(bson.M{"id": group.ID}, group)
 	} else {
 
 		emptyCopy := emptyGroupType{
@@ -130,13 +137,13 @@ func (group *Group) Upsert() error {
 			Type:           group.Type,
 		}
 
-		_, err = p.GetCollection().Upsert(bson.M{"id": group.ID}, emptyCopy)
+		_, err = objectCollection.Upsert(bson.M{"id": group.ID}, emptyCopy)
 		if err != nil {
 			return err
 		}
 
 		//make sure there are no duplicateas - $addToSet
-		err = p.GetCollection().Update(bson.M{"id": group.ID}, bson.M{"$addToSet": bson.M{"itemids": bson.M{"$each": group.ItemIDs}}})
+		err = objectCollection.Update(bson.M{"id": group.ID}, bson.M{"$addToSet": bson.M{"itemids": bson.M{"$each": group.ItemIDs}}})
 		if err != nil {
 			return err
 		}
@@ -150,7 +157,10 @@ func (group *Group) Upsert() error {
 
 // Delete - delete group - ID must be set
 func (group *Group) Delete() error {
-	err := GetPersistorForObject(group).GetCollection().Remove(bson.M{"id": group.ID})
+	session, collection := GetPersistorForObject(group).GetCollection()
+	defer session.Close()
+
+	err := collection.Remove(bson.M{"id": group.ID})
 	if err != nil {
 		return err
 	}
@@ -160,7 +170,10 @@ func (group *Group) Delete() error {
 
 // DeleteGroup -
 func DeleteGroup(ID string) error {
-	err := GetPersistorForObject(new(Group)).GetCollection().Remove(bson.M{"id": ID})
+	session, collection := GetPersistorForObject(new(Group)).GetCollection()
+	defer session.Close()
+
+	err := collection.Remove(bson.M{"id": ID})
 	if err != nil {
 		return err
 	}
@@ -169,8 +182,10 @@ func DeleteGroup(ID string) error {
 
 // RemoveAllGroups -
 func RemoveAllGroups() error {
-	p := GetPersistorForObject(new(Group))
-	_, err := p.GetCollection().RemoveAll(bson.M{})
+	session, collection := GetPersistorForObject(new(Group)).GetCollection()
+	defer session.Close()
+
+	_, err := collection.RemoveAll(bson.M{})
 	if err != nil {
 		return err
 	}
@@ -180,7 +195,10 @@ func RemoveAllGroups() error {
 // GetGroupsIDSForItem -
 func GetGroupsIDSForItem(itemID string, groupType GroupType) []string {
 	//now := time.Now()
-	p := GetPersistorForObject(new(Group))
+
+	session, collection := GetPersistorForObject(new(Group)).GetCollection()
+	defer session.Close()
+
 	query := bson.M{"itemids": bson.M{"$in": []string{itemID}}, "type": groupType}
 
 	var ret = []string{}
@@ -189,7 +207,7 @@ func GetGroupsIDSForItem(itemID string, groupType GroupType) []string {
 		ID string `bson:"id"`
 	}
 
-	err := p.GetCollection().Find(query).Select(bson.M{"id": 1}).Sort("priority").All(&result)
+	err := collection.Find(query).Select(bson.M{"id": 1}).Sort("priority").All(&result)
 	if err != nil {
 		// handle error
 		return []string{}
@@ -228,10 +246,12 @@ func GetBlacklistedItemIds() (itemIDs []string, err error) {
 }
 
 func getItemIDsFroGroupType(groupType GroupType) (itemIDs []string, err error) {
-	p := GetPersistorForObject(&Group{})
+	session, collection := GetPersistorForObject(&Group{}).GetCollection()
+	defer session.Close()
+
 	query := bson.M{"type": groupType}
 	var result = []Group{}
-	findErr := p.GetCollection().Find(query).Sort("priority").All(&result)
+	findErr := collection.Find(query).Sort("priority").All(&result)
 	if findErr != nil {
 		log.Println(findErr)
 		err = findErr

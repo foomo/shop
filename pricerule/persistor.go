@@ -76,7 +76,11 @@ func GetPriceRuleByID(ID string, customProvider PriceRuleCustomProvider) (*Price
 // ObjectOfTypeAlreadyExistsInDB checks if a customer with given customerID already exists in the database
 func ObjectOfTypeAlreadyExistsInDB(ID string, objOfType interface{}) (bool, error) {
 	p := GetPersistorForObject(objOfType)
-	q := p.GetCollection().Find(&bson.M{"id": ID})
+	session, collection := p.GetCollection()
+	defer session.Close()
+
+	q := collection.Find(&bson.M{"id": ID})
+
 	count, err := q.Count()
 	if err != nil {
 		return false, err
@@ -102,7 +106,7 @@ func GetPersistorForObject(obj interface{}) *persistence.Persistor {
 
 // Returns GLOBAL_PERSISTOR. If GLOBAL_PERSISTOR is nil, a new persistor is created, set as GLOBAL_PERSISTOR and returned
 func getPriceRulePersistorForType(persistorType string) *persistence.Persistor {
-	url := configuration.MONGO_URL
+	url := configuration.GetMongoURL()
 	collection := configuration.MONGO_COLLECTION_PRICERULES
 	switch persistorType {
 	case TypePriceRules:
@@ -156,13 +160,17 @@ func findOneObj(obj interface{}, find *bson.M, selection *bson.M, sort string, c
 	if selection == nil {
 		selection = &bson.M{}
 	}
+
+	session, collection := p.GetCollection()
+	defer session.Close()
+
 	if sort != "" {
-		err := p.GetCollection().Find(find).Select(selection).Sort(sort).One(obj)
+		err := collection.Find(find).Select(selection).Sort(sort).One(obj)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		err := p.GetCollection().Find(find).Select(selection).One(obj)
+		err := collection.Find(find).Select(selection).One(obj)
 		if err != nil {
 			return nil, err
 		}

@@ -37,7 +37,6 @@ type Voucher struct {
 	LastModifiedAt time.Time //updated at
 
 	Custom interface{} `bson:",omitempty"` //make it extensible if needed
-
 }
 
 //VoucherType - voucher type
@@ -94,8 +93,10 @@ func (voucher *Voucher) Upsert() error {
 	}
 	voucher.LastModifiedAt = time.Now()
 
-	p := GetPersistorForObject(voucher)
-	_, err := p.GetCollection().Upsert(bson.M{"id": voucher.ID}, voucher)
+	session, collection := GetPersistorForObject(voucher).GetCollection()
+	defer session.Close()
+
+	_, err := collection.Upsert(bson.M{"id": voucher.ID}, voucher)
 
 	if err != nil {
 		return err
@@ -138,21 +139,29 @@ func (voucher *Voucher) Redeem(customerID string) error {
 
 // Delete - delete voucher - ID must be set
 func (voucher *Voucher) Delete() error {
-	err := GetPersistorForObject(voucher).GetCollection().Remove(bson.M{"id": voucher.ID})
+	session, collection := GetPersistorForObject(voucher).GetCollection()
+	defer session.Close()
+
+	err := collection.Remove(bson.M{"id": voucher.ID})
 	voucher = nil
 	return err
 }
 
 // DeleteVoucher - delete voucher
 func DeleteVoucher(ID string) error {
-	err := GetPersistorForObject(new(Voucher)).GetCollection().Remove(bson.M{"id": ID})
+	session, collection :=  GetPersistorForObject(new(Voucher)).GetCollection()
+	defer session.Close()
+
+	err := collection.Remove(bson.M{"id": ID})
 	return err
 }
 
 // RemoveAllVouchers -
 func RemoveAllVouchers() error {
-	p := GetPersistorForObject(new(Voucher))
-	_, err := p.GetCollection().RemoveAll(bson.M{})
+	session, collection :=  GetPersistorForObject(new(Voucher)).GetCollection()
+	defer session.Close()
+
+	_, err := collection.RemoveAll(bson.M{})
 	return err
 }
 

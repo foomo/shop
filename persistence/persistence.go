@@ -24,12 +24,16 @@ type Persistor struct {
 // ~ CONSTRUCTOR
 //------------------------------------------------------------------
 
-func NewPersistorWithIndex(mongoURL string, collection string, index mgo.Index) (p *Persistor, err error) {
-	p, err = NewPersistor(mongoURL, collection)
+func NewPersistorWithIndex(mongoURL string, collectionName string, index mgo.Index) (p *Persistor, err error) {
+	p, err = NewPersistor(mongoURL, collectionName)
 	if err != nil {
 		return
 	}
-	err = p.GetCollection().EnsureIndex(index)
+
+	session, collection := p.GetCollection()
+	defer session.Close()
+
+	err = collection.EnsureIndex(index)
 	if err != nil {
 		return
 	}
@@ -65,9 +69,22 @@ func NewPersistor(mongoURL string, collection string) (p *Persistor, err error) 
 // ~ PUBLIC METHODS
 //------------------------------------------------------------------
 
-func (p *Persistor) GetCollection() *mgo.Collection {
+func (p *Persistor) GetCollection() (session *mgo.Session, collection *mgo.Collection) {
+	session = p.session.Clone()
+	collection = session.DB(p.db).C(p.collection)
+	return session, collection
+}
+
+// GetGlobalSessionCollection is used when multiple threads share the same connections (bad idea)
+// and should be used ONLY when necessary. Use get collection and return the connection to the connection
+// pool instead by invoking session.close() instead
+func (p *Persistor) GetGlobalSessionCollection() (collection *mgo.Collection) {
+	if err := p.session.Ping(); err != nil {
+		p.session.Refresh()
+	}
 	return p.session.DB(p.db).C(p.collection)
 }
+
 func (p *Persistor) GetCollectionName() string {
 	return p.collection
 }

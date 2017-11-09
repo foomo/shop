@@ -5,11 +5,9 @@ package crypto
 
 import (
 	"errors"
-
-	"git.bestbytes.net/Project-Globus-Services/utils"
-
 	zxcbvn "github.com/nbutton23/zxcvbn-go"
 	"github.com/nbutton23/zxcvbn-go/scoring"
+	"strconv"
 )
 
 var minLength int = -1
@@ -31,11 +29,13 @@ func DeterminePasswordStrength(password string, userInput []string) scoring.MinE
 // GetPasswordScore returns a score of 0 (poor), 1, 2, 3 or 4 (excellent) for the strength of the password
 func GetPasswordScore(password string, userInput []string) (int, error) {
 	if minLength != -1 && len(password) < minLength {
-		return 0, errors.New("Password must have at least " + utils.IntToString(minLength) + " characters!")
+		return 0, errors.New("Password must have at least " + strconv.Itoa(minLength) + " characters!")
 	}
 	if maxLength != -1 && len(password) > maxLength {
-		return 0, errors.New("Password must be not longer than " + utils.IntToString(maxLength) + " characters!")
+		return 0, errors.New("Password must be not longer than " + strconv.Itoa(maxLength) + " characters!")
 	}
 	match := DeterminePasswordStrength(password, userInput)
 	return match.Score, nil
 }
+
+
