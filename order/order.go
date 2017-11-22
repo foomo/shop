@@ -310,7 +310,11 @@ func (order *Order) SetPositionQuantity(itemID string, quantity float64, crossPr
 			if price != -1 {
 				newPos.Price = price
 			}
-			order.Positions = append(order.Positions, newPos)
+			// append new psoitions as first item
+			tmpPositions := []*Position{}
+			tmpPositions = append(tmpPositions, newPos)
+			tmpPositions = append(tmpPositions, order.Positions...)
+			order.Positions = tmpPositions
 			return order.Upsert()
 		}
 		return nil
