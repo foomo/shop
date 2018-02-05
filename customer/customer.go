@@ -20,13 +20,16 @@ import (
 //------------------------------------------------------------------
 
 const (
-	CountryCodeGermany       CountryCode  = "DE"
-	CountryCodeFrance        CountryCode  = "FR"
-	CountryCodeSwitzerland   CountryCode  = "CH"
-	CountryCodeLiechtenstein CountryCode  = "LI"
-	LanguageCodeFrance       LanguageCode = "fr"
-	LanguageCodeGermany      LanguageCode = "de"
-	LanguageCodeSwitzerland  LanguageCode = "ch"
+	CountryCodeGermany       CountryCode = "DE"
+	CountryCodeFrance        CountryCode = "FR"
+	CountryCodeSwitzerland   CountryCode = "CH"
+	CountryCodeAustria       CountryCode = "AT"
+	CountryCodeLiechtenstein CountryCode = "LI"
+	CountryCodeItaly         CountryCode = "IT"
+
+	LanguageCodeFrance      LanguageCode = "fr"
+	LanguageCodeGermany     LanguageCode = "de"
+	LanguageCodeSwitzerland LanguageCode = "ch"
 )
 
 //------------------------------------------------------------------
