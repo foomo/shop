@@ -490,6 +490,11 @@ func getOrderTotalForPriceRule(priceRule *PriceRule, calculationParameters *Calc
 		if contains(article.ID, priceRule.ExcludedItemIDsFromOrderAmountCalculation) {
 			continue
 		}
+
+		if contains(article.ID, calculationParameters.blacklistedItemIDs) {
+			continue
+		}
+
 		// rule has no customer or product group limitations
 		if len(priceRule.IncludedProductGroupIDS) == 0 &&
 			len(priceRule.ExcludedProductGroupIDS) == 0 &&
@@ -510,6 +515,7 @@ func getOrderTotalForPriceRule(priceRule *PriceRule, calculationParameters *Calc
 				IsOneProductOrCustomerGroupInIncludedGroups(priceRule.IncludedCustomerGroupIDS, calculationParameters.groupIDsForCustomer) &&
 				IsNoProductOrGroupInExcludeGroups(priceRule.ExcludedCustomerGroupIDS, calculationParameters.groupIDsForCustomer) {
 
+				total += article.Price * article.Quantity
 				if priceRule.CalculateDiscountedOrderAmount == true {
 					if orderDiscount, ok := orderDiscounts[article.ID]; ok {
 						itemDiscount := orderDiscount.TotalDiscountAmountApplicable
