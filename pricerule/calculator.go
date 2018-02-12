@@ -245,7 +245,7 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 	// vouchers: step 2
 	// find the vouchers and voucher rules
 	// find applicable pricerules of type TypeVoucher for
-
+	bonusVoucherCodes := []string{}
 	if len(voucherCodes) > 0 {
 		var ruleVoucherPairsStep2 []RuleVoucherPair
 		for _, voucherCode := range voucherCodes {
@@ -256,6 +256,12 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 				}
 				if err != nil {
 					log.Println("skipping voucher "+voucherCode, err)
+					continue
+				}
+
+				if voucherPriceRule.Type != TypeVoucher {
+					log.Println("skipping voucher "+voucherCode+" with type Voucher", err)
+					bonusVoucherCodes = append(bonusVoucherCodes, voucherCode)
 					continue
 				}
 
@@ -322,6 +328,62 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 	}
 
 	// ----------------------------------------------------------------------------------------------------------
+
+	// ----------------------------------------------------------------------------------------------------------
+	// vouchers: step 5
+	// find the vouchers and voucher rules
+	// find applicable pricerules of type TypeVoucher for
+
+	if len(bonusVoucherCodes) > 0 {
+		var ruleVoucherPairsStep5 []RuleVoucherPair
+		for _, voucherCode := range bonusVoucherCodes {
+			if len(voucherCode) > 0 {
+				voucherVo, voucherPriceRule, err := GetVoucherAndPriceRule(voucherCode, customProvider)
+				if voucherVo == nil {
+					log.Println("voucher not found for code: " + voucherCode + " in " + "priceRule.ApplyDiscounts")
+				}
+				if err != nil {
+					log.Println("skipping voucher "+voucherCode, err)
+					continue
+				}
+
+				if voucherPriceRule.Type != TypeBonusVoucher {
+					log.Println("skipping voucher "+voucherCode+" with type BonusVoucher", err)
+					continue
+				}
+
+				//check if rule is valid
+				if time.Now().Before(voucherPriceRule.ValidFrom) || time.Now().After(voucherPriceRule.ValidTo) {
+					log.Println("skipping vocucher" + voucherCode + " VlidFrom/ValidTo mismatch")
+					continue
+				}
+
+				if !voucherVo.TimeRedeemed.IsZero() {
+					if Verbose {
+						log.Println("voucher " + voucherCode + " already redeemed ... skipping")
+					}
+					continue
+				}
+
+				pair := RuleVoucherPair{
+					Rule:    voucherPriceRule,
+					Voucher: voucherVo,
+				}
+				ruleVoucherPairsStep5 = append(ruleVoucherPairsStep5, pair)
+			}
+		}
+		//apply them
+
+		//no products should be blacklisted
+		calculationParameters.blacklistedItemIDs = []string{}
+
+		// the bonus voucher should be applicable on shipping costs as well
+		calculationParameters.shippingGroupIDs = []string{}
+
+		for _, priceRulePair := range ruleVoucherPairsStep5 {
+			orderDiscounts = calculateRule(orderDiscounts, priceRulePair, calculationParameters)
+		}
+	}
 
 	timeTrack(nowAll, "All rules together")
 
@@ -646,6 +708,14 @@ func validatePriceRuleForPosition(priceRule PriceRule, article *Article, calcula
 
 // validatePriceRule -
 func validatePriceRule(priceRule PriceRule, checkedPosition *Article, calculationParameters *CalculationParameters, orderDiscounts OrderDiscounts) (ok bool, reason TypeRuleValidationMsg) {
+
+	if priceRule.Type == TypeBonusVoucher {
+		bonusApplicableAmount := getOrderTotalForPriceRule(&priceRule, calculationParameters, orderDiscounts)
+		if priceRule.Amount > bonusApplicableAmount {
+			return false, ValidationPriceRuleBonusValueTooHigh
+		}
+	}
+
 	if len(priceRule.CheckoutAttributes) > 0 {
 		match := false
 		for _, checkoutAttribute := range calculationParameters.checkoutAttributes {
