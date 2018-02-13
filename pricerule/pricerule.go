@@ -1,6 +1,7 @@
 package pricerule
 
 import (
+	"errors"
 	"log"
 	"sync"
 	"time"
@@ -17,7 +18,8 @@ const (
 	TypePromotionOrder        Type = "promotion_order"         // multiple can be applied
 	TypeVoucher               Type = "voucher"                 // rule associated to a voucher
 	TypePaymentMethodDiscount Type = "payment_method_discount" // rule associated to a payment method
-	TypeShipping              Type = "shipping"                // rule used to calculate shipping price
+	TypeShipping              Type = "shipping"
+	TypeBonusVoucher          Type = "bonus_voucher" // rule used to pay with
 
 	ActionItemByPercent ActionType = "item_by_percent"
 	ActionCartByPercent ActionType = "cart_by_percent"
@@ -102,7 +104,7 @@ type PriceRule struct {
 
 	ScaledAmounts []ScaledAmountLevel //defines discount scale 100 -> 2%, 200 -> 3% etc - See ActionScaledPercentage & ActionScaledAbsolute
 
-	ScaledAmountsPerQuantity []ScaledAmountLevel
+	ScaledAmountsPerQuantity []ScaledAmountLevel //@todo: remove- but double check if not used somewhere!!!
 
 	MinOrderAmount float64 //minimum amount for discount to be applocable
 
@@ -172,7 +174,6 @@ func NewPriceRule(ID string) *PriceRule {
 	priceRule.ExcludedProductGroupIDS = []string{}
 	priceRule.IncludedProductGroupIDS = []string{}
 	priceRule.CheckoutAttributes = []string{}
-	priceRule.MaxUsesPerCustomer = MaxInt
 	priceRule.MinOrderAmountApplicableItemsOnly = false
 	priceRule.Priority = 999
 	priceRule.ValidFrom = time.Date(1971, time.January, 1, 0, 0, 0, 0, time.UTC)
@@ -181,6 +182,44 @@ func NewPriceRule(ID string) *PriceRule {
 	priceRule.ItemSets = [][]string{}
 
 	return priceRule
+}
+
+func NewBonusPriceRule(ruleID string, amount float64, name map[string]string, description map[string]string, validFrom time.Time, validTo time.Time) (priceRule *PriceRule) {
+	priceRule = new(PriceRule)
+	priceRule.ID = ruleID
+	priceRule.Type = TypeBonusVoucher
+	priceRule.Name = name
+	priceRule.Description = description
+	priceRule.Action = ActionCartByAbsolute
+	priceRule.Amount = amount
+	priceRule.IsAmountIndependentOfQty = false
+	priceRule.MinOrderAmount = 0
+	priceRule.ExcludedItemIDsFromOrderAmountCalculation = []string{}
+	priceRule.QtyThreshold = 0
+	priceRule.MaxUses = MaxInt
+	priceRule.MaxUsesPerCustomer = 1
+	priceRule.Exclusive = false
+	priceRule.ExcludedProductGroupIDS = []string{}
+	priceRule.IncludedProductGroupIDS = []string{}
+	priceRule.CheckoutAttributes = []string{}
+	priceRule.CalculateDiscountedOrderAmount = true
+
+	priceRule.MinOrderAmountApplicableItemsOnly = false
+	priceRule.Priority = 999
+	priceRule.ValidFrom = validFrom
+	priceRule.ValidTo = validTo
+	priceRule.WhichXYFree = XYCheapestFree
+	priceRule.ItemSets = [][]string{}
+	return
+}
+
+func NewBonusVoucher(ruleID string, customerID string, voucherCode string, voucherID string) (voucher *Voucher, err error) {
+	if customerID == "" {
+		err = errors.New("customer ID must be provided in bonus vouchers")
+		return
+	}
+	voucher = NewVoucherWithRuleID(voucherID, voucherCode, ruleID, customerID)
+	return
 }
 
 //------------------------------------------------------------------
@@ -215,6 +254,9 @@ func (pricerule *PriceRule) Insert() error {
 // Upsert - upsers a PriceRule
 // note that if you programmatically manipulate the CreatedAt time, this methd will upsert it
 func (pricerule *PriceRule) Upsert() error {
+
+	pricerule.checkIfBonusVoucher()
+
 	//set created and modified times
 	if pricerule.CreatedAt.IsZero() {
 		priceruleFromDb, err := GetPriceRuleByID(pricerule.ID, nil)
@@ -235,6 +277,91 @@ func (pricerule *PriceRule) Upsert() error {
 		return err
 	}
 	return nil
+}
+
+func (pricerule *PriceRule) checkIfBonusVoucher() {
+	//check and fix TypeBonusVoucher
+	if pricerule.Type == TypeBonusVoucher {
+		if pricerule.Action != ActionCartByAbsolute {
+			pricerule.Action = ActionCartByAbsolute
+			log.Println(pricerule.ID + " was not cart by absolute for bonus voucher")
+		}
+
+		if pricerule.MinOrderAmount > 0 {
+			log.Println(pricerule.ID + " mio order amount was not 0 for bonus voucher")
+			pricerule.MinOrderAmount = 0
+		}
+
+		if pricerule.MinOrderAmountApplicableItemsOnly != false {
+			log.Println(pricerule.ID + "MinOrderAmountApplicableItemsOnly vas not false for bonus voucher")
+			pricerule.MinOrderAmountApplicableItemsOnly = false
+		}
+
+		if len(pricerule.ExcludedCustomerGroupIDS) != 0 {
+			log.Println(pricerule.ID + "ExcludedCustomerGroupIDS was not empty for bonus voucher")
+			pricerule.ExcludedCustomerGroupIDS = []string{}
+		}
+
+		if len(pricerule.ExcludedProductGroupIDS) != 0 {
+			log.Println(pricerule.ID + "ExcludedProductGroupIDS was not empty for bonus voucher")
+			pricerule.ExcludedProductGroupIDS = []string{}
+		}
+
+		if len(pricerule.IncludedCustomerGroupIDS) != 0 {
+			log.Println(pricerule.ID + "IncludedCustomerGroupIDS was not empty for bonus voucher")
+			pricerule.IncludedCustomerGroupIDS = []string{}
+		}
+
+		if len(pricerule.IncludedProductGroupIDS) != 0 {
+			log.Println(pricerule.ID + "IncludedProductGroupIDS was not empty for bonus voucher")
+			pricerule.IncludedProductGroupIDS = []string{}
+		}
+
+		if pricerule.IsAmountIndependentOfQty != true {
+			log.Println(pricerule.ID + "IsAmountIndependentOfQty was not true for bonus voucher")
+			pricerule.IsAmountIndependentOfQty = true
+		}
+
+		if pricerule.Exclusive != false {
+			log.Println(pricerule.ID + "Exclusive was not false for bonus voucher")
+			pricerule.Exclusive = false
+		}
+
+		if len(pricerule.ItemSets) != 0 {
+			log.Println(pricerule.ID + "Itemsets were not empty for bonus voucher")
+			pricerule.ItemSets = [][]string{}
+		}
+
+		/*if pricerule.MaxUses != 1 {
+			log.Println(pricerule.ID + "MaxUses was not 1 for bonus voucher")
+			pricerule.MaxUses = 1
+		}*/
+
+		if pricerule.MaxUsesPerCustomer != 1 {
+			log.Println(pricerule.ID + "MaxUsesPerCustomer was not 1 for bonus voucher")
+			pricerule.MaxUsesPerCustomer = 1
+		}
+
+		if pricerule.QtyThreshold > 0 {
+			log.Println(pricerule.ID + "QtyThreshold was not 0 for bonus voucher")
+			pricerule.QtyThreshold = 0
+		}
+
+		if len(pricerule.ScaledAmounts) != 0 {
+			log.Println(pricerule.ID + "ScaledAmounts were not empt for bonus voucher")
+			pricerule.ScaledAmounts = []ScaledAmountLevel{}
+		}
+
+		if len(pricerule.WhichXYList) != 0 {
+			log.Println(pricerule.ID + "WhichXYList were not empt for bonus voucher")
+			pricerule.WhichXYList = []string{}
+		}
+
+		if pricerule.CalculateDiscountedOrderAmount != false {
+			log.Println(pricerule.ID + "CalculateDiscountedOrderAmount was false for BonusVoucher")
+			pricerule.CalculateDiscountedOrderAmount = true
+		}
+	}
 }
 
 // UpdatePriceRuleUsageHistoryAtomic - atomicaly update times used and times used per customer if customer id provided

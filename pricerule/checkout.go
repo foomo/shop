@@ -30,6 +30,7 @@ const (
 
 	ValidationPriceRuleCheckoutAttributesMismatch TypeRuleValidationMsg = "pricerule_checkout_attributes_missmatch"
 	ValidationPriceRuleQuantityThresholdNotMet    TypeRuleValidationMsg = "qty_below_pricerule_quantity_threshold"
+	ValidationPriceRuleBonusValueTooHigh          TypeRuleValidationMsg = "bonus_value_too_high"
 
 	ValidationPriceRuleBlacklist                  TypeRuleValidationMsg = "products_blacklisted"
 	ValidationPriceRuleNotForCatalogueCalculation TypeRuleValidationMsg = "not_for_catalogue_calculation"
@@ -134,8 +135,17 @@ func ValidateVoucher(voucherCode string, articleCollection *ArticleCollection, c
 	calculationParameters.groupIDsForCustomer = groupIDsForCustomer
 
 	//find the groupIds for articleCollection items
+
 	productGroupIDsPerPosition := getProductGroupIDsPerPosition(articleCollection, false)
 	calculationParameters.productGroupIDsPerPosition = productGroupIDsPerPosition
+
+	//remove all group limitations if bonus voucher
+	if voucherPriceRule.Type == TypeBonusVoucher {
+		//no products should be blacklisted
+		calculationParameters.blacklistedItemIDs = []string{}
+		// the bonus voucher should be applicable on shipping costs as well
+		calculationParameters.shippingGroupIDs = []string{}
+	}
 
 	ok, priceRuleFailReason := validatePriceRuleForOrder(*voucherPriceRule, calculationParameters, OrderDiscounts{})
 	if !ok {

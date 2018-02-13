@@ -62,6 +62,21 @@ func NewVoucher(ID string, voucherCode string, priceRule *PriceRule, customerID 
 	return voucher
 }
 
+func NewVoucherWithRuleID(ID string, voucherCode string, priceRuleID string, customerID string) *Voucher {
+	voucher := new(Voucher)
+	voucher.ID = ID
+	voucher.PriceRuleID = priceRuleID
+	//	voucher.MappingID = priceRule.MappingID
+	voucher.VoucherCode = voucherCode
+	if len(customerID) > 0 {
+		voucher.VoucherType = VoucherTypePersonalized
+	} else {
+		voucher.VoucherType = VoucherTypeAnonymous
+	}
+
+	return voucher
+}
+
 //------------------------------------------------------------------
 // ~ PUBLIC METHODS
 //------------------------------------------------------------------
@@ -149,7 +164,7 @@ func (voucher *Voucher) Delete() error {
 
 // DeleteVoucher - delete voucher
 func DeleteVoucher(ID string) error {
-	session, collection :=  GetPersistorForObject(new(Voucher)).GetCollection()
+	session, collection := GetPersistorForObject(new(Voucher)).GetCollection()
 	defer session.Close()
 
 	err := collection.Remove(bson.M{"id": ID})
@@ -158,7 +173,7 @@ func DeleteVoucher(ID string) error {
 
 // RemoveAllVouchers -
 func RemoveAllVouchers() error {
-	session, collection :=  GetPersistorForObject(new(Voucher)).GetCollection()
+	session, collection := GetPersistorForObject(new(Voucher)).GetCollection()
 	defer session.Close()
 
 	_, err := collection.RemoveAll(bson.M{})
@@ -175,6 +190,7 @@ func GetVoucherAndPriceRule(voucherCode string, customProvider PriceRuleCustomPr
 	if voucher != nil && len(voucher.PriceRuleID) > 0 {
 		//get the pricerule
 		priceRule, err := GetPriceRuleByID(voucher.PriceRuleID, customProvider)
+
 		if err != nil {
 			return voucher, nil, err
 		}

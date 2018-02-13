@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/foomo/shop/utils"
 )
 
@@ -85,6 +86,91 @@ func Init(t *testing.T) {
 
 	createMockVouchers(t)
 	checkVouchersExists(t)
+}
+
+func testBonuVoucher(t *testing.T) {
+	productsInGroups = make(map[string][]string)
+	productsInGroups[GroupIDSale] = []string{ProductID1, ProductID2, ProductID1SKU1, ProductID1SKU2, ProductID2SKU1, ProductID2SKU2}
+	productsInGroups[GroupIDNormal] = []string{ProductID4, ProductID5, ProductID4SKU1, ProductID4SKU2, ProductID5SKU1, ProductID5SKU2}
+	productsInGroups[GroupIDShirts] = []string{ProductID3, ProductID4, ProductID5, ProductID3SKU1, ProductID4SKU1, ProductID5SKU1, ProductID3SKU2, ProductID4SKU2, ProductID5SKU2}
+
+	RemoveAllGroups()
+	RemoveAllPriceRules()
+	RemoveAllVouchers()
+
+	name := map[string]string{
+		"de": "bonus20",
+		"fr": "bonus20",
+		"it": "bonus20",
+	}
+	description := map[string]string{
+		"de": "bonus20",
+		"fr": "bonus20",
+		"it": "bonus20",
+	}
+
+	priceRule := NewBonusPriceRule("bonus20", 200.10, name, description, time.Now(), time.Now().AddDate(1, 0, 0))
+	err := priceRule.Upsert()
+	if err != nil {
+		panic(err)
+	}
+
+	bonusVoucher, createErr := NewBonusVoucher(priceRule.ID, CustomerID1, "bonuscode", "bonus-id")
+	if createErr != nil {
+		panic(createErr)
+	}
+	err = bonusVoucher.Upsert()
+	if err != nil {
+		panic(err)
+	}
+
+	// normal voucher
+
+	// VOUCHERS ------------``
+	priceRule = NewPriceRule("nonbonus")
+	priceRule.Name = map[string]string{
+		"de": "nonbonus",
+		"fr": "nonbonus",
+		"it": "nonbonus",
+	}
+	priceRule.Type = TypeVoucher
+	priceRule.Description = priceRule.Name
+	priceRule.Action = ActionItemByAbsolute
+	priceRule.Amount = 10.0
+	priceRule.Priority = 800
+	priceRule.IncludedProductGroupIDS = []string{}
+	priceRule.IncludedCustomerGroupIDS = []string{}
+	err = priceRule.Upsert()
+	if err != nil {
+		panic(err)
+	}
+
+	priceRule, err = GetPriceRuleByID("nonbonus", nil)
+	if err != nil {
+		panic(err)
+	}
+	voucher := NewVoucher("nonbonus-id", "non-bonuscode", priceRule, "")
+
+	err = voucher.Upsert()
+	if err != nil {
+		panic(err)
+	}
+
+	orderVo, err := createMockOrder(t)
+	if err != nil {
+		panic(err)
+	}
+
+	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{"bonuscode", "non-bonuscode"}, []string{}, 0.05, nil)
+	utils.PrintJSON(discountsVo)
+	utils.PrintJSON(summary)
+	utils.PrintJSON(err)
+
+	validVoucher, validationErr := ValidateVoucher("bonuscode", orderVo, []string{})
+	spew.Dump(validVoucher)
+	spew.Dump("------------")
+	spew.Dump(validationErr)
+
 }
 
 // Test groups creation
