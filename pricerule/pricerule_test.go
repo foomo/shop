@@ -1155,7 +1155,7 @@ func testExclude(t *testing.T) {
 }
 
 // Test discounts for customers (employee)
-func TestCustomerDiscounts(t *testing.T) {
+func testCustomerDiscounts(t *testing.T) {
 
 	productsInGroups = make(map[string][]string)
 	productsInGroups[GroupIDSale] = []string{ProductID1, ProductID2, ProductID1SKU1, ProductID1SKU2, ProductID2SKU1, ProductID2SKU2}
@@ -1276,6 +1276,154 @@ func TestCustomerDiscounts(t *testing.T) {
 	priceRule.MinOrderAmountApplicableItemsOnly = false
 	priceRule.IncludedProductGroupIDS = []string{}
 	priceRule.IncludedCustomerGroupIDS = []string{}
+	err = priceRule.Upsert()
+	if err != nil {
+		panic(err)
+	}
+
+	priceRule, err = GetPriceRuleByID(PriceRuleIDSaleVoucher, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	voucher := NewVoucher(VoucherID1, VoucherCode1, priceRule, CustomerID1)
+
+	err = voucher.Upsert()
+	if err != nil {
+		panic(err)
+	}
+
+	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{VoucherCode1}, []string{}, 0.05, nil)
+	utils.PrintJSON(discountsVo)
+	utils.PrintJSON(summary)
+	utils.PrintJSON(err)
+
+}
+
+func testApplicableInCatalogFlag(t *testing.T) {
+	productsInGroups = make(map[string][]string)
+	productsInGroups[GroupIDSale] = []string{ProductID1, ProductID2, ProductID1SKU1, ProductID1SKU2, ProductID2SKU1, ProductID2SKU2}
+	productsInGroups[GroupIDNormal] = []string{ProductID4, ProductID5, ProductID4SKU1, ProductID4SKU2, ProductID5SKU1, ProductID5SKU2}
+	productsInGroups[GroupIDShirts] = []string{ProductID3, ProductID4, ProductID5, ProductID3SKU1, ProductID4SKU1, ProductID5SKU1, ProductID3SKU2, ProductID4SKU2, ProductID5SKU2}
+
+	RemoveAllGroups()
+	RemoveAllPriceRules()
+	RemoveAllVouchers()
+	checkGroupsNotExists(t)
+	createMockCustomerGroups(t)
+	createMockProductGroups(t)
+	checkGroupsExists(t)
+	orderVo, err := createMockOrder(t)
+	if err != nil {
+		panic(err)
+	}
+
+	//
+	priceRule := NewPriceRule(PriceRuleIDSaleProduct1)
+	priceRule.Name = map[string]string{
+		"de": PriceRuleIDSale,
+		"fr": PriceRuleIDSale,
+		"it": PriceRuleIDSale,
+	}
+	priceRule.Type = TypePromotionProduct
+	priceRule.Description = priceRule.Name
+	priceRule.Action = ActionItemByAbsolute
+	priceRule.Amount = 20.0
+	priceRule.IncludedProductGroupIDS = []string{GroupIDShirts}
+	priceRule.IncludedCustomerGroupIDS = []string{}
+	priceRule.MinOrderAmount = 100
+	priceRule.MinOrderAmountApplicableItemsOnly = true
+	priceRule.CalculateDiscountedOrderAmount = false
+	err = priceRule.Upsert()
+	if err != nil {
+		panic(err)
+	}
+
+	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{}, []string{}, 0.05, nil)
+	utils.PrintJSON(discountsVo)
+	utils.PrintJSON(summary)
+	utils.PrintJSON(err)
+
+}
+
+func testAbsoluteVoucher(t *testing.T) {
+	productsInGroups = make(map[string][]string)
+	productsInGroups[GroupIDSale] = []string{ProductID1, ProductID2, ProductID1SKU1, ProductID1SKU2, ProductID2SKU1, ProductID2SKU2}
+	productsInGroups[GroupIDNormal] = []string{ProductID4, ProductID5, ProductID4SKU1, ProductID4SKU2, ProductID5SKU1, ProductID5SKU2}
+	productsInGroups[GroupIDShirts] = []string{ProductID3, ProductID4, ProductID5, ProductID3SKU1, ProductID4SKU1, ProductID5SKU1, ProductID3SKU2, ProductID4SKU2, ProductID5SKU2}
+
+	RemoveAllGroups()
+	RemoveAllPriceRules()
+	RemoveAllVouchers()
+	checkGroupsNotExists(t)
+	createMockCustomerGroups(t)
+	createMockProductGroups(t)
+	checkGroupsExists(t)
+
+	//create blacklist
+	group := new(Group)
+	group.Type = ProductGroup
+	group.ID = "BlackList"
+	group.Name = "BlackList"
+	group.Type = BlacklistGroup
+	group.AddGroupItemIDs([]string{ProductID3SKU2})
+
+	err := group.Upsert()
+	if err != nil {
+		t.Fatal("Could not upsert product group " + "BlackList")
+	}
+
+	orderVo, err := createMockOrder2(t)
+	if err != nil {
+		panic(err)
+	}
+
+	// Customer discount 30%
+	priceRule := NewPriceRule(PriceRuleIDSaleCustomer1)
+	priceRule.Name = map[string]string{
+		"de": PriceRuleIDSaleVoucher,
+		"fr": PriceRuleIDSaleVoucher,
+		"it": PriceRuleIDSaleVoucher,
+	}
+	priceRule.Type = TypePromotionCustomer
+	priceRule.Description = priceRule.Name
+	priceRule.Action = ActionItemByPercent
+	priceRule.Amount = 30.0
+	priceRule.Priority = 0
+	priceRule.MinOrderAmount = 0
+	priceRule.ValidFrom = time.Date(1999, 12, 1, 12, 0, 0, 0, time.UTC)
+	priceRule.ValidTo = time.Date(2018, 12, 1, 12, 0, 0, 0, time.UTC)
+
+	priceRule.MinOrderAmountApplicableItemsOnly = true
+	priceRule.IncludedProductGroupIDS = []string{}
+	priceRule.IncludedCustomerGroupIDS = []string{}
+	err = priceRule.Upsert()
+	if err != nil {
+		panic(err)
+	}
+
+	// Voucher 100 100
+	priceRule = NewPriceRule(PriceRuleIDSaleVoucher)
+	priceRule.Name = map[string]string{
+		"de": PriceRuleIDSaleVoucher,
+		"fr": PriceRuleIDSaleVoucher,
+		"it": PriceRuleIDSaleVoucher,
+	}
+	priceRule.Type = TypeVoucher
+	priceRule.Description = priceRule.Name
+	priceRule.Action = ActionCartByAbsolute
+	priceRule.Amount = 100.0
+
+	priceRule.Priority = 0
+	priceRule.MinOrderAmount = 0
+	priceRule.ValidFrom = time.Date(1999, 12, 1, 12, 0, 0, 0, time.UTC)
+	priceRule.ValidTo = time.Date(2018, 12, 1, 12, 0, 0, 0, time.UTC)
+
+	priceRule.MinOrderAmount = 100
+	priceRule.MinOrderAmountApplicableItemsOnly = true
+	priceRule.IncludedProductGroupIDS = []string{}
+	priceRule.IncludedCustomerGroupIDS = []string{}
+
 	err = priceRule.Upsert()
 	if err != nil {
 		panic(err)
@@ -1775,12 +1923,58 @@ func createMockOrder(t *testing.T) (*ArticleCollection, error) {
 		i++
 		positionVo := &Article{}
 		positionVo.ID = positionID
-		positionVo.Price = 100
-		positionVo.Quantity = 1
+		positionVo.Price = 15
+		positionVo.Quantity = 10
 
 		orderVo.Articles = append(orderVo.Articles, positionVo)
 
 	}
+	return orderVo, nil
+}
+
+func createMockOrder1(t *testing.T) (*ArticleCollection, error) {
+	orderVo := &ArticleCollection{}
+
+	orderVo.CustomerID = CustomerID1
+	orderVo.CustomerType = CustomerID1
+
+	positionVo := &Article{}
+	positionVo.ID = ProductID1SKU1
+	positionVo.Price = 15
+	positionVo.Quantity = 2
+
+	orderVo.Articles = append(orderVo.Articles, positionVo)
+
+	positionVo = &Article{}
+	positionVo.ID = ProductID3SKU2
+	positionVo.Price = 60
+	positionVo.Quantity = 1
+
+	orderVo.Articles = append(orderVo.Articles, positionVo)
+
+	return orderVo, nil
+}
+
+func createMockOrder2(t *testing.T) (*ArticleCollection, error) {
+	orderVo := &ArticleCollection{}
+
+	orderVo.CustomerID = CustomerID1
+	orderVo.CustomerType = CustomerID1
+
+	positionVo := &Article{}
+	positionVo.ID = ProductID3SKU2
+	positionVo.Price = 500
+	positionVo.Quantity = 2
+
+	orderVo.Articles = append(orderVo.Articles, positionVo)
+
+	positionVo = &Article{}
+	positionVo.ID = ProductID1SKU1
+	positionVo.Price = 49.9
+	positionVo.Quantity = 2
+
+	orderVo.Articles = append(orderVo.Articles, positionVo)
+
 	return orderVo, nil
 }
 
