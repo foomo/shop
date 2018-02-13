@@ -60,6 +60,7 @@ type DiscountApplied struct {
 	AppliedInCatalog        bool // applied in catalog calculation
 	ApplicableInCatalog     bool //could have been applied in catalog
 	IsTypePromotionCustomer bool // is the type TypePromotionCustomer
+	IsTypeBonusVoucher      bool // is the type Bonus Voucher
 
 	Custom interface{}
 }

@@ -56,6 +56,9 @@ func getInitializedDiscountApplied(priceRuleVoucherPair RuleVoucherPair, orderDi
 	} else {
 		discountApplied.CalculationBasePrice = orderDiscounts[itemID].VoucherCalculationBaseItemPrice
 	}
+	if priceRuleVoucherPair.Rule.Type == TypeBonusVoucher {
+		discountApplied.IsTypeBonusVoucher = true
+	}
 	discountApplied.Price = orderDiscounts[itemID].InitialItemPrice
 	return discountApplied
 }
