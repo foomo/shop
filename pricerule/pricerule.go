@@ -282,85 +282,21 @@ func (pricerule *PriceRule) Upsert() error {
 func (pricerule *PriceRule) checkIfBonusVoucher() {
 	//check and fix TypeBonusVoucher
 	if pricerule.Type == TypeBonusVoucher {
-		if pricerule.Action != ActionCartByAbsolute {
-			pricerule.Action = ActionCartByAbsolute
-			log.Println(pricerule.ID + " was not cart by absolute for bonus voucher")
-		}
+		// Overwrite values which should not be set differently for bonus voucher promos
+		pricerule.Action = ActionCartByAbsolute
+		pricerule.MinOrderAmount = 0
+		pricerule.MinOrderAmountApplicableItemsOnly = false
+		pricerule.ExcludedCustomerGroupIDS = []string{}
+		pricerule.IncludedCustomerGroupIDS = []string{}
+		pricerule.IsAmountIndependentOfQty = true
+		pricerule.Exclusive = false
+		pricerule.ItemSets = [][]string{}
+		pricerule.MaxUsesPerCustomer = 1
+		pricerule.QtyThreshold = 0
+		pricerule.ScaledAmounts = []ScaledAmountLevel{}
+		pricerule.WhichXYList = []string{}
+		pricerule.CalculateDiscountedOrderAmount = true
 
-		if pricerule.MinOrderAmount > 0 {
-			log.Println(pricerule.ID + " mio order amount was not 0 for bonus voucher")
-			pricerule.MinOrderAmount = 0
-		}
-
-		if pricerule.MinOrderAmountApplicableItemsOnly != false {
-			log.Println(pricerule.ID + "MinOrderAmountApplicableItemsOnly vas not false for bonus voucher")
-			pricerule.MinOrderAmountApplicableItemsOnly = false
-		}
-
-		if len(pricerule.ExcludedCustomerGroupIDS) != 0 {
-			log.Println(pricerule.ID + "ExcludedCustomerGroupIDS was not empty for bonus voucher")
-			pricerule.ExcludedCustomerGroupIDS = []string{}
-		}
-
-		if len(pricerule.ExcludedProductGroupIDS) != 0 {
-			log.Println(pricerule.ID + "ExcludedProductGroupIDS was not empty for bonus voucher")
-			pricerule.ExcludedProductGroupIDS = []string{}
-		}
-
-		if len(pricerule.IncludedCustomerGroupIDS) != 0 {
-			log.Println(pricerule.ID + "IncludedCustomerGroupIDS was not empty for bonus voucher")
-			pricerule.IncludedCustomerGroupIDS = []string{}
-		}
-
-		if len(pricerule.IncludedProductGroupIDS) != 0 {
-			log.Println(pricerule.ID + "IncludedProductGroupIDS was not empty for bonus voucher")
-			pricerule.IncludedProductGroupIDS = []string{}
-		}
-
-		if pricerule.IsAmountIndependentOfQty != true {
-			log.Println(pricerule.ID + "IsAmountIndependentOfQty was not true for bonus voucher")
-			pricerule.IsAmountIndependentOfQty = true
-		}
-
-		if pricerule.Exclusive != false {
-			log.Println(pricerule.ID + "Exclusive was not false for bonus voucher")
-			pricerule.Exclusive = false
-		}
-
-		if len(pricerule.ItemSets) != 0 {
-			log.Println(pricerule.ID + "Itemsets were not empty for bonus voucher")
-			pricerule.ItemSets = [][]string{}
-		}
-
-		/*if pricerule.MaxUses != 1 {
-			log.Println(pricerule.ID + "MaxUses was not 1 for bonus voucher")
-			pricerule.MaxUses = 1
-		}*/
-
-		if pricerule.MaxUsesPerCustomer != 1 {
-			log.Println(pricerule.ID + "MaxUsesPerCustomer was not 1 for bonus voucher")
-			pricerule.MaxUsesPerCustomer = 1
-		}
-
-		if pricerule.QtyThreshold > 0 {
-			log.Println(pricerule.ID + "QtyThreshold was not 0 for bonus voucher")
-			pricerule.QtyThreshold = 0
-		}
-
-		if len(pricerule.ScaledAmounts) != 0 {
-			log.Println(pricerule.ID + "ScaledAmounts were not empt for bonus voucher")
-			pricerule.ScaledAmounts = []ScaledAmountLevel{}
-		}
-
-		if len(pricerule.WhichXYList) != 0 {
-			log.Println(pricerule.ID + "WhichXYList were not empt for bonus voucher")
-			pricerule.WhichXYList = []string{}
-		}
-
-		if pricerule.CalculateDiscountedOrderAmount != false {
-			log.Println(pricerule.ID + "CalculateDiscountedOrderAmount was false for BonusVoucher")
-			pricerule.CalculateDiscountedOrderAmount = true
-		}
 	}
 }
 
