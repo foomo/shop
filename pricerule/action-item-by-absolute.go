@@ -34,7 +34,7 @@ func calculateDiscountsItemByAbsolute(priceRuleVoucherPair RuleVoucherPair, orde
 
 			discountApplied.AppliedInCatalog = calculationParameters.isCatalogCalculation
 			discountApplied.ApplicableInCatalog = false
-			if len(priceRuleVoucherPair.Rule.CheckoutAttributes) == 0 && (priceRuleVoucherPair.Rule.Type == TypePromotionProduct || calculationParameters.isCatalogCalculation) {
+			if len(priceRuleVoucherPair.Rule.CheckoutAttributes) == 0 && (priceRuleVoucherPair.Rule.Type == TypePromotionProduct && priceRuleVoucherPair.Rule.QtyThreshold == 0 || calculationParameters.isCatalogCalculation) {
 				discountApplied.ApplicableInCatalog = true
 			}
 			discountApplied.IsTypePromotionCustomer = false
