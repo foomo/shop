@@ -3,6 +3,8 @@ package address
 import (
 	"testing"
 
+	"github.com/foomo/shop/unique"
+
 	"github.com/stretchr/testify/assert"
 
 	"gopkg.in/mgo.v2/bson"
@@ -43,13 +45,13 @@ func TestPersonContactsMigration(t *testing.T) {
 		Birthday:   "1973-12-22",
 		Contacts: []*Contact{
 			&Contact{
-				ID:        "asdfghjklö",
+				ID:        unique.GetNewIDShortID(),
 				IsDefault: true,
 				Type:      ContactTypeEmail,
 				Value:     "foo@example.com",
 			},
 			&Contact{
-				ID:        "1234567890",
+				ID:        unique.GetNewIDShortID(),
 				IsDefault: true,
 				Type:      ContactTypePhone,
 				Value:     "+49 1234 56 78 990",

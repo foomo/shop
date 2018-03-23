@@ -1,6 +1,7 @@
 package address
 
 import (
+	"github.com/foomo/shop/unique"
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -45,20 +46,24 @@ func bsonDecodeOldPersonStruct(p *Person, raw bson.Raw) error {
 	p.Title = decodedOld.Title
 	p.Salutation = decodedOld.Salutation
 	p.Birthday = decodedOld.Birthday
-	p.Contacts = []*Contact{
-		&Contact{
-			ID:        "dfghjkl",
-			IsDefault: true,
-			Type:      ContactTypeEmail,
-			Value:     decodedOld.Contacts.Email,
-		},
-		&Contact{
-			ID:        "sfgfgjghfj",
-			IsDefault: true,
-			Type:      ContactTypePhone,
-			Value:     decodedOld.Contacts.PhoneMobile,
-		},
+	p.Contacts = []*Contact{}
+
+	appendContact := func(contacts []*Contact, contactValue string, contactType ContactType) []*Contact {
+		if contactValue != "" {
+			contacts = append(contacts, &Contact{
+				ID:        unique.GetNewIDShortID(),
+				IsDefault: true,
+				Type:      contactType,
+				Value:     contactValue,
+			})
+		}
+		return contacts
 	}
+
+	p.Contacts = appendContact(p.Contacts, decodedOld.Contacts.Email, ContactTypeEmail)
+	p.Contacts = appendContact(p.Contacts, decodedOld.Contacts.PhoneMobile, ContactTypePhoneMobile)
+	p.Contacts = appendContact(p.Contacts, decodedOld.Contacts.PhoneLandLine, ContactTypePhoneLandline)
+	p.Contacts = appendContact(p.Contacts, decodedOld.Contacts.Skype, ContactTypeSkype)
 
 	// no error
 	return nil

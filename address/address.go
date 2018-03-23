@@ -14,8 +14,11 @@ const (
 	ContactTypePhone         ContactType = "phone"
 	ContactTypePhoneMobile   ContactType = "mobile"
 	ContactTypePhoneLandline ContactType = "landline"
-	ContactTypeSkype         ContactType = "skype"
 	ContactTypeFax           ContactType = "fax"
+	ContactTypeSkype         ContactType = "skype"
+	ContactTypeSlack         ContactType = "slack"
+	ContactTypeTwitter       ContactType = "twitter"
+	ContactTypeFacebook      ContactType = "facebook"
 
 	SalutationTypeMr       SalutationType = "male"   //"Mr"
 	SalutationTypeMrs      SalutationType = "female" //"Mrs"
@@ -57,13 +60,6 @@ type Person struct {
 	Salutation SalutationType
 	Birthday   string
 	Contacts   []*Contact
-}
-
-type Contact struct {
-	ID        string
-	Type      ContactType
-	Value     string
-	IsDefault bool
 }
 
 func (address *Address) GetID() string {
