@@ -6,23 +6,27 @@ type SalutationType string
 type TitleType string
 
 const (
-	AddressDefaultBilling    AddressType    = "addresDefaultBilling"
-	AddressDefaultShipping   AddressType    = "addressDefaultShipping"
-	AddressOther             AddressType    = "addressOther"
-	ContactTypePhoneLandline ContactType    = "landline"
-	ContactTypePhoneMobile   ContactType    = "mobile"
-	ContactTypeEmail         ContactType    = "email"
-	ContactTypeSkype         ContactType    = "skype"
-	ContactTypeFax           ContactType    = "fax"
-	SalutationTypeMr         SalutationType = "male"   //"Mr"
-	SalutationTypeMrs        SalutationType = "female" //"Mrs"
-	SalutationTypeMrAndMrs   SalutationType = "MrAndMrs"
-	SalutationTypeCompany    SalutationType = "Company" // TODO: find better wording
-	SalutationTypeFamily     SalutationType = "Family"  // TODO: find better wording
-	TitleTypeDr              TitleType      = "Dr"
-	TitleTypeProf            TitleType      = "Prof."
-	TitleTypeProfDr          TitleType      = "Prof. Dr."
-	TitleTypePriest          TitleType      = "Priest" // TODO: find better wording
+	AddressDefaultBilling  AddressType = "addresDefaultBilling"
+	AddressDefaultShipping AddressType = "addressDefaultShipping"
+	AddressOther           AddressType = "addressOther"
+
+	ContactTypeEmail         ContactType = "email"
+	ContactTypePhone         ContactType = "phone"
+	ContactTypePhoneMobile   ContactType = "mobile"
+	ContactTypePhoneLandline ContactType = "landline"
+	ContactTypeSkype         ContactType = "skype"
+	ContactTypeFax           ContactType = "fax"
+
+	SalutationTypeMr       SalutationType = "male"   //"Mr"
+	SalutationTypeMrs      SalutationType = "female" //"Mrs"
+	SalutationTypeMrAndMrs SalutationType = "MrAndMrs"
+	SalutationTypeCompany  SalutationType = "Company" // TODO: find better wording
+	SalutationTypeFamily   SalutationType = "Family"  // TODO: find better wording
+
+	TitleTypeDr     TitleType = "Dr"
+	TitleTypeProf   TitleType = "Prof."
+	TitleTypeProfDr TitleType = "Prof. Dr."
+	TitleTypePriest TitleType = "Priest" // TODO: find better wording
 )
 
 type Address struct {
@@ -52,14 +56,14 @@ type Person struct {
 	Title      TitleType
 	Salutation SalutationType
 	Birthday   string
-	Contacts   *Contacts
+	Contacts   []*Contact
 }
-type Contacts struct {
-	PhoneLandLine string
-	PhoneMobile   string
-	Email         string
-	Skype         string
-	Primary       ContactType
+
+type Contact struct {
+	ID        string
+	Type      ContactType
+	Value     string
+	IsDefault bool
 }
 
 func (address *Address) GetID() string {
@@ -93,21 +97,4 @@ func (address *Address) Equals(otherAddress *Address) bool {
 	equal = equal && address.Country == otherAddress.Country
 
 	return equal
-}
-
-// GetPrimaryContact returns primary contact as string
-func (c *Contacts) GetPrimaryContact() string {
-	switch c.Primary {
-	case ContactTypePhoneLandline:
-		return string(ContactTypePhoneLandline) + ": " + c.PhoneLandLine
-	case ContactTypePhoneMobile:
-		return string(ContactTypePhoneMobile) + ": " + c.PhoneMobile
-	case ContactTypeEmail:
-		return string(ContactTypeEmail) + ": " + c.Email
-	case ContactTypeSkype:
-		return string(ContactTypeSkype) + ": " + c.Skype
-		// case ContactTypeFax: // 2016 anyone??
-		// 	return string(ContactTypeFax) + ": " + c.Fax
-	}
-	return "No primary contact available!"
 }
