@@ -1,7 +1,5 @@
 package address
 
-import "github.com/foomo/shop/address"
-
 type Contact struct {
 	ID        string
 	Type      ContactType
@@ -10,17 +8,17 @@ type Contact struct {
 }
 
 func CreatePhoneContact(phone string, isDefault bool) *Contact {
-	return &address.Contact{
+	return &Contact{
 		IsDefault: isDefault,
-		Type:      address.ContactTypePhone,
+		Type:      ContactTypePhone,
 		Value:     phone,
 	}
 }
 
 func CreateMailContact(mail string, isDefault bool) *Contact {
-	return &address.Contact{
+	return &Contact{
 		IsDefault: isDefault,
-		Type:      address.ContactTypePhone,
+		Type:      ContactTypePhone,
 		Value:     mail,
 	}
 }
