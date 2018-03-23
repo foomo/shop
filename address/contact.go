@@ -1,5 +1,9 @@
 package address
 
+import (
+	"strings"
+)
+
 type Contact struct {
 	ID        string
 	Type      ContactType
@@ -19,7 +23,7 @@ func CreateMailContact(mail string, isDefault bool) *Contact {
 	return &Contact{
 		IsDefault: isDefault,
 		Type:      ContactTypePhone,
-		Value:     mail,
+		Value:     strings.ToLower(mail),
 	}
 }
 

@@ -132,7 +132,7 @@ func NewCustomer(email, password string, customProvider CustomerCustomProvider) 
 		LastModifiedAt: utils.TimeNow(),
 		Person: &address.Person{
 			Contacts: []*address.Contact{
-				address.CreateMailContact(mail, true),
+				address.CreateMailContact(email, true),
 			},
 		},
 		Localization: &Localization{},
@@ -250,7 +250,7 @@ func (customer *Customer) AddAddress(addr *address.Address) (string, error) {
 		addr.Person = &address.Person{}
 	}
 	if addr.Person.Contacts == nil {
-		addr.Person.Contacts = []*address.Contacts{}
+		addr.Person.Contacts = []*address.Contact{}
 	}
 
 	// If Person of Customer is still empty and this is the first address
@@ -260,7 +260,7 @@ func (customer *Customer) AddAddress(addr *address.Address) (string, error) {
 	if customer.Person == nil {
 		log.Println("WARNING: customer.Person must not be nil: customerID: " + customer.GetID() + ", AddressID: " + addr.Id)
 		customer.Person = &address.Person{
-			Contacts: []*address.Contacts{},
+			Contacts: []*address.Contact{},
 		}
 		*customer.Person = *addr.Person
 	} else if len(customer.Addresses) == 0 && customer.Person != nil && customer.Person.LastName == "" {
