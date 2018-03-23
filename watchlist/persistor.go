@@ -31,7 +31,7 @@ func NewPersistor(mongoURL string, collectionName string) (p *persistence.Persis
 
 // Returns GLOBAL_PERSISTOR. If GLOBAL_PERSISTOR is nil, a new persistor is created, set as GLOBAL_PERSISTOR and returned
 func GetWatchListPersistor() *persistence.Persistor {
-	url := configuration.MONGO_URL
+	url := configuration.GetMongoURL()
 	collection := configuration.MONGO_COLLECTION_WATCHLISTS
 	if globalWatchListPersistor == nil {
 		p, err := NewPersistor(url, collection)
@@ -92,6 +92,8 @@ func NewCustomerWatchListsFromSessionID(sessionID string) (*CustomerWatchLists, 
 }
 
 func CustomerWatchListsExists(customerId, sessionId, email string) (bool, error) {
+
+
 	key := ""
 	value := ""
 	if customerId != "" {
@@ -104,8 +106,10 @@ func CustomerWatchListsExists(customerId, sessionId, email string) (bool, error)
 		key = "email"
 		value = email
 	}
-	p := GetWatchListPersistor()
-	q := p.GetCollection().Find(&bson.M{key: value})
+	session, collection := GetWatchListPersistor().GetCollection()
+	defer session.Close()
+
+	q := collection.Find(&bson.M{key: value})
 	count, err := q.Count()
 	if err != nil {
 		return false, err
@@ -114,16 +118,28 @@ func CustomerWatchListsExists(customerId, sessionId, email string) (bool, error)
 }
 
 func DeleteCustomerWatchLists(cw *CustomerWatchLists) error {
-	return GetWatchListPersistor().GetCollection().Remove(bson.M{"_id": cw.BsonId})
+	session, collection := GetWatchListPersistor().GetCollection()
+	defer session.Close()
+
+	return collection.Remove(bson.M{"_id": cw.BsonId})
 }
 func DeleteCustomerWatchListsByCustomerId(id string) error {
-	return GetWatchListPersistor().GetCollection().Remove(bson.M{"customerID": id})
+	session, collection := GetWatchListPersistor().GetCollection()
+	defer session.Close()
+
+	return collection.Remove(bson.M{"customerID": id})
 }
 func DeleteCustomerWatchListsBySessionId(id string) error {
-	return GetWatchListPersistor().GetCollection().Remove(bson.M{"sessionID": id})
+	session, collection := GetWatchListPersistor().GetCollection()
+	defer session.Close()
+
+	return collection.Remove(bson.M{"sessionID": id})
 }
 func DeleteCustomerWatchListsByEmail(email string) error {
-	return GetWatchListPersistor().GetCollection().Remove(bson.M{"email": email})
+	session, collection := GetWatchListPersistor().GetCollection()
+	defer session.Close()
+
+	return collection.Remove(bson.M{"email": email})
 }
 
 // GetCustomerWatchListsByURIHash returns the CustomerWatchLists VO which contains a WatchList with the given URI hash
@@ -141,8 +157,9 @@ func GetCustomerWatchListsByEmail(email string) (*CustomerWatchLists, error) {
 }
 
 func (cw *CustomerWatchLists) Upsert() error {
-	p := GetWatchListPersistor()
-	_, err := p.GetCollection().UpsertId(cw.BsonId, cw)
+	session, collection := GetWatchListPersistor().GetCollection()
+	defer session.Close()
+	_, err := collection.UpsertId(cw.BsonId, cw)
 	return err
 }
 
@@ -151,14 +168,18 @@ func (cw *CustomerWatchLists) Upsert() error {
 //------------------------------------------------------------------
 
 func insertCustomerWatchLists(cw *CustomerWatchLists) error {
-	return GetWatchListPersistor().GetCollection().Insert(cw)
+	session, collection := GetWatchListPersistor().GetCollection()
+	defer session.Close()
+	return collection.Insert(cw)
 }
 
 func findOne(customerID, sessionID, email string) (*CustomerWatchLists, error) {
 	if customerID == "" && sessionID == "" && email == "" {
 		return nil, errors.New("Error: Either customerID, sessionID or email of Customer must be provided.")
 	}
-	p := GetWatchListPersistor()
+	session, collection := GetWatchListPersistor().GetCollection()
+	defer session.Close()
+
 	find := &bson.M{}
 	if customerID != "" {
 		find = &bson.M{"customerID": customerID}
@@ -171,7 +192,7 @@ func findOne(customerID, sessionID, email string) (*CustomerWatchLists, error) {
 	}
 
 	customerWatchLists := &CustomerWatchLists{}
-	err := p.GetCollection().Find(find).One(customerWatchLists)
+	err := collection.Find(find).One(customerWatchLists)
 	if err != nil {
 		return nil, err
 	}
@@ -182,10 +203,11 @@ func findOneByQuery(query *bson.M) (*CustomerWatchLists, error) {
 	if query == nil {
 		return nil, errors.New("Query must not be empty!")
 	}
-	p := GetWatchListPersistor()
+	session, collection := GetWatchListPersistor().GetCollection()
+	defer session.Close()
 
 	customerWatchLists := &CustomerWatchLists{}
-	err := p.GetCollection().Find(query).One(customerWatchLists)
+	err := collection.Find(query).One(customerWatchLists)
 	if err != nil {
 		return nil, err
 	}

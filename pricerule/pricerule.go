@@ -1,6 +1,7 @@
 package pricerule
 
 import (
+	"errors"
 	"log"
 	"sync"
 	"time"
@@ -17,7 +18,8 @@ const (
 	TypePromotionOrder        Type = "promotion_order"         // multiple can be applied
 	TypeVoucher               Type = "voucher"                 // rule associated to a voucher
 	TypePaymentMethodDiscount Type = "payment_method_discount" // rule associated to a payment method
-	TypeShipping              Type = "shipping"                // rule used to calculate shipping price
+	TypeShipping              Type = "shipping"
+	TypeBonusVoucher          Type = "bonus_voucher" // rule used to pay with
 
 	ActionItemByPercent ActionType = "item_by_percent"
 	ActionCartByPercent ActionType = "cart_by_percent"
@@ -102,7 +104,7 @@ type PriceRule struct {
 
 	ScaledAmounts []ScaledAmountLevel //defines discount scale 100 -> 2%, 200 -> 3% etc - See ActionScaledPercentage & ActionScaledAbsolute
 
-	ScaledAmountsPerQuantity []ScaledAmountLevel
+	ScaledAmountsPerQuantity []ScaledAmountLevel //@todo: remove- but double check if not used somewhere!!!
 
 	MinOrderAmount float64 //minimum amount for discount to be applocable
 
@@ -126,7 +128,6 @@ type PriceRule struct {
 	LastModifiedAt time.Time // updated at
 
 	Custom interface{} `bson:",omitempty"` //make it extensible if needed (included, excluded group IDs)
-
 }
 
 //Type the type of the price rule
@@ -173,7 +174,6 @@ func NewPriceRule(ID string) *PriceRule {
 	priceRule.ExcludedProductGroupIDS = []string{}
 	priceRule.IncludedProductGroupIDS = []string{}
 	priceRule.CheckoutAttributes = []string{}
-	priceRule.MaxUsesPerCustomer = MaxInt
 	priceRule.MinOrderAmountApplicableItemsOnly = false
 	priceRule.Priority = 999
 	priceRule.ValidFrom = time.Date(1971, time.January, 1, 0, 0, 0, 0, time.UTC)
@@ -182,6 +182,44 @@ func NewPriceRule(ID string) *PriceRule {
 	priceRule.ItemSets = [][]string{}
 
 	return priceRule
+}
+
+func NewBonusPriceRule(ruleID string, amount float64, name map[string]string, description map[string]string, validFrom time.Time, validTo time.Time) (priceRule *PriceRule) {
+	priceRule = new(PriceRule)
+	priceRule.ID = ruleID
+	priceRule.Type = TypeBonusVoucher
+	priceRule.Name = name
+	priceRule.Description = description
+	priceRule.Action = ActionCartByAbsolute
+	priceRule.Amount = amount
+	priceRule.IsAmountIndependentOfQty = false
+	priceRule.MinOrderAmount = 0
+	priceRule.ExcludedItemIDsFromOrderAmountCalculation = []string{}
+	priceRule.QtyThreshold = 0
+	priceRule.MaxUses = MaxInt
+	priceRule.MaxUsesPerCustomer = 1
+	priceRule.Exclusive = false
+	priceRule.ExcludedProductGroupIDS = []string{}
+	priceRule.IncludedProductGroupIDS = []string{}
+	priceRule.CheckoutAttributes = []string{}
+	priceRule.CalculateDiscountedOrderAmount = true
+
+	priceRule.MinOrderAmountApplicableItemsOnly = false
+	priceRule.Priority = 999
+	priceRule.ValidFrom = validFrom
+	priceRule.ValidTo = validTo
+	priceRule.WhichXYFree = XYCheapestFree
+	priceRule.ItemSets = [][]string{}
+	return
+}
+
+func NewBonusVoucher(ruleID string, customerID string, voucherCode string, voucherID string) (voucher *Voucher, err error) {
+	if customerID == "" {
+		err = errors.New("customer ID must be provided in bonus vouchers")
+		return
+	}
+	voucher = NewVoucherWithRuleID(voucherID, voucherCode, ruleID, customerID)
+	return
 }
 
 //------------------------------------------------------------------
@@ -216,6 +254,9 @@ func (pricerule *PriceRule) Insert() error {
 // Upsert - upsers a PriceRule
 // note that if you programmatically manipulate the CreatedAt time, this methd will upsert it
 func (pricerule *PriceRule) Upsert() error {
+
+	pricerule.checkIfBonusVoucher()
+
 	//set created and modified times
 	if pricerule.CreatedAt.IsZero() {
 		priceruleFromDb, err := GetPriceRuleByID(pricerule.ID, nil)
@@ -227,13 +268,36 @@ func (pricerule *PriceRule) Upsert() error {
 	}
 	pricerule.LastModifiedAt = time.Now()
 
-	p := GetPersistorForObject(pricerule)
-	_, err := p.GetCollection().Upsert(bson.M{"id": pricerule.ID}, pricerule)
+	session, collection := GetPersistorForObject(pricerule).GetCollection()
+	defer session.Close()
+
+	_, err := collection.Upsert(bson.M{"id": pricerule.ID}, pricerule)
 
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func (pricerule *PriceRule) checkIfBonusVoucher() {
+	//check and fix TypeBonusVoucher
+	if pricerule.Type == TypeBonusVoucher {
+		// Overwrite values which should not be set differently for bonus voucher promos
+		pricerule.Action = ActionCartByAbsolute
+		pricerule.MinOrderAmount = 0
+		pricerule.MinOrderAmountApplicableItemsOnly = false
+		pricerule.ExcludedCustomerGroupIDS = []string{}
+		pricerule.IncludedCustomerGroupIDS = []string{}
+		pricerule.IsAmountIndependentOfQty = true
+		pricerule.Exclusive = false
+		pricerule.ItemSets = [][]string{}
+		pricerule.MaxUsesPerCustomer = 1
+		pricerule.QtyThreshold = 0
+		pricerule.ScaledAmounts = []ScaledAmountLevel{}
+		pricerule.WhichXYList = []string{}
+		pricerule.CalculateDiscountedOrderAmount = true
+
+	}
 }
 
 // UpdatePriceRuleUsageHistoryAtomic - atomicaly update times used and times used per customer if customer id provided
@@ -269,21 +333,29 @@ func (pricerule *PriceRule) UpdateUsageHistory(customerID string) error {
 
 // Delete - delete PriceRule - ID must be set
 func (pricerule *PriceRule) Delete() error {
-	err := GetPersistorForObject(pricerule).GetCollection().Remove(bson.M{"id": pricerule.ID})
+	session, collection := GetPersistorForObject(new(PriceRule)).GetCollection()
+	defer session.Close()
+
+	err := collection.Remove(bson.M{"id": pricerule.ID})
 	pricerule = nil
 	return err
 }
 
 // DeletePriceRule - delete PriceRule
 func DeletePriceRule(ID string) error {
-	err := GetPersistorForObject(new(PriceRule)).GetCollection().Remove(bson.M{"id": ID})
+	session, collection := GetPersistorForObject(new(PriceRule)).GetCollection()
+	defer session.Close()
+
+	err := collection.Remove(bson.M{"id": ID})
 	return err
 }
 
 // RemoveAllPriceRules -
 func RemoveAllPriceRules() error {
-	p := GetPersistorForObject(new(PriceRule))
-	_, err := p.GetCollection().RemoveAll(bson.M{})
+	session, collection := GetPersistorForObject(new(PriceRule)).GetCollection()
+	defer session.Close()
+
+	_, err := collection.RemoveAll(bson.M{})
 	return err
 }
 
@@ -307,8 +379,10 @@ func getPromotions(query bson.M, customProvider PriceRuleCustomProvider) ([]Pric
 	now := time.Now()
 	var result []*PriceRule
 
-	p := GetPersistorForObject(new(PriceRule))
-	err := p.GetCollection().Find(query).Select(nil).Sort("priority").All(&result)
+	session, collection := GetPersistorForObject(new(PriceRule)).GetCollection()
+	defer session.Close()
+
+	err := collection.Find(query).Select(nil).Sort("priority").All(&result)
 	if err != nil {
 		// handle error
 		return nil, err

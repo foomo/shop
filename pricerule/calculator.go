@@ -60,6 +60,7 @@ type DiscountApplied struct {
 	AppliedInCatalog        bool // applied in catalog calculation
 	ApplicableInCatalog     bool //could have been applied in catalog
 	IsTypePromotionCustomer bool // is the type TypePromotionCustomer
+	IsTypeBonusVoucher      bool // is the type Bonus Voucher
 
 	Custom interface{}
 }
@@ -156,20 +157,25 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 	}
 	calculationParameters.blacklistedItemIDs = blacklistedItemIDs
 
+	// Initialize all discounts
+	orderDiscounts := NewOrderDiscounts(articleCollection)
+
 	// ----------------------------------------------------------------------------------------------------------
-	// promotions - step 1
+	// product and order promotions: step 1
+
 	timeTrack(now, "groups data took ")
 	// find applicable pricerules - auto promotions
-	promotionPriceRules, err := GetValidPriceRulesForPromotions([]Type{TypePromotionCustomer, TypePromotionProduct, TypePromotionOrder}, customProvider)
-
+	otherPromotionPriceRules, err := GetValidPriceRulesForPromotions([]Type{TypePromotionProduct, TypePromotionOrder}, customProvider)
 	if err != nil {
 		return nil, nil, err
 	}
-	var ruleVoucherPairs []RuleVoucherPair
-	for _, promotionRule := range promotionPriceRules {
+
+	var otherRuleVoucherPairs []RuleVoucherPair
+	for _, promotionRule := range otherPromotionPriceRules {
 		rule := &PriceRule{}
 		*rule = promotionRule
-		ruleVoucherPairs = append(ruleVoucherPairs, RuleVoucherPair{Rule: rule, Voucher: nil})
+		pair := RuleVoucherPair{Rule: rule, Voucher: nil}
+		otherRuleVoucherPairs = append(otherRuleVoucherPairs, pair)
 	}
 
 	timeTrack(now, "loading pricerules took ")
@@ -184,40 +190,63 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 		for _, paymentRule := range paymentPriceRules {
 			rule := &PriceRule{}
 			*rule = paymentRule
-			ruleVoucherPairs = append(ruleVoucherPairs, RuleVoucherPair{Rule: rule, Voucher: nil})
+			pair := RuleVoucherPair{Rule: rule, Voucher: nil}
+			otherRuleVoucherPairs = append(otherRuleVoucherPairs, pair)
 		}
 	}
+
 	timeTrack(now, "loading pricerules took ")
 
-	orderDiscounts := NewOrderDiscounts(articleCollection)
-	summary := &OrderDiscountSummary{
-		AppliedVoucherCodes: []string{},
-		AppliedVoucherIDs:   []string{},
-		VoucherDiscounts:    map[string]VoucherDiscount{},
-	}
 	timeTrack(now, "preparations took ")
+
 	nowAll := time.Now()
 
-	// ~ PRICERULE PAIR SORTING - BY PRIORITY - higher priority means it is applied first
-	sort.Sort(ByPriority(ruleVoucherPairs))
-	//first loop where all promotion discounts are applied
+	// other promotion price rule sorting by priority
+	sort.Sort(ByPriority(otherRuleVoucherPairs))
 
-	bestOptionCustomerProductRulePerItem := getBestOptionCustomerProductRulePerItem(ruleVoucherPairs, calculationParameters)
-	calculationParameters.bestOptionCustomeProductRulePerItem = bestOptionCustomerProductRulePerItem
-	//spew.Dump(bestOptionCustomerProductRulePerItem)
+	bestOptionOtherRulePerItem := getBestOptionCustomerProductRulePerItem(otherRuleVoucherPairs, calculationParameters)
+	calculationParameters.bestOptionCustomeProductRulePerItem = bestOptionOtherRulePerItem
 
-	for _, priceRulePair := range ruleVoucherPairs {
-		pair := RuleVoucherPair{}
-		pair = priceRulePair
-		//apply them
-		orderDiscounts = calculateRule(orderDiscounts, pair, calculationParameters)
+	for _, priceRulePair := range otherRuleVoucherPairs {
+		orderDiscounts = calculateRule(orderDiscounts, priceRulePair, calculationParameters)
+	}
+
+	// ----------------------------------------------------------------------------------------------------------
+	// customer type promotions: step 1.2
+	// for customer type promotions, calculation should be done separated (with best option calculation)
+
+	customerPromotionPriceRules, err := GetValidPriceRulesForPromotions([]Type{TypePromotionCustomer}, customProvider)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var customerRuleVoucherPairs []RuleVoucherPair
+	for _, promotionRule := range customerPromotionPriceRules {
+		rule := &PriceRule{}
+		*rule = promotionRule
+		pair := RuleVoucherPair{Rule: rule, Voucher: nil}
+		customerRuleVoucherPairs = append(customerRuleVoucherPairs, pair)
+	}
+
+	timeTrack(now, "loading pricerules took ")
+
+	// customer promotion price rule sorting by priority
+	sort.Sort(ByPriority(customerRuleVoucherPairs))
+
+	calculationParameters.bestOptionCustomeProductRulePerItem = make(map[string]string)
+	bestOptionCustomerRulePerItem := getBestOptionCustomerProductRulePerItem(customerRuleVoucherPairs, calculationParameters)
+	calculationParameters.bestOptionCustomeProductRulePerItem = bestOptionCustomerRulePerItem
+
+	//apply them
+	for _, priceRulePair := range customerRuleVoucherPairs {
+		orderDiscounts = calculateRule(orderDiscounts, priceRulePair, calculationParameters)
 	}
 
 	// ----------------------------------------------------------------------------------------------------------
 	// vouchers: step 2
 	// find the vouchers and voucher rules
 	// find applicable pricerules of type TypeVoucher for
-
+	bonusVoucherCodes := []string{}
 	if len(voucherCodes) > 0 {
 		var ruleVoucherPairsStep2 []RuleVoucherPair
 		for _, voucherCode := range voucherCodes {
@@ -228,6 +257,18 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 				}
 				if err != nil {
 					log.Println("skipping voucher "+voucherCode, err)
+					continue
+				}
+
+				if voucherPriceRule.Type != TypeVoucher {
+					log.Println("skipping voucher "+voucherCode+" with type Voucher", err)
+					bonusVoucherCodes = append(bonusVoucherCodes, voucherCode)
+					continue
+				}
+
+				//check if rule is valid
+				if time.Now().Before(voucherPriceRule.ValidFrom) || time.Now().After(voucherPriceRule.ValidTo) {
+					log.Println("skipping vocucher" + voucherCode + " VlidFrom/ValidTo mismatch")
 					continue
 				}
 
@@ -289,7 +330,70 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 
 	// ----------------------------------------------------------------------------------------------------------
 
+	// ----------------------------------------------------------------------------------------------------------
+	// vouchers: step 5
+	// find the vouchers and voucher rules
+	// find applicable pricerules of type TypeVoucher for
+
+	if len(bonusVoucherCodes) > 0 {
+		var ruleVoucherPairsStep5 []RuleVoucherPair
+		for _, voucherCode := range bonusVoucherCodes {
+			if len(voucherCode) > 0 {
+				voucherVo, voucherPriceRule, err := GetVoucherAndPriceRule(voucherCode, customProvider)
+				if voucherVo == nil {
+					log.Println("voucher not found for code: " + voucherCode + " in " + "priceRule.ApplyDiscounts")
+				}
+				if err != nil {
+					log.Println("skipping voucher "+voucherCode, err)
+					continue
+				}
+
+				if voucherPriceRule.Type != TypeBonusVoucher {
+					log.Println("skipping voucher "+voucherCode+" with type BonusVoucher", err)
+					continue
+				}
+
+				//check if rule is valid
+				if time.Now().Before(voucherPriceRule.ValidFrom) || time.Now().After(voucherPriceRule.ValidTo) {
+					log.Println("skipping vocucher" + voucherCode + " VlidFrom/ValidTo mismatch")
+					continue
+				}
+
+				if !voucherVo.TimeRedeemed.IsZero() {
+					if Verbose {
+						log.Println("voucher " + voucherCode + " already redeemed ... skipping")
+					}
+					continue
+				}
+
+				pair := RuleVoucherPair{
+					Rule:    voucherPriceRule,
+					Voucher: voucherVo,
+				}
+				ruleVoucherPairsStep5 = append(ruleVoucherPairsStep5, pair)
+			}
+		}
+		//apply them
+
+		//no products should be blacklisted
+		calculationParameters.blacklistedItemIDs = []string{}
+
+		// the bonus voucher should be applicable on shipping costs as well
+		calculationParameters.shippingGroupIDs = []string{}
+
+		for _, priceRulePair := range ruleVoucherPairsStep5 {
+			orderDiscounts = calculateRule(orderDiscounts, priceRulePair, calculationParameters)
+		}
+	}
+
 	timeTrack(nowAll, "All rules together")
+
+	summary := &OrderDiscountSummary{
+		AppliedVoucherCodes: []string{},
+		AppliedVoucherIDs:   []string{},
+		VoucherDiscounts:    map[string]VoucherDiscount{},
+	}
+
 	for _, orderDiscount := range orderDiscounts {
 		summary.TotalDiscount += orderDiscount.TotalDiscountAmount
 		summary.TotalDiscountApplicable += orderDiscount.TotalDiscountAmountApplicable
@@ -449,6 +553,11 @@ func getOrderTotalForPriceRule(priceRule *PriceRule, calculationParameters *Calc
 		if contains(article.ID, priceRule.ExcludedItemIDsFromOrderAmountCalculation) {
 			continue
 		}
+
+		if contains(article.ID, calculationParameters.blacklistedItemIDs) {
+			continue
+		}
+
 		// rule has no customer or product group limitations
 		if len(priceRule.IncludedProductGroupIDS) == 0 &&
 			len(priceRule.ExcludedProductGroupIDS) == 0 &&
@@ -469,6 +578,7 @@ func getOrderTotalForPriceRule(priceRule *PriceRule, calculationParameters *Calc
 				IsOneProductOrCustomerGroupInIncludedGroups(priceRule.IncludedCustomerGroupIDS, calculationParameters.groupIDsForCustomer) &&
 				IsNoProductOrGroupInExcludeGroups(priceRule.ExcludedCustomerGroupIDS, calculationParameters.groupIDsForCustomer) {
 
+				total += article.Price * article.Quantity
 				if priceRule.CalculateDiscountedOrderAmount == true {
 					if orderDiscount, ok := orderDiscounts[article.ID]; ok {
 						itemDiscount := orderDiscount.TotalDiscountAmountApplicable
@@ -599,6 +709,14 @@ func validatePriceRuleForPosition(priceRule PriceRule, article *Article, calcula
 
 // validatePriceRule -
 func validatePriceRule(priceRule PriceRule, checkedPosition *Article, calculationParameters *CalculationParameters, orderDiscounts OrderDiscounts) (ok bool, reason TypeRuleValidationMsg) {
+
+	if priceRule.Type == TypeBonusVoucher {
+		bonusApplicableAmount := getOrderTotalForPriceRule(&priceRule, calculationParameters, orderDiscounts)
+		if priceRule.Amount > bonusApplicableAmount {
+			return false, ValidationPriceRuleBonusValueTooHigh
+		}
+	}
+
 	if len(priceRule.CheckoutAttributes) > 0 {
 		match := false
 		for _, checkoutAttribute := range calculationParameters.checkoutAttributes {
@@ -790,6 +908,7 @@ func getBestOptionCustomerProductRulePerItem(ruleVoucherPairs []RuleVoucherPair,
 	for _, priceRulePair := range ruleVoucherPairs {
 		tempDiscounts := NewOrderDiscounts(calculationParameters.articleCollection)
 		tempDiscounts = calculateRule(tempDiscounts, priceRulePair, calculationParameters)
+
 		//go over applied discounts an select the better one
 		for _, article := range calculationParameters.articleCollection.Articles {
 			itemID := article.ID
@@ -798,21 +917,26 @@ func getBestOptionCustomerProductRulePerItem(ruleVoucherPairs []RuleVoucherPair,
 			if _, ok := currentDiscounts[itemID]; !ok {
 				currentDiscounts[itemID] = 0
 			}
-			//init map if necessary
-			if _, ok := currentBestDiscountType[itemID]; !ok {
-				currentBestDiscountType[itemID] = TypePromotionCustomer // we can always overrider
-			}
+			////init map if necessary
+			//if _, ok := currentBestDiscountType[itemID]; !ok {
+			//	currentBestDiscountType[itemID] = TypePromotionCustomer // we can always overrider
+			//}
+			//
+			//overwrite := false
+			//if currentBestDiscountType[itemID] == TypePromotionCustomer || priceRulePair.Rule.Type != TypePromotionCustomer {
+			//	//overwrite
+			//	overwrite = true
+			//} else {
+			//	if discount > currentDiscounts[itemID] {
+			//		overwrite = true
+			//	} else {
+			//		overwrite = false
+			//	}
+			//}
 
 			overwrite := false
-			if currentBestDiscountType[itemID] == TypePromotionCustomer || priceRulePair.Rule.Type != TypePromotionCustomer {
-				//overwrite
+			if discount > currentDiscounts[itemID] {
 				overwrite = true
-			} else {
-				if discount > currentDiscounts[itemID] {
-					overwrite = true
-				} else {
-					overwrite = false
-				}
 			}
 
 			if overwrite && discount > 0 {

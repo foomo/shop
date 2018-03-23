@@ -20,13 +20,16 @@ import (
 //------------------------------------------------------------------
 
 const (
-	CountryCodeGermany       CountryCode  = "DE"
-	CountryCodeFrance        CountryCode  = "FR"
-	CountryCodeSwitzerland   CountryCode  = "CH"
-	CountryCodeLiechtenstein CountryCode  = "LI"
-	LanguageCodeFrance       LanguageCode = "fr"
-	LanguageCodeGermany      LanguageCode = "de"
-	LanguageCodeSwitzerland  LanguageCode = "ch"
+	CountryCodeGermany       CountryCode = "DE"
+	CountryCodeFrance        CountryCode = "FR"
+	CountryCodeSwitzerland   CountryCode = "CH"
+	CountryCodeAustria       CountryCode = "AT"
+	CountryCodeLiechtenstein CountryCode = "LI"
+	CountryCodeItaly         CountryCode = "IT"
+
+	LanguageCodeFrance      LanguageCode = "fr"
+	LanguageCodeGermany     LanguageCode = "de"
+	LanguageCodeSwitzerland LanguageCode = "ch"
 )
 
 //------------------------------------------------------------------
@@ -97,7 +100,6 @@ func NewGuestCustomer(email string, customProvider CustomerCustomProvider) (*Cus
 // Email must be unique for a customer. customerProvider may be nil at this point.
 func NewCustomer(email, password string, customProvider CustomerCustomProvider) (*Customer, error) {
 	log.Println("=== Creating new customer ", email)
-	isGuest := password == ""
 	if email == "" {
 		return nil, errors.New(shop_error.ErrorRequiredFieldMissing)
 	}
@@ -125,7 +127,7 @@ func NewCustomer(email, password string, customProvider CustomerCustomProvider) 
 		Flags:          &Flags{},
 		Version:        version.NewVersion(),
 		Id:             unique.GetNewID(),
-		Email:          utils.IteString(isGuest, "", lc(email)), // If Customer is a guest, we do not set the email address. This field should be unique in the database (and would not be if the guest ordered twice).
+		Email:          lc(email),
 		CreatedAt:      utils.TimeNow(),
 		LastModifiedAt: utils.TimeNow(),
 		Person: &address.Person{
@@ -142,11 +144,7 @@ func NewCustomer(email, password string, customProvider CustomerCustomProvider) 
 		return nil, err
 	}
 	customer.Tracking.TrackingID = "tid" + trackingId
-
-	if isGuest {
-		customer.IsGuest = true
-	}
-
+	customer.IsGuest = false
 	if customProvider != nil {
 		customer.Custom = customProvider.NewCustomerCustom()
 	}
@@ -256,10 +254,15 @@ func (customer *Customer) AddAddress(addr *address.Address) (string, error) {
 
 	// If Person of Customer is still empty and this is the first address
 	// added to the customer, Person of Address is adopted for Customer
+	log.Println("is customer nil: ", customer == nil)
+	log.Println("is customer.person nil: ", customer.Person == nil)
 	if customer.Person == nil {
 		log.Println("WARNING: customer.Person must not be nil: customerID: " + customer.GetID() + ", AddressID: " + addr.Id)
+		customer.Person = &address.Person{
+			Contacts: &address.Contacts{},
+		}
 		*customer.Person = *addr.Person
-	} else if len(customer.Addresses) == 0 && customer.Person.LastName == "" {
+	} else if len(customer.Addresses) == 0 && customer.Person != nil && customer.Person.LastName == "" {
 		*customer.Person = *addr.Person
 	}
 

@@ -160,8 +160,8 @@ func TestCustomerCreateGuest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !guest.IsGuest {
-		t.Fatal("Expected isGuest to be true, but is false")
+	if guest.IsGuest {
+		t.Fatal("Expected isGuest to be false, but is true")
 	}
 }
 

@@ -26,6 +26,7 @@ const (
 	SalutationTypeCompany  SalutationType = "Company" // TODO: find better wording
 	SalutationTypeFamily   SalutationType = "Family"  // TODO: find better wording
 
+	TitleTypeNone   TitleType = ""
 	TitleTypeDr     TitleType = "Dr"
 	TitleTypeProf   TitleType = "Prof."
 	TitleTypeProfDr TitleType = "Prof. Dr."

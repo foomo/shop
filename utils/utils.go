@@ -3,16 +3,20 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"math"
 	"os"
 	"reflect"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
-	"github.com/skratchdot/open-golang/open"
 )
+
+const UTCOffsetSummer = time.Duration(2)
+const UTCOffsetWinter = time.Duration(1)
+
+var UTCOffset time.Duration = UTCOffsetSummer
 
 func GetTimeHHMMSS(t time.Time) string {
 	return t.Format("150405")
@@ -106,14 +110,24 @@ func GetTimeFromYYYYMMDD(date string) (time.Time, error) {
 	if err != nil {
 		return time.Time{}, err
 	}
-	return t.In(CET).Add(-time.Hour * 2), nil
+	if IsSummerTime(time.Now()) {
+		UTCOffset = UTCOffsetSummer
+	} else {
+		UTCOffset = UTCOffsetWinter
+	}
+	return t.In(CET).Add(-time.Hour * UTCOffset), nil
 }
 func GetTimeFromYYY_MM_DD(date string) (time.Time, error) {
 	t, err := time.Parse("2006-01-02", date)
 	if err != nil {
 		return time.Time{}, err
 	}
-	return t.In(CET).Add(-time.Hour * 2), nil
+	if IsSummerTime(time.Now()) {
+		UTCOffset = UTCOffsetSummer
+	} else {
+		UTCOffset = UTCOffsetWinter
+	}
+	return t.In(CET).Add(-time.Hour * UTCOffset), nil
 }
 
 func TimeNow() time.Time {
@@ -157,10 +171,7 @@ func OpenInBrowser(name string, html string) error {
 	}
 	tmpFile.WriteString(html)
 	tmpFile.Close()
-	err = open.Start(path)
-	if err != nil {
-		log.Println(err)
-	}
+
 	return err
 
 }
@@ -181,4 +192,12 @@ func Round(input float64, decimals int) float64 {
 		return math.Ceil(input-0.5) / math.Pow10(decimals)
 	}
 	return math.Floor(input+0.5) / math.Pow10(decimals)
+}
+
+func IsSummerTime(ti time.Time) bool {
+	s := ti.String()
+	if strings.Contains(s, "+0200") {
+		return true
+	}
+	return false
 }

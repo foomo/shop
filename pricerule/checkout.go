@@ -1,6 +1,7 @@
 package pricerule
 
 import "sort"
+import "time"
 
 //------------------------------------------------------------------
 // ~ PUBLIC TYPES
@@ -29,14 +30,34 @@ const (
 
 	ValidationPriceRuleCheckoutAttributesMismatch TypeRuleValidationMsg = "pricerule_checkout_attributes_missmatch"
 	ValidationPriceRuleQuantityThresholdNotMet    TypeRuleValidationMsg = "qty_below_pricerule_quantity_threshold"
+	ValidationPriceRuleBonusValueTooHigh          TypeRuleValidationMsg = "bonus_value_too_high"
 
-	ValidationPriceRuleBlacklist TypeRuleValidationMsg = "products_blacklisted"
+	ValidationPriceRuleBlacklist                  TypeRuleValidationMsg = "products_blacklisted"
 	ValidationPriceRuleNotForCatalogueCalculation TypeRuleValidationMsg = "not_for_catalogue_calculation"
 )
 
 //------------------------------------------------------------------
 // ~ PUBLIC FUNCTIONS
 //------------------------------------------------------------------
+
+// PickApplicableVouchers -
+func PickApplicableVouchers(candidateVoucherCodes []string, articleCollection *ArticleCollection, checkoutAttributes []string, customProvider PriceRuleCustomProvider) (applicablePriceRules map[string]*PriceRule, err error) {
+	applicablePriceRules = make(map[string]*PriceRule)
+	for _, code := range candidateVoucherCodes {
+
+		ok, _ := ValidateVoucher(code, articleCollection, checkoutAttributes)
+		if ok == true {
+			voucher, voucherPriceRule, getErr := GetVoucherAndPriceRule(code, customProvider)
+			//check if exists
+			if getErr != nil || voucher.VoucherCode != code {
+				err = getErr
+				return
+			}
+			applicablePriceRules[code] = voucherPriceRule
+		}
+	}
+	return
+}
 
 // ValidateVoucher - validates a voucher code and returns o = true or a validation message when ok = false
 // if articleCollection is not provided it will only check non-articleCollection related conditions
@@ -95,6 +116,14 @@ func ValidateVoucher(voucherCode string, articleCollection *ArticleCollection, c
 		return false, ValidationVoucherAlreadyUsed
 	}
 
+	if time.Now().After(voucherPriceRule.ValidTo) {
+		return false, ValidationPriceRuleExpired
+	}
+
+	if time.Now().Before(voucherPriceRule.ValidFrom) {
+		return false, ValidationPriceRuleNotValidYet
+	}
+
 	//--------------------------------------------------------------
 	// PriceRule
 	//--------------------------------------------------------------
@@ -106,8 +135,17 @@ func ValidateVoucher(voucherCode string, articleCollection *ArticleCollection, c
 	calculationParameters.groupIDsForCustomer = groupIDsForCustomer
 
 	//find the groupIds for articleCollection items
+
 	productGroupIDsPerPosition := getProductGroupIDsPerPosition(articleCollection, false)
 	calculationParameters.productGroupIDsPerPosition = productGroupIDsPerPosition
+
+	//remove all group limitations if bonus voucher
+	if voucherPriceRule.Type == TypeBonusVoucher {
+		//no products should be blacklisted
+		calculationParameters.blacklistedItemIDs = []string{}
+		// the bonus voucher should be applicable on shipping costs as well
+		calculationParameters.shippingGroupIDs = []string{}
+	}
 
 	ok, priceRuleFailReason := validatePriceRuleForOrder(*voucherPriceRule, calculationParameters, OrderDiscounts{})
 	if !ok {

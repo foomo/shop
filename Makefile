@@ -1,34 +1,19 @@
 SHELL = "/bin/bash"
 
 TEST_PATH = github.com/foomo/shop
-
+# invoke a single test by setting go test -v $(TEST_PATH)/shop
 
 clean:
 	rm -f customer/diff-*
-clear-dbs:
-	clear
-	make clean
-	go test -run TestDropAllCollections $(TEST_PATH)/test_utils
-test:
-	clear
-	make clean
-	go test -run Test $(TEST_PATH)/crypto
-	go test -run Test $(TEST_PATH)/customer
-	go test -run Test $(TEST_PATH)/watchlist
-	go test -run Test $(TEST_PATH)/examples
-	go test -run Test $(TEST_PATH)/order
-	go test -run Test $(TEST_PATH)/state
-	go test -run Test $(TEST_PATH)/unique
-	go test -run Test $(TEST_PATH)/shop_error
-testv:
-	clear
-	make clean
-	go test -v -run Test $(TEST_PATH)/crypto
-	go test -v -run Test $(TEST_PATH)/customer
-	go test -v -run Test $(TEST_PATH)/watchlist
-	go test -v -run Test $(TEST_PATH)/examples
-	go test -v -run Test $(TEST_PATH)/order
-	go test -v -run Test $(TEST_PATH)/state
-	go test -v -run Test $(TEST_PATH)/unique
-	go test -v -run Test $(TEST_PATH)/shop_error
 
+test: clean
+	./scripts/test.sh
+
+install-test-dependencies:
+	go get -u github.com/ventu-io/go-shortid
+	go get -u github.com/bwmarrin/snowflake
+	go get -u github.com/sergi/go-diff/diffmatchpatch
+	go get -u github.com/nbutton23/zxcvbn-go
+	go get -u gopkg.in/mgo.v2/bson
+	go get -u github.com/mitchellh/mapstructure
+	go get -u golang.org/x/crypto/bcrypt

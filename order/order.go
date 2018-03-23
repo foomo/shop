@@ -310,7 +310,11 @@ func (order *Order) SetPositionQuantity(itemID string, quantity float64, crossPr
 			if price != -1 {
 				newPos.Price = price
 			}
-			order.Positions = append(order.Positions, newPos)
+			// append new psoitions as first item
+			tmpPositions := []*Position{}
+			tmpPositions = append(tmpPositions, newPos)
+			tmpPositions = append(tmpPositions, order.Positions...)
+			order.Positions = tmpPositions
 			return order.Upsert()
 		}
 		return nil
@@ -342,22 +346,6 @@ func (order *Order) GetPositionByItemId(itemID string) *Position {
 		}
 	}
 	return nil
-}
-
-// OverrideID may be used to use a different than the automatially generated id (Unit tests)
-func OverrideId(oldID, newID string) error {
-	log.Println("+++ INFO: Overriding orderID", oldID, "with id", newID, "+++")
-	o := &Order{}
-	p := GetOrderPersistor()
-	err := p.GetCollection().Find(&bson.M{"id": oldID}).One(o)
-	if err != nil {
-		log.Println("Upsert failed: Could not find order with id", oldID, "Error:", err)
-		return err
-	}
-	o.Id = newID
-	o.State.SetModified()
-	_, err = p.GetCollection().UpsertId(o.BsonId, o)
-	return err
 }
 
 //------------------------------------------------------------------

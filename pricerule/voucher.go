@@ -37,7 +37,6 @@ type Voucher struct {
 	LastModifiedAt time.Time //updated at
 
 	Custom interface{} `bson:",omitempty"` //make it extensible if needed
-
 }
 
 //VoucherType - voucher type
@@ -52,6 +51,21 @@ func NewVoucher(ID string, voucherCode string, priceRule *PriceRule, customerID 
 	voucher := new(Voucher)
 	voucher.ID = ID
 	voucher.PriceRuleID = priceRule.ID
+	//	voucher.MappingID = priceRule.MappingID
+	voucher.VoucherCode = voucherCode
+	if len(customerID) > 0 {
+		voucher.VoucherType = VoucherTypePersonalized
+	} else {
+		voucher.VoucherType = VoucherTypeAnonymous
+	}
+
+	return voucher
+}
+
+func NewVoucherWithRuleID(ID string, voucherCode string, priceRuleID string, customerID string) *Voucher {
+	voucher := new(Voucher)
+	voucher.ID = ID
+	voucher.PriceRuleID = priceRuleID
 	//	voucher.MappingID = priceRule.MappingID
 	voucher.VoucherCode = voucherCode
 	if len(customerID) > 0 {
@@ -94,8 +108,10 @@ func (voucher *Voucher) Upsert() error {
 	}
 	voucher.LastModifiedAt = time.Now()
 
-	p := GetPersistorForObject(voucher)
-	_, err := p.GetCollection().Upsert(bson.M{"id": voucher.ID}, voucher)
+	session, collection := GetPersistorForObject(voucher).GetCollection()
+	defer session.Close()
+
+	_, err := collection.Upsert(bson.M{"id": voucher.ID}, voucher)
 
 	if err != nil {
 		return err
@@ -138,21 +154,29 @@ func (voucher *Voucher) Redeem(customerID string) error {
 
 // Delete - delete voucher - ID must be set
 func (voucher *Voucher) Delete() error {
-	err := GetPersistorForObject(voucher).GetCollection().Remove(bson.M{"id": voucher.ID})
+	session, collection := GetPersistorForObject(voucher).GetCollection()
+	defer session.Close()
+
+	err := collection.Remove(bson.M{"id": voucher.ID})
 	voucher = nil
 	return err
 }
 
 // DeleteVoucher - delete voucher
 func DeleteVoucher(ID string) error {
-	err := GetPersistorForObject(new(Voucher)).GetCollection().Remove(bson.M{"id": ID})
+	session, collection := GetPersistorForObject(new(Voucher)).GetCollection()
+	defer session.Close()
+
+	err := collection.Remove(bson.M{"id": ID})
 	return err
 }
 
 // RemoveAllVouchers -
 func RemoveAllVouchers() error {
-	p := GetPersistorForObject(new(Voucher))
-	_, err := p.GetCollection().RemoveAll(bson.M{})
+	session, collection := GetPersistorForObject(new(Voucher)).GetCollection()
+	defer session.Close()
+
+	_, err := collection.RemoveAll(bson.M{})
 	return err
 }
 
@@ -166,6 +190,7 @@ func GetVoucherAndPriceRule(voucherCode string, customProvider PriceRuleCustomPr
 	if voucher != nil && len(voucher.PriceRuleID) > 0 {
 		//get the pricerule
 		priceRule, err := GetPriceRuleByID(voucher.PriceRuleID, customProvider)
+
 		if err != nil {
 			return voucher, nil, err
 		}

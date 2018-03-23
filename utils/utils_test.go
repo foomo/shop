@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"log"
 	"testing"
 	"time"
@@ -85,6 +86,27 @@ func TestTimeSameDay(t *testing.T) {
 	}
 	if isOnSameDay {
 		t.Fatal("Expected isOnSameDay to be false", isOnSameDay)
+	}
+
+}
+
+func TestSummerTime(t *testing.T) {
+
+	timeForDate, _ := GetTimeFromYYY_MM_DD("2017-10-23")
+	fmt.Println(timeForDate)
+	isSummerTime := IsSummerTime(timeForDate)
+	if !isSummerTime {
+		t.Log("isSummerTime", isSummerTime)
+		t.Log("Expected isSummerTime to be true")
+		t.Fail()
+	}
+	timeForDate, _ = GetTimeFromYYY_MM_DD("2017-10-30")
+	fmt.Println(timeForDate)
+	isSummerTime = IsSummerTime(timeForDate)
+	if isSummerTime {
+		t.Log("isSummerTime", isSummerTime)
+		t.Log("Expected isSummerTime to be false")
+		t.Fail()
 	}
 
 }

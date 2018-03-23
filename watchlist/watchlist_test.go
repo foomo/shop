@@ -53,31 +53,7 @@ func TestWatchListsManipulate(t *testing.T) {
 		utils.PrintJSON(cw)
 		t.Fatal("Wrong Quantity, expected 5")
 	}
-	// Reduce Quantity of item by 1
-	err = cw.ListRemoveItem(listA.Id, "item2", 1)
-	if err != nil {
-		utils.PrintJSON(cw)
-		t.Fatal(err)
-	}
-	item, err = cw.GetItem(listA.Id, "item2")
-	if err != nil {
-		utils.PrintJSON(cw)
-		t.Fatal(err)
-	}
-	if item.Quantity != 1 {
-		t.Fatal("Wrong Quantity, expected 1")
-	}
-	// Remove last of item2
-	err = cw.ListRemoveItem(listA.Id, "item2", 1)
-	if err != nil {
-		utils.PrintJSON(cw)
-		t.Fatal(err)
-	}
 
-	if len(listA.Items) != 1 {
-		utils.PrintJSON(cw)
-		t.Fatal("Expected 1 item in ListA")
-	}
 	newDescription := "new description"
 	newName := "newName"
 	// Edit list
@@ -155,7 +131,6 @@ func TestWatchListsManipulate(t *testing.T) {
 		utils.PrintJSON(cw)
 		t.Fatal("Expected Quantity == 2")
 	}
-	utils.PrintJSON(cw)
 
 	// Test Getter
 	cw, err = GetCustomerWatchListsByCustomerID(customerID)
@@ -183,5 +158,4 @@ func TestWatchListsManipulate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	utils.PrintJSON(watchList)
 }

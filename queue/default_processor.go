@@ -8,6 +8,7 @@ import (
 
 	"github.com/foomo/shop/persistence"
 	"gopkg.in/mgo.v2/bson"
+	"gopkg.in/mgo.v2"
 )
 
 //------------------------------------------------------------------
@@ -19,7 +20,7 @@ type Processor interface {
 	GetQuery() *bson.M
 	SetQuery(*bson.M)
 	Process(interface{}) error
-	Find(*bson.M, *persistence.Persistor) (func() (interface{}, error), error)
+	Find(*bson.M, *mgo.Collection) (func() (interface{}, error), error)
 	GetMutex() *sync.Mutex
 	GetRunningJobs() int
 	IncRunningJobs()
@@ -237,24 +238,29 @@ func (proc *DefaultProcessor) Reset() {
 }
 
 // Find returns an iterator for all entries found matching on query.
-func (proc *DefaultProcessor) Find(query *bson.M, p *persistence.Persistor) (iter func() (data interface{}, err error), err error) {
+func (proc *DefaultProcessor) Find(query *bson.M, collection *mgo.Collection) (iter func() (data interface{}, err error), err error) {
 	if proc.Verbose {
 		log.Println("Default Processor Find")
 	}
-	_, err = p.GetCollection().Find(query).Count()
+
+
+	_, err = collection.Find(query).Count()
 	if err != nil {
 		log.Println(err)
 	}
-	q := p.GetCollection().Find(query).Sort("_id")
+	q := collection.Find(query).Sort("_id")
 
 	count, err := q.Count()
 	if proc.Verbose {
 		log.Println("Found", count, "items in database ", "("+proc.GetId()+")")
 	}
+
 	if err != nil {
 		return
 	}
+
 	mgoiter := q.Iter()
+
 	iter = func() (interface{}, error) {
 		data := proc.GetDataWrapper()
 		if mgoiter.Next(data) {
@@ -262,6 +268,7 @@ func (proc *DefaultProcessor) Find(query *bson.M, p *persistence.Persistor) (ite
 		}
 		return nil, nil
 	}
+
 	return
 }
 

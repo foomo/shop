@@ -123,15 +123,18 @@ func removeValueFromArray(val string, vals []string) []string {
 
 func (c *Cache) loadGroupCacheByItem() error {
 	now := time.Now()
+	p := GetPersistorForObject(&Group{})
+	session, collection := p.GetCollection()
+	defer session.Close()
 
 	tempMap := make(map[GroupType]map[string][]string)
 	for _, groupType := range []GroupType{ProductGroup, CustomerGroup} {
-		p := GetPersistorForObject(&Group{})
 		query := bson.M{"type": groupType}
 
 		var result = []Group{}
 
-		err := p.GetCollection().Find(query).Sort("priority").All(&result)
+
+		err := collection.Find(query).Sort("priority").All(&result)
 		if err != nil {
 			return err
 		}

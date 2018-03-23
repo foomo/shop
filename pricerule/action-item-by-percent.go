@@ -1,10 +1,18 @@
 package pricerule
 
+import "log"
+
 // CalculateDiscountsItemByPercent -
 func calculateDiscountsItemByPercent(priceRuleVoucherPair RuleVoucherPair, orderDiscounts OrderDiscounts, calculationParameters *CalculationParameters) OrderDiscounts {
 	if priceRuleVoucherPair.Rule.Action != ActionItemByPercent {
 		panic("CalculateDiscountsItemByPercent called with pricerule of action " + priceRuleVoucherPair.Rule.Action)
 	}
+
+	if (priceRuleVoucherPair.Rule.QtyThreshold > 0 || priceRuleVoucherPair.Rule.MinOrderAmount > 0) && calculationParameters.isCatalogCalculation == true {
+		log.Println("catalog calculations can not handle qty threshold > 0")
+		return orderDiscounts
+	}
+
 	for _, article := range calculationParameters.articleCollection.Articles {
 		ok, _ := validatePriceRuleForPosition(*priceRuleVoucherPair.Rule, article, calculationParameters, orderDiscounts)
 		orderDiscountsForPosition := orderDiscounts[article.ID]
@@ -18,7 +26,7 @@ func calculateDiscountsItemByPercent(priceRuleVoucherPair RuleVoucherPair, order
 
 			discountApplied.AppliedInCatalog = calculationParameters.isCatalogCalculation
 			discountApplied.ApplicableInCatalog = false
-			if priceRuleVoucherPair.Rule.Type == TypePromotionProduct || calculationParameters.isCatalogCalculation {
+			if len(priceRuleVoucherPair.Rule.CheckoutAttributes) == 0 && (priceRuleVoucherPair.Rule.Type == TypePromotionProduct && priceRuleVoucherPair.Rule.QtyThreshold == 0 || calculationParameters.isCatalogCalculation) {
 				discountApplied.ApplicableInCatalog = true
 			}
 			discountApplied.IsTypePromotionCustomer = false
@@ -44,9 +52,12 @@ func getInitializedDiscountApplied(priceRuleVoucherPair RuleVoucherPair, orderDi
 		discountApplied.VoucherCode = priceRuleVoucherPair.Voucher.VoucherCode
 	}
 	if priceRuleVoucherPair.Rule.Type != TypeVoucher {
-		discountApplied.CalculationBasePrice = orderDiscounts[itemID].InitialItemPrice
+		discountApplied.CalculationBasePrice = orderDiscounts[itemID].CurrentItemPrice
 	} else {
 		discountApplied.CalculationBasePrice = orderDiscounts[itemID].VoucherCalculationBaseItemPrice
+	}
+	if priceRuleVoucherPair.Rule.Type == TypeBonusVoucher {
+		discountApplied.IsTypeBonusVoucher = true
 	}
 	discountApplied.Price = orderDiscounts[itemID].InitialItemPrice
 	return discountApplied
