@@ -1,10 +1,33 @@
 package address
 
+import "github.com/foomo/shop/address"
+
 type Contact struct {
 	ID        string
 	Type      ContactType
 	Value     string
 	IsDefault bool
+}
+
+func CreatePhoneContact(phone string, isDefault bool) *Contact {
+	return &address.Contact{
+		IsDefault: isDefault,
+		Type:      address.ContactTypePhone,
+		Value:     phone,
+	}
+}
+
+func CreateMailContact(mail string, isDefault bool) *Contact {
+	return &address.Contact{
+		IsDefault: isDefault,
+		Type:      address.ContactTypePhone,
+		Value:     mail,
+	}
+}
+
+// IsMail if type is ContactTypeEmail
+func (c *Contact) IsMail() bool {
+	return c.Type == ContactTypeEmail
 }
 
 // IsPhone if type is in (ContactTypePhone, ContactTypePhoneMobile, ContactTypePhoneLandline)

@@ -131,19 +131,19 @@ func NewCustomer(email, password string, customProvider CustomerCustomProvider) 
 		CreatedAt:      utils.TimeNow(),
 		LastModifiedAt: utils.TimeNow(),
 		Person: &address.Person{
-			Contacts: &address.Contacts{
-				Email: email,
+			Contacts: []*address.Contact{
+				address.CreateMailContact(mail, true),
 			},
 		},
 		Localization: &Localization{},
 		Tracking:     &Tracking{},
 	}
 
-	trackingId, err := crypto.CreateHash(customer.GetID())
+	trackingID, err := crypto.CreateHash(customer.GetID())
 	if err != nil {
 		return nil, err
 	}
-	customer.Tracking.TrackingID = "tid" + trackingId
+	customer.Tracking.TrackingID = "tid" + trackingID
 	customer.IsGuest = false
 	if customProvider != nil {
 		customer.Custom = customProvider.NewCustomerCustom()
@@ -163,14 +163,16 @@ func NewCustomer(email, password string, customProvider CustomerCustomProvider) 
 //------------------------------------------------------------------
 
 func (customer *Customer) ChangeEmail(email, newEmail string) error {
-	// err := ChangeEmail(email, newEmail)
-	// if err != nil {
-	// 	return err
-	// }
-	customer.Email = lc(newEmail)
+	// lower case
+	email = lc(email)
+	newEmail = lc(newEmail)
+
+	customer.Email = newEmail
 	for _, addr := range customer.GetAddresses() {
-		if addr.Person.Contacts.Email == lc(email) {
-			addr.Person.Contacts.Email = lc(newEmail)
+		for _, contact := range addr.Person.Contacts {
+			if contact.IsMail() && contact.Value == email {
+				contact.Value = newEmail
+			}
 		}
 	}
 	return customer.Upsert()
@@ -245,11 +247,10 @@ func (customer *Customer) AddAddress(addr *address.Address) (string, error) {
 	addr.Id = unique.GetNewID()
 	// Prevent nil pointer in case we get an incomplete address
 	if addr.Person == nil {
-		addr.Person = &address.Person{
-			Contacts: &address.Contacts{},
-		}
-	} else if addr.Person.Contacts == nil {
-		addr.Person.Contacts = &address.Contacts{}
+		addr.Person = &address.Person{}
+	}
+	if addr.Person.Contacts == nil {
+		addr.Person.Contacts = []*address.Contacts{}
 	}
 
 	// If Person of Customer is still empty and this is the first address
@@ -259,7 +260,7 @@ func (customer *Customer) AddAddress(addr *address.Address) (string, error) {
 	if customer.Person == nil {
 		log.Println("WARNING: customer.Person must not be nil: customerID: " + customer.GetID() + ", AddressID: " + addr.Id)
 		customer.Person = &address.Person{
-			Contacts: &address.Contacts{},
+			Contacts: []*address.Contacts{},
 		}
 		*customer.Person = *addr.Person
 	} else if len(customer.Addresses) == 0 && customer.Person != nil && customer.Person.LastName == "" {
