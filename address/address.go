@@ -35,6 +35,7 @@ const (
 
 type Address struct {
 	Id            string // is automatically set on AddAddress()
+	ExternalID    string
 	Person        *Person
 	Type          AddressType
 	Street        string
@@ -54,13 +55,14 @@ type Address struct {
 // Person is a field Customer and of Address
 // Only Customer->Person has Contacts
 type Person struct {
-	FirstName  string
-	MiddleName string
-	LastName   string
-	Title      TitleType
-	Salutation SalutationType
-	Birthday   string
-	Contacts   []*Contact
+	FirstName       string
+	MiddleName      string
+	LastName        string
+	Title           TitleType
+	Salutation      SalutationType
+	Birthday        string
+	Contacts        map[string]*Contact    // key must be contactID
+	DefaultContacts map[ContactType]string // reference by contactID
 }
 
 func (address *Address) GetID() string {

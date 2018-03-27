@@ -44,7 +44,8 @@ type CountryCode string
 type Customer struct {
 	BsonId         bson.ObjectId `bson:"_id,omitempty"`
 	Id             string        // Email is used as LoginID, but can change. This is never changes!
-	unlinkDB       bool          // if true, changes to Customer are not stored in database
+	ExternalID     string
+	unlinkDB       bool // if true, changes to Customer are not stored in database
 	Flags          *Flags
 	Version        *version.Version
 	CreatedAt      time.Time
@@ -123,6 +124,7 @@ func NewCustomer(email, password string, customProvider CustomerCustomProvider) 
 	// 	// }
 	// }
 
+	mailContact := address.CreateMailContact(email)
 	customer := &Customer{
 		Flags:          &Flags{},
 		Version:        version.NewVersion(),
@@ -131,8 +133,11 @@ func NewCustomer(email, password string, customProvider CustomerCustomProvider) 
 		CreatedAt:      utils.TimeNow(),
 		LastModifiedAt: utils.TimeNow(),
 		Person: &address.Person{
-			Contacts: []*address.Contact{
-				address.CreateMailContact(email, true),
+			Contacts: map[string]*address.Contact{
+				mailContact.ID: mailContact,
+			},
+			DefaultContacts: map[address.ContactType]string{
+				address.ContactTypeEmail: mailContact.ID,
 			},
 		},
 		Localization: &Localization{},
@@ -177,6 +182,7 @@ func (customer *Customer) ChangeEmail(email, newEmail string) error {
 	}
 	return customer.Upsert()
 }
+
 func (customer *Customer) ChangePassword(password, passwordNew string, force bool) error {
 	err := ChangePassword(customer.Email, password, passwordNew, force)
 	if err != nil {
@@ -250,7 +256,8 @@ func (customer *Customer) AddAddress(addr *address.Address) (string, error) {
 		addr.Person = &address.Person{}
 	}
 	if addr.Person.Contacts == nil {
-		addr.Person.Contacts = []*address.Contact{}
+		addr.Person.Contacts = map[string]*address.Contact{}
+		addr.Person.DefaultContacts = map[address.ContactType]string{}
 	}
 
 	// If Person of Customer is still empty and this is the first address
@@ -260,7 +267,8 @@ func (customer *Customer) AddAddress(addr *address.Address) (string, error) {
 	if customer.Person == nil {
 		log.Println("WARNING: customer.Person must not be nil: customerID: " + customer.GetID() + ", AddressID: " + addr.Id)
 		customer.Person = &address.Person{
-			Contacts: []*address.Contact{},
+			Contacts:        map[string]*address.Contact{},
+			DefaultContacts: map[address.ContactType]string{},
 		}
 		*customer.Person = *addr.Person
 	} else if len(customer.Addresses) == 0 && customer.Person != nil && customer.Person.LastName == "" {

@@ -1,77 +1,10 @@
 package address
 
-import (
-	"strings"
-)
-
 type Contact struct {
-	ID        string
-	Type      ContactType
-	Value     string
-	IsDefault bool
-}
-
-func CreatePhoneContact(phone string, isDefault bool) *Contact {
-	return &Contact{
-		IsDefault: isDefault,
-		Type:      ContactTypePhone,
-		Value:     phone,
-	}
-}
-
-func CreateMailContact(mail string, isDefault bool) *Contact {
-	return &Contact{
-		IsDefault: isDefault,
-		Type:      ContactTypePhone,
-		Value:     strings.ToLower(mail),
-	}
-}
-
-// IsMail if type is ContactTypeEmail
-func (c *Contact) IsMail() bool {
-	return c.Type == ContactTypeEmail
-}
-
-// IsPhone if type is in (ContactTypePhone, ContactTypePhoneMobile, ContactTypePhoneLandline)
-func (c *Contact) IsPhone() bool {
-	return c.Type == ContactTypePhone || c.Type == ContactTypePhoneMobile || c.Type == ContactTypePhoneLandline
-}
-
-// GetPhone returns a phone or nil if none is stored yet
-// tries to find types in the given order: ContactTypePhone first, ContactTypePhoneMobile second, ContactTypePhoneLandline last
-// if one of these contact types is marked as default it will be returned immediately
-func (p *Person) GetPhone() *Contact {
-
-	// fallback
-	var fallback *Contact
-	setFallback := func(contact *Contact) {
-		if fallback == nil {
-			fallback = contact
-		}
-	}
-
-	// generic phone
-	phone := p.GetContactByType(ContactTypePhone)
-	if phone != nil && phone.IsDefault {
-		return phone
-	}
-	setFallback(phone)
-
-	// mobile
-	mobile := p.GetContactByType(ContactTypePhoneMobile)
-	if mobile != nil && mobile.IsDefault {
-		return mobile
-	}
-	setFallback(mobile)
-
-	// landline
-	landline := p.GetContactByType(ContactTypePhoneLandline)
-	if landline != nil && landline.IsDefault {
-		return landline
-	}
-	setFallback(landline)
-
-	return fallback
+	ID         string
+	ExternalID string
+	Type       ContactType
+	Value      string
 }
 
 // GetContactByType will search for given contact type
@@ -79,16 +12,31 @@ func (p *Person) GetPhone() *Contact {
 // if no default exists at least any of that type will be returned
 // if none of that type exists it will be nil
 func (p *Person) GetContactByType(contactType ContactType) *Contact {
-	var match *Contact
+
+	// try to load default first
+	defaultContact := p.GetDefaultContactByType(contactType)
+	if defaultContact != nil {
+		return defaultContact
+	}
+
+	// no default ... try to find a fallback of same type
 	for _, c := range p.Contacts {
 		if c.Type == contactType {
-			if c.IsDefault {
-				return c
-			}
-			if match == nil {
-				match = c
-			}
+			return c
 		}
 	}
-	return match
+
+	// we failed ... contact type is not present
+	return nil
+}
+
+func (p *Person) GetDefaultContactByType(contactType ContactType) *Contact {
+	// try to return default
+	if id, ok := p.DefaultContacts[contactType]; ok {
+		if c, ok := p.Contacts[id]; ok {
+			return c
+		}
+	}
+
+	return nil
 }

@@ -46,24 +46,26 @@ func bsonDecodeOldPersonStruct(p *Person, raw bson.Raw) error {
 	p.Title = decodedOld.Title
 	p.Salutation = decodedOld.Salutation
 	p.Birthday = decodedOld.Birthday
-	p.Contacts = []*Contact{}
+	p.Contacts = map[string]*Contact{}
+	p.DefaultContacts = map[ContactType]string{}
 
-	appendContact := func(contacts []*Contact, contactValue string, contactType ContactType) []*Contact {
+	appendContact := func(p *Person, contactValue string, contactType ContactType) {
 		if contactValue != "" {
-			contacts = append(contacts, &Contact{
-				ID:        unique.GetNewIDShortID(),
-				IsDefault: true,
-				Type:      contactType,
-				Value:     contactValue,
-			})
+			id := unique.GetNewIDShortID()
+			contact := &Contact{
+				ID:    id,
+				Type:  contactType,
+				Value: contactValue,
+			}
+			p.Contacts[contact.ID] = contact
+			p.DefaultContacts[contactType] = contact.ID
 		}
-		return contacts
 	}
 
-	p.Contacts = appendContact(p.Contacts, decodedOld.Contacts.Email, ContactTypeEmail)
-	p.Contacts = appendContact(p.Contacts, decodedOld.Contacts.PhoneMobile, ContactTypePhoneMobile)
-	p.Contacts = appendContact(p.Contacts, decodedOld.Contacts.PhoneLandLine, ContactTypePhoneLandline)
-	p.Contacts = appendContact(p.Contacts, decodedOld.Contacts.Skype, ContactTypeSkype)
+	appendContact(p, decodedOld.Contacts.Email, ContactTypeEmail)
+	appendContact(p, decodedOld.Contacts.PhoneLandLine, ContactTypePhoneLandline)
+	appendContact(p, decodedOld.Contacts.PhoneMobile, ContactTypePhoneMobile)
+	appendContact(p, decodedOld.Contacts.Skype, ContactTypeSkype)
 
 	// no error
 	return nil
@@ -72,13 +74,14 @@ func bsonDecodeOldPersonStruct(p *Person, raw bson.Raw) error {
 func bsonDecodeNewPersonStruct(p *Person, raw bson.Raw) error {
 	// expected struct
 	decoded := new(struct {
-		FirstName  string
-		MiddleName string
-		LastName   string
-		Title      TitleType
-		Salutation SalutationType
-		Birthday   string
-		Contacts   []*Contact
+		FirstName       string
+		MiddleName      string
+		LastName        string
+		Title           TitleType
+		Salutation      SalutationType
+		Birthday        string
+		Contacts        map[string]*Contact
+		DefaultContacts map[ContactType]string
 	})
 
 	// unmarshall
@@ -102,6 +105,7 @@ func bsonDecodeNewPersonStruct(p *Person, raw bson.Raw) error {
 	p.Salutation = decoded.Salutation
 	p.Birthday = decoded.Birthday
 	p.Contacts = decoded.Contacts
+	p.DefaultContacts = decoded.DefaultContacts
 
 	// no error
 	return nil
