@@ -1,6 +1,5 @@
 package: github.com/foomo/shop
 import:
-- package: git.bestbytes.net/Project-Globus-Services/utils
 - package: github.com/bwmarrin/snowflake
 - package: github.com/mitchellh/mapstructure
 - package: github.com/nbutton23/zxcvbn-go
