@@ -67,6 +67,7 @@ type Order struct {
 
 type CustomerData struct {
 	CustomerId          string
+	GuestCustomerID     string
 	CustomerType        string // Private / Staff etc.
 	Email               string
 	BillingAddress      *address.Address
@@ -335,8 +336,7 @@ func (order *Order) SetPositionQuantity(itemID string, quantity float64, crossPr
 	} else {
 		pos.Quantity = quantity
 	}
-	// use project-globus-services-1
-	// db.orders.find({}, {positions:1}).pretty()
+
 	return order.Upsert()
 }
 func (order *Order) GetPositionByItemId(itemID string) *Position {
