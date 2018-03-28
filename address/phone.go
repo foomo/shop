@@ -22,6 +22,8 @@ func (p *Person) SetPhone(phone string) *Contact {
 	if contact == nil {
 		if p.Contacts == nil {
 			p.Contacts = map[string]*Contact{}
+		}
+		if p.DefaultContacts == nil {
 			p.DefaultContacts = map[ContactType]string{}
 		}
 		contact = CreatePhoneContact(phone)
