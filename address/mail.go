@@ -24,6 +24,10 @@ func CreateMailContact(mail string) *Contact {
 func (p *Person) SetMail(mail string) *Contact {
 	contact := p.GetContactByType(ContactTypeEmail)
 	if contact == nil {
+		if p.Contacts == nil {
+			p.Contacts = map[string]*Contact{}
+			p.DefaultContacts = map[ContactType]string{}
+		}
 		contact = CreateMailContact(mail)
 		p.Contacts[contact.ID] = contact
 		p.DefaultContacts[ContactTypeEmail] = contact.ID

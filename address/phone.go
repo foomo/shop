@@ -20,6 +20,10 @@ func CreatePhoneContact(phone string) *Contact {
 func (p *Person) SetPhone(phone string) *Contact {
 	contact := p.GetContactByType(ContactTypePhone)
 	if contact == nil {
+		if p.Contacts == nil {
+			p.Contacts = map[string]*Contact{}
+			p.DefaultContacts = map[ContactType]string{}
+		}
 		contact = CreatePhoneContact(phone)
 		p.Contacts[contact.ID] = contact
 		p.DefaultContacts[ContactTypePhone] = contact.ID
