@@ -35,10 +35,11 @@ type ArticleCollection struct {
 }
 
 type Article struct {
-	ID         string
-	Price      float64
-	CrossPrice float64
-	Quantity   float64
+	ID                         string
+	Price                      float64
+	CrossPrice                 float64
+	Quantity                   float64
+	AllowCrossPriceCalculation bool
 }
 
 // DiscountApplied -

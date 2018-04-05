@@ -29,6 +29,20 @@ func calculateScaledDiscounts(priceRuleVoucherPair RuleVoucherPair, orderDiscoun
 			return evaluateScale(scaledLevel, priceRuleVoucherPair, orderDiscounts, calculationParameters)
 		}
 	}
+
+	// check if compare value is greather then last scale value
+	scaledAmountsCount := len(priceRuleVoucherPair.Rule.ScaledAmounts)
+	if scaledAmountsCount > 0 {
+		lastScaleLevel := priceRuleVoucherPair.Rule.ScaledAmounts[scaledAmountsCount-1]
+		compareValue := orderTotal
+		if !lastScaleLevel.IsFromToPrice {
+			compareValue = totalQuantityForRule
+		}
+		if compareValue >= lastScaleLevel.FromValue {
+			return evaluateScale(lastScaleLevel, priceRuleVoucherPair, orderDiscounts, calculationParameters)
+		}
+	}
+
 	return orderDiscounts
 }
 
