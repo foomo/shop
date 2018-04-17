@@ -732,6 +732,9 @@ func validatePriceRule(priceRule PriceRule, checkedPosition *Article, calculatio
 	}
 
 	if calculationParameters.isCatalogCalculation {
+		if !checkedPosition.AllowCrossPriceCalculation {
+			return false, ValidationArticleAlreadyDiscountedOnSAP
+		}
 		if priceRule.QtyThreshold > 0 || priceRule.MinOrderAmount > 0 {
 			return false, ValidationPriceRuleNotForCatalogueCalculation
 		}
@@ -791,6 +794,7 @@ func validatePriceRule(priceRule PriceRule, checkedPosition *Article, calculatio
 	if checkedPosition == nil {
 		for _, article := range calculationParameters.articleCollection.Articles {
 			//at least some must match
+			//TODO: but only last one is checked for those values :(
 			if IsOneProductOrCustomerGroupInIncludedGroups(priceRule.IncludedProductGroupIDS, calculationParameters.productGroupIDsPerPosition[article.ID]) {
 				productGroupIncludeMatchOK = true
 			}
@@ -851,6 +855,18 @@ func validatePriceRule(priceRule PriceRule, checkedPosition *Article, calculatio
 	if !blacklistOK {
 		return false, ValidationPriceRuleBlacklist
 	}
+
+	//check if product can be discounted even if it was already discounted on sap
+	//only cases where it cannot be discounted is in situation when discount is applicable in catalog
+	//which means - when it is PromotionProduct with no qntThreshold and when item should be discounted by percent or absolute.
+	if checkedPosition != nil && !checkedPosition.AllowCrossPriceCalculation {
+		if priceRule.Type == TypePromotionProduct && priceRule.QtyThreshold == 0 {
+			if priceRule.Action == ActionItemByAbsolute || priceRule.Action == ActionItemByPercent {
+				return false, ValidationArticleAlreadyDiscountedOnSAP
+			}
+		}
+	}
+
 	return true, ValidationPriceRuleOK
 }
 

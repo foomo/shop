@@ -34,6 +34,7 @@ const (
 
 	ValidationPriceRuleBlacklist                  TypeRuleValidationMsg = "products_blacklisted"
 	ValidationPriceRuleNotForCatalogueCalculation TypeRuleValidationMsg = "not_for_catalogue_calculation"
+	ValidationArticleAlreadyDiscountedOnSAP       TypeRuleValidationMsg = "article_already_discounted"
 )
 
 //------------------------------------------------------------------
