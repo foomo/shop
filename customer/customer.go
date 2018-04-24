@@ -100,7 +100,7 @@ func NewGuestCustomer(email string, customProvider CustomerCustomProvider) (*Cus
 // NewCustomer creates a new Customer in the database and returns it.
 // Email must be unique for a customer. customerProvider may be nil at this point.
 func NewCustomer(email, password string, customProvider CustomerCustomProvider) (*Customer, error) {
-	log.Println("=== Creating new customer ", email)
+	//log.Println("=== Creating new customer ", email)
 	if email == "" {
 		return nil, errors.New(shop_error.ErrorRequiredFieldMissing)
 	}
@@ -262,8 +262,8 @@ func (customer *Customer) AddAddress(addr *address.Address) (string, error) {
 
 	// If Person of Customer is still empty and this is the first address
 	// added to the customer, Person of Address is adopted for Customer
-	log.Println("is customer nil: ", customer == nil)
-	log.Println("is customer.person nil: ", customer.Person == nil)
+	// log.Println("is customer nil: ", customer == nil)
+	// log.Println("is customer.person nil: ", customer.Person == nil)
 	if customer.Person == nil {
 		log.Println("WARNING: customer.Person must not be nil: customerID: " + customer.GetID() + ", AddressID: " + addr.Id)
 		customer.Person = &address.Person{
