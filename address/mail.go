@@ -15,7 +15,7 @@ func (c *Contact) IsMail() bool {
 func CreateMailContact(mail string) *Contact {
 	return &Contact{
 		ID:    unique.GetNewIDShortID(),
-		Type:  ContactTypePhone,
+		Type:  ContactTypeEmail,
 		Value: strings.ToLower(mail),
 	}
 }
