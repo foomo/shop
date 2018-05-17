@@ -65,12 +65,17 @@ func CreateCustomerCredentials(email, password string) error {
 
 }
 
-// CheckLoginAvailable returns true if the email address is available as login credential
+// CheckLoginAvailable returns true if the email address is available as login credential (ignores guest accounts)
 func CheckLoginAvailable(email string) (bool, error) {
 	session, collection := GetCustomerPersistor().GetCollection()
 	defer session.Close()
 
-	query := collection.Find(&bson.M{"email": lc(email)})
+	query := collection.Find(&bson.M{
+		"$and": []*bson.M{
+			&bson.M{"email": lc(email)},
+			&bson.M{"isguest": false},
+		}})
+
 	count, err := query.Count()
 	if err != nil {
 		return false, err

@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/foomo/shop/address"
-	"github.com/foomo/shop/shop_error"
 	"github.com/foomo/shop/test_utils"
 	"github.com/foomo/shop/utils"
 )
@@ -142,16 +141,6 @@ func create2CustomersAndPerformSomeUpserts(t *testing.T) (*Customer, *Customer) 
 		t.Fatal(err)
 	}
 	return customer, customer2
-}
-
-// Try to get a customer which is not in the db
-func TestCustomerTryRetrieveNonExistent(t *testing.T) {
-	test_utils.DropAllCollections()
-	_, err := GetCustomerByEmail("meNot@existent.com", nil)
-	if !shop_error.IsError(err, shop_error.ErrorNotInDatabase) {
-		t.Fail()
-	}
-	log.Println(err)
 }
 
 func TestCustomerCreateGuest(t *testing.T) {
