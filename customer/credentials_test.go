@@ -24,14 +24,19 @@ func TestCredentials(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Try to create credentials for already taken email.
-	// This should fail
-	email = "alice@bar.com"
-	password = "wonderland"
-	err = CreateCustomerCredentials(email, password)
-	if err == nil {
-		t.Fatal(err)
-	}
+
+	// ! ----------------------------------------------------------------------
+	// ~ due to non unique mails creating multiple creds with same mail is allowed now
+	// ! ----------------------------------------------------------------------
+
+	// // Try to create credentials for already taken email.
+	// // This should fail
+	// email = "alice@bar.com"
+	// password = "wonderland"
+	// err = CreateCustomerCredentials(email, password)
+	// if err == nil {
+	// 	t.Fatal(err)
+	// }
 
 	// Change email
 	err = ChangeEmail("foo@bar.com", "trent@bar.com")
