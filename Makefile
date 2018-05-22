@@ -3,6 +3,9 @@ SHELL = "/bin/bash"
 TEST_PATH = github.com/foomo/shop
 # invoke a single test by setting go test -v $(TEST_PATH)/shop
 
+mongo:
+	docker run --rm -d -it -p 27017:27017 mongo
+
 clean:
 	rm -f customer/diff-*
 

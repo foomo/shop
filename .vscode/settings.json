@@ -1,0 +1,6 @@
+// Place your settings in this file to overwrite default and user settings.
+{
+    "go.testEnvVars": {
+        "MONGO_URL": "mongodb://127.0.0.1:27017/shop",
+    }
+}
