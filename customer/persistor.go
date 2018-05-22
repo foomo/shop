@@ -6,6 +6,8 @@ import (
 	"log"
 	"strconv"
 
+	"github.com/foomo/shop/shop_error"
+
 	"github.com/foomo/shop/configuration"
 	"github.com/foomo/shop/persistence"
 	"github.com/foomo/shop/utils"
@@ -220,13 +222,14 @@ func DeleteCustomer(c *Customer) error {
 	session, collection := GetCustomerPersistor().GetCollection()
 	defer session.Close()
 
+	// remove customer
 	err := collection.Remove(bson.M{"_id": c.BsonId})
-	if err != nil {
+	if err != nil && err.Error() != shop_error.ErrorNotInDatabase {
 		return err
 	}
-	err = DeleteCredential(c.Email)
 
-	return err
+	// remove credentials
+	return DeleteCredential(c.Email)
 }
 func DeleteCustomerById(id string) error {
 	customer, err := GetCustomerById(id, nil)

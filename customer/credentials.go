@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/foomo/shop/crypto"
+	"github.com/foomo/shop/shop_error"
 	"github.com/foomo/shop/version"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -151,7 +152,13 @@ func DeleteCredential(email string) error {
 	session, collection := GetCustomerPersistor().GetCollection()
 	defer session.Close()
 
-	return collection.Remove(&bson.M{"email": lc(email)})
+	// remove credentials
+	err := collection.Remove(&bson.M{"email": lc(email)})
+	if err != nil && err.Error() != shop_error.ErrorNotInDatabase {
+		return err
+	}
+
+	return nil
 }
 
 //------------------------------------------------------------------

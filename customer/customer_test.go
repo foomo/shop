@@ -154,6 +154,33 @@ func TestCustomerCreateGuest(t *testing.T) {
 	}
 }
 
+func TestCustomerDelete(t *testing.T) {
+	test_utils.DropAllCollections()
+	guest, err := NewGuestCustomer(MOCK_EMAIL, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if guest.IsGuest {
+		t.Fatal("Expected isGuest to be false, but is true")
+	}
+
+	// test user
+	testCustomer, testCustomerErr := GetCustomerById(guest.Id, nil)
+	if testCustomerErr != nil {
+		t.Fatal(testCustomerErr)
+	}
+
+	if testCustomer.BsonId != guest.BsonId {
+		t.Fatal("customer missmatch")
+	}
+
+	// delete guest
+	delErr := guest.Delete()
+	if delErr != nil {
+		t.Fatal(delErr)
+	}
+}
+
 func TestCustomerChangeAddress(t *testing.T) {
 	test_utils.DropAllCollections()
 	customer, err := NewCustomer(MOCK_EMAIL, MOCK_PASSWORD, nil)
