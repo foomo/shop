@@ -6,13 +6,15 @@ import (
 	"log"
 	"strconv"
 
+	"github.com/foomo/shop/shop_error"
+
 	"github.com/foomo/shop/configuration"
 	"github.com/foomo/shop/persistence"
 	"github.com/foomo/shop/utils"
 	"github.com/foomo/shop/version"
 	"github.com/mitchellh/mapstructure"
-	"gopkg.in/mgo.v2/bson"
 	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 )
 
 // !! NOTE: customer must not import order !!
@@ -220,13 +222,14 @@ func DeleteCustomer(c *Customer) error {
 	session, collection := GetCustomerPersistor().GetCollection()
 	defer session.Close()
 
+	// remove customer
 	err := collection.Remove(bson.M{"_id": c.BsonId})
-	if err != nil {
+	if err != nil && err.Error() != shop_error.ErrorNotInDatabase {
 		return err
 	}
-	err = DeleteCredential(c.Email)
 
-	return err
+	// remove credentials
+	return DeleteCredential(c.Email)
 }
 func DeleteCustomerById(id string) error {
 	customer, err := GetCustomerById(id, nil)
@@ -246,10 +249,6 @@ func GetCustomerById(id string, customProvider CustomerCustomProvider) (*Custome
 	return findOneCustomer(&bson.M{"id": id}, nil, "", customProvider, false)
 }
 
-// GetCustomerByEmail // TODO this won't work for guests, because for guests there could be multiple entries for the same email address
-func GetCustomerByEmail(email string, customProvider CustomerCustomProvider) (*Customer, error) {
-	return findOneCustomer(&bson.M{"email": email}, nil, "", customProvider, false)
-}
 func GetCurrentCustomerByIdFromVersionsHistory(customerId string, customProvider CustomerCustomProvider) (*Customer, error) {
 	return findOneCustomer(&bson.M{"id": customerId}, nil, "-version.current", customProvider, true)
 }

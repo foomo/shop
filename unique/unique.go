@@ -38,7 +38,7 @@ func GetNewIDSnowFlake() string {
 func GetNewIDShortID() string {
 	var seed uint64 = 3214
 	if generator == nil {
-		newGenerator, err := shortid.New(1, shortid.DefaultABC, seed)
+		newGenerator, err := shortid.New(1, shortid.DEFAULT_ABC, seed)
 		generator = newGenerator
 		if err != nil {
 			// The Shop can no longer work without this, therfore panic.

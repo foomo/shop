@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/foomo/shop/address"
-	"github.com/foomo/shop/shop_error"
 	"github.com/foomo/shop/test_utils"
 	"github.com/foomo/shop/utils"
 )
@@ -144,16 +143,6 @@ func create2CustomersAndPerformSomeUpserts(t *testing.T) (*Customer, *Customer) 
 	return customer, customer2
 }
 
-// Try to get a customer which is not in the db
-func TestCustomerTryRetrieveNonExistent(t *testing.T) {
-	test_utils.DropAllCollections()
-	_, err := GetCustomerByEmail("meNot@existent.com", nil)
-	if !shop_error.IsError(err, shop_error.ErrorNotInDatabase) {
-		t.Fail()
-	}
-	log.Println(err)
-}
-
 func TestCustomerCreateGuest(t *testing.T) {
 	test_utils.DropAllCollections()
 	guest, err := NewGuestCustomer(MOCK_EMAIL, nil)
@@ -162,6 +151,33 @@ func TestCustomerCreateGuest(t *testing.T) {
 	}
 	if guest.IsGuest {
 		t.Fatal("Expected isGuest to be false, but is true")
+	}
+}
+
+func TestCustomerDelete(t *testing.T) {
+	test_utils.DropAllCollections()
+	guest, err := NewGuestCustomer(MOCK_EMAIL, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if guest.IsGuest {
+		t.Fatal("Expected isGuest to be false, but is true")
+	}
+
+	// test user
+	testCustomer, testCustomerErr := GetCustomerById(guest.Id, nil)
+	if testCustomerErr != nil {
+		t.Fatal(testCustomerErr)
+	}
+
+	if testCustomer.BsonId != guest.BsonId {
+		t.Fatal("customer missmatch")
+	}
+
+	// delete guest
+	delErr := guest.Delete()
+	if delErr != nil {
+		t.Fatal(delErr)
 	}
 }
 
