@@ -5,5 +5,10 @@ sudo: required
 services:
   - docker
 
+install:
+  - go get -v github.com/Masterminds/glide
+  - cd $GOPATH/src/github.com/Masterminds/glide && git checkout v0.13.1 && go install && cd -
+  - glide install
+
 script:
-  -  make install-test-dependencies test
+  -  make test
