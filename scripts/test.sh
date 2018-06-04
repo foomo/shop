@@ -2,10 +2,10 @@
 
 TEST_PATH=github.com/foomo/shop
 CONTAINER=$(docker run --rm -d -it -P mongo)
-MONGO_PORT=$(docker inspect ${CONTAINER} | grep HostPort | sed 's/.*\"\([0-9]*\)".*/\1/g')
+MONGO_PORT=$(docker inspect --format '{{ (index (index .NetworkSettings.Ports "27017/tcp") 0).HostPort }}' ${CONTAINER})
 
 export MONGO_URL="mongodb://127.0.0.1:${MONGO_PORT}/shop"
-export MONGO_URL_PRODUCTS="mongodb://127.0.0.1:${MONGO_PORT}/products"
+#export MONGO_URL_PRODUCTS="mongodb://127.0.0.1:${MONGO_PORT}/products"
 
 ERRORS=""
 RES=0

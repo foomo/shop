@@ -44,7 +44,8 @@ type CountryCode string
 type Customer struct {
 	BsonId         bson.ObjectId `bson:"_id,omitempty"`
 	Id             string        // Email is used as LoginID, but can change. This is never changes!
-	unlinkDB       bool          // if true, changes to Customer are not stored in database
+	ExternalID     string
+	unlinkDB       bool // if true, changes to Customer are not stored in database
 	Flags          *Flags
 	Version        *version.Version
 	CreatedAt      time.Time
@@ -99,7 +100,7 @@ func NewGuestCustomer(email string, customProvider CustomerCustomProvider) (*Cus
 // NewCustomer creates a new Customer in the database and returns it.
 // Email must be unique for a customer. customerProvider may be nil at this point.
 func NewCustomer(email, password string, customProvider CustomerCustomProvider) (*Customer, error) {
-	log.Println("=== Creating new customer ", email)
+	//log.Println("=== Creating new customer ", email)
 	if email == "" {
 		return nil, errors.New(shop_error.ErrorRequiredFieldMissing)
 	}
@@ -123,6 +124,7 @@ func NewCustomer(email, password string, customProvider CustomerCustomProvider) 
 	// 	// }
 	// }
 
+	mailContact := address.CreateMailContact(email)
 	customer := &Customer{
 		Flags:          &Flags{},
 		Version:        version.NewVersion(),
@@ -131,19 +133,22 @@ func NewCustomer(email, password string, customProvider CustomerCustomProvider) 
 		CreatedAt:      utils.TimeNow(),
 		LastModifiedAt: utils.TimeNow(),
 		Person: &address.Person{
-			Contacts: &address.Contacts{
-				Email: email,
+			Contacts: map[string]*address.Contact{
+				mailContact.ID: mailContact,
+			},
+			DefaultContacts: map[address.ContactType]string{
+				address.ContactTypeEmail: mailContact.ID,
 			},
 		},
 		Localization: &Localization{},
 		Tracking:     &Tracking{},
 	}
 
-	trackingId, err := crypto.CreateHash(customer.GetID())
+	trackingID, err := crypto.CreateHash(customer.GetID())
 	if err != nil {
 		return nil, err
 	}
-	customer.Tracking.TrackingID = "tid" + trackingId
+	customer.Tracking.TrackingID = "tid" + trackingID
 	customer.IsGuest = false
 	if customProvider != nil {
 		customer.Custom = customProvider.NewCustomerCustom()
@@ -163,18 +168,21 @@ func NewCustomer(email, password string, customProvider CustomerCustomProvider) 
 //------------------------------------------------------------------
 
 func (customer *Customer) ChangeEmail(email, newEmail string) error {
-	// err := ChangeEmail(email, newEmail)
-	// if err != nil {
-	// 	return err
-	// }
-	customer.Email = lc(newEmail)
+	// lower case
+	email = lc(email)
+	newEmail = lc(newEmail)
+
+	customer.Email = newEmail
 	for _, addr := range customer.GetAddresses() {
-		if addr.Person.Contacts.Email == lc(email) {
-			addr.Person.Contacts.Email = lc(newEmail)
+		for _, contact := range addr.Person.Contacts {
+			if contact.IsMail() && contact.Value == email {
+				contact.Value = newEmail
+			}
 		}
 	}
 	return customer.Upsert()
 }
+
 func (customer *Customer) ChangePassword(password, passwordNew string, force bool) error {
 	err := ChangePassword(customer.Email, password, passwordNew, force)
 	if err != nil {
@@ -245,21 +253,22 @@ func (customer *Customer) AddAddress(addr *address.Address) (string, error) {
 	addr.Id = unique.GetNewID()
 	// Prevent nil pointer in case we get an incomplete address
 	if addr.Person == nil {
-		addr.Person = &address.Person{
-			Contacts: &address.Contacts{},
-		}
-	} else if addr.Person.Contacts == nil {
-		addr.Person.Contacts = &address.Contacts{}
+		addr.Person = &address.Person{}
+	}
+	if addr.Person.Contacts == nil {
+		addr.Person.Contacts = map[string]*address.Contact{}
+		addr.Person.DefaultContacts = map[address.ContactType]string{}
 	}
 
 	// If Person of Customer is still empty and this is the first address
 	// added to the customer, Person of Address is adopted for Customer
-	log.Println("is customer nil: ", customer == nil)
-	log.Println("is customer.person nil: ", customer.Person == nil)
+	// log.Println("is customer nil: ", customer == nil)
+	// log.Println("is customer.person nil: ", customer.Person == nil)
 	if customer.Person == nil {
 		log.Println("WARNING: customer.Person must not be nil: customerID: " + customer.GetID() + ", AddressID: " + addr.Id)
 		customer.Person = &address.Person{
-			Contacts: &address.Contacts{},
+			Contacts:        map[string]*address.Contact{},
+			DefaultContacts: map[address.ContactType]string{},
 		}
 		*customer.Person = *addr.Person
 	} else if len(customer.Addresses) == 0 && customer.Person != nil && customer.Person.LastName == "" {
