@@ -733,6 +733,7 @@ func validatePriceRule(priceRule PriceRule, checkedPosition *Article, calculatio
 
 	if calculationParameters.isCatalogCalculation {
 		if !checkedPosition.AllowCrossPriceCalculation {
+			log.Printf("Position %s already discounted on SAP. AllowCrossPriceCalculation = false (price = %f, crossprice = %f)", checkedPosition.ID, checkedPosition.Price, checkedPosition.CrossPrice)
 			return false, ValidationArticleAlreadyDiscountedOnSAP
 		}
 		if priceRule.QtyThreshold > 0 || priceRule.MinOrderAmount > 0 {
@@ -862,6 +863,7 @@ func validatePriceRule(priceRule PriceRule, checkedPosition *Article, calculatio
 	if checkedPosition != nil && !checkedPosition.AllowCrossPriceCalculation {
 		if priceRule.Type == TypePromotionProduct && priceRule.QtyThreshold == 0 {
 			if priceRule.Action == ActionItemByAbsolute || priceRule.Action == ActionItemByPercent {
+				log.Printf("Position %s already discounted on SAP. AllowCrossPriceCalculation = false (price = %f, crossprice = %f)", checkedPosition.ID, checkedPosition.Price, checkedPosition.CrossPrice)
 				return false, ValidationArticleAlreadyDiscountedOnSAP
 			}
 		}
