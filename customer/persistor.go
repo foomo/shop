@@ -6,10 +6,9 @@ import (
 	"log"
 	"strconv"
 
-	"github.com/foomo/shop/shop_error"
-
 	"github.com/foomo/shop/configuration"
 	"github.com/foomo/shop/persistence"
+	"github.com/foomo/shop/shop_error"
 	"github.com/foomo/shop/utils"
 	"github.com/foomo/shop/version"
 	"github.com/mitchellh/mapstructure"
@@ -22,20 +21,43 @@ import (
 // ~ CONSTANTS / VARS
 //------------------------------------------------------------------
 
-var globalCustomerPersistor *persistence.Persistor
-var globalCustomerVersionsPersistor *persistence.Persistor
-var globalCredentialsPersistor *persistence.Persistor
+var (
+	globalCustomerPersistor         *persistence.Persistor
+	globalCustomerVersionsPersistor *persistence.Persistor
+	globalCredentialsPersistor      *persistence.Persistor
+
+	customerEnsuredIndexes = []mgo.Index{
+		mgo.Index{
+			Name:       "id",
+			Key:        []string{"id"},
+			Unique:     true,
+			Background: true,
+		},
+		mgo.Index{
+			Name:       "mail",
+			Key:        []string{"email"},
+			Unique:     false,
+			Background: true,
+		},
+		mgo.Index{
+			Name:       "externalid",
+			Key:        []string{"externalid"},
+			Unique:     false,
+			Background: true,
+		},
+	}
+)
 
 //------------------------------------------------------------------
 // ~ PUBLIC METHODS
 //------------------------------------------------------------------
 
-// Returns GLOBAL_PERSISTOR. If GLOBAL_PERSISTOR is nil, a new persistor is created, set as GLOBAL_PERSISTOR and returned
+// GetCustomerPersistor will return a singleton instance of a customer mongo persistor
 func GetCustomerPersistor() *persistence.Persistor {
 	url := configuration.GetMongoURL()
 	collection := configuration.MONGO_COLLECTION_CUSTOMERS
 	if globalCustomerPersistor == nil {
-		p, err := persistence.NewPersistor(url, collection)
+		p, err := persistence.NewPersistorWithIndexes(url, collection, customerEnsuredIndexes)
 		if err != nil || p == nil {
 			panic(errors.New("failed to create mongoDB global persistor: " + err.Error()))
 		}
@@ -47,7 +69,7 @@ func GetCustomerPersistor() *persistence.Persistor {
 		return globalCustomerPersistor
 	}
 
-	p, err := persistence.NewPersistor(url, collection)
+	p, err := persistence.NewPersistorWithIndexes(url, collection, customerEnsuredIndexes)
 	if err != nil || p == nil {
 		panic(err)
 	}
@@ -55,7 +77,7 @@ func GetCustomerPersistor() *persistence.Persistor {
 	return globalCustomerPersistor
 }
 
-// Returns GLOBAL_PERSISTOR. If GLOBAL_PERSISTOR is nil, a new persistor is created, set as GLOBAL_PERSISTOR and returned
+// GetCustomerVersionsPersistor will return a singleton instance of a versioned customer mongo persistor
 func GetCustomerVersionsPersistor() *persistence.Persistor {
 	url := configuration.GetMongoURL()
 	collection := configuration.MONGO_COLLECTION_CUSTOMERS_HISTORY
@@ -80,7 +102,7 @@ func GetCustomerVersionsPersistor() *persistence.Persistor {
 	return globalCustomerVersionsPersistor
 }
 
-// Returns GLOBAL_PERSISTOR. If GLOBAL_PERSISTOR is nil, a new persistor is created, set as GLOBAL_PERSISTOR and returned
+// GetCredentialsPersistor will return a singleton instance of a credentials mongo persistor
 func GetCredentialsPersistor() *persistence.Persistor {
 	url := configuration.GetMongoURL()
 	collection := configuration.MONGO_COLLECTION_CREDENTIALS
@@ -118,6 +140,7 @@ func AlreadyExistsInDB(customerID string) (bool, error) {
 	return count > 0, nil
 }
 
+// Count will count the items in mongo collection matching the query
 func Count(query *bson.M, customProvider CustomerCustomProvider) (count int, err error) {
 	session, collection := GetCustomerPersistor().GetCollection()
 	defer session.Close()
@@ -150,6 +173,7 @@ func Find(query *bson.M, customProvider CustomerCustomProvider) (iter func() (cu
 	return
 }
 
+// UpsertCustomer will save a given customer in mongo collection
 func UpsertCustomer(c *Customer) error {
 
 	// order is unlinked or not yet inserted in db

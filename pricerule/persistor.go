@@ -4,26 +4,50 @@ import (
 	"errors"
 	"reflect"
 
-	"gopkg.in/mgo.v2/bson"
-
 	"github.com/foomo/shop/configuration"
 	"github.com/foomo/shop/persistence"
 	"github.com/foomo/shop/shop_error"
 	"github.com/mitchellh/mapstructure"
-)
-
-//Public constants
-const (
-	TypePriceRules         string = "pricerules"
-	TypePriceRulesVouchers string = "vouchers"
-	TypePriceRulesGroups   string = "groups"
+	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 )
 
 //------------------------------------------------------------------
 // ~ CONSTANTS / VARS
 //------------------------------------------------------------------
 
+const (
+	TypePriceRules         string = "pricerules"
+	TypePriceRulesVouchers string = "vouchers"
+	TypePriceRulesGroups   string = "groups"
+)
+
 var globalPriceRulePersistors map[string]*persistence.Persistor
+
+var ensuredIndexes = map[string][]mgo.Index{
+	TypePriceRules: []mgo.Index{},
+	TypePriceRulesVouchers: []mgo.Index{
+		mgo.Index{
+			Name:       "id",
+			Key:        []string{"id"},
+			Unique:     false,
+			Background: true,
+		},
+		mgo.Index{
+			Name:       "vouchercode",
+			Key:        []string{"vouchercode"},
+			Unique:     false,
+			Background: true,
+		},
+		mgo.Index{
+			Name:       "id-customerid",
+			Key:        []string{"id", "customerid"},
+			Unique:     false,
+			Background: true,
+		},
+	},
+	TypePriceRulesGroups: []mgo.Index{},
+}
 
 // PriceRuleCustomProvider - in case obj is extended
 type PriceRuleCustomProvider interface {
@@ -106,27 +130,38 @@ func GetPersistorForObject(obj interface{}) *persistence.Persistor {
 
 // Returns GLOBAL_PERSISTOR. If GLOBAL_PERSISTOR is nil, a new persistor is created, set as GLOBAL_PERSISTOR and returned
 func getPriceRulePersistorForType(persistorType string) *persistence.Persistor {
+
+	// variables
+	indexes := []mgo.Index{}
 	url := configuration.GetMongoURL()
 	collection := configuration.MONGO_COLLECTION_PRICERULES
+
+	// switch collection and indices
 	switch persistorType {
 	case TypePriceRules:
 		collection = configuration.MONGO_COLLECTION_PRICERULES
-
+		indexes = ensuredIndexes[TypePriceRules]
 	case TypePriceRulesVouchers:
 		collection = configuration.MONGO_COLLECTION_PRICERULES_VOUCHERS
-
+		indexes = ensuredIndexes[TypePriceRulesVouchers]
 	case TypePriceRulesGroups:
 		collection = configuration.MONGO_COLLECTION_PRICERULES_GROUPS
-
+		indexes = ensuredIndexes[TypePriceRulesGroups]
 	default:
 		panic("type " + persistorType + " does not exist")
 	}
 
-	if globalPriceRulePersistors[persistorType] == nil {
-		p, err := persistence.NewPersistor(url, collection)
-		if err != nil || p == nil {
-			panic(errors.New("failed to create mongoDB articleCollection persistor: " + err.Error()))
+	// create persistor with index
+	var mustPersist = func(u string, c string, i []mgo.Index) *persistence.Persistor {
+		p, e := persistence.NewPersistorWithIndexes(u, c, i)
+		if e != nil || p == nil {
+			panic(errors.New("failed to create mongoDB persistor: " + e.Error()))
 		}
+		return p
+	}
+
+	if globalPriceRulePersistors[persistorType] == nil {
+		p := mustPersist(url, collection, indexes)
 		if len(globalPriceRulePersistors) == 0 {
 			globalPriceRulePersistors = make(map[string]*persistence.Persistor)
 		}
@@ -138,10 +173,7 @@ func getPriceRulePersistorForType(persistorType string) *persistence.Persistor {
 		return globalPriceRulePersistors[persistorType]
 	}
 
-	p, err := persistence.NewPersistor(url, collection)
-	if err != nil || p == nil {
-		panic(err)
-	}
+	p := mustPersist(url, collection, indexes)
 	globalPriceRulePersistors[persistorType] = p
 	return globalPriceRulePersistors[persistorType]
 }

@@ -5,11 +5,11 @@ import (
 	"log"
 	"strconv"
 
+	"github.com/foomo/shop/configuration"
 	"github.com/foomo/shop/persistence"
 	"github.com/foomo/shop/version"
 	"github.com/mitchellh/mapstructure"
-
-	"github.com/foomo/shop/configuration"
+	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -20,18 +20,27 @@ import (
 var (
 	globalOrderPersistor         *persistence.Persistor
 	globalOrderVersionsPersistor *persistence.Persistor
+
+	orderEnsuredIndexes = []mgo.Index{
+		mgo.Index{
+			Name:       "id",
+			Key:        []string{"id"},
+			Unique:     true,
+			Background: true,
+		},
+	}
 )
 
 //------------------------------------------------------------------
 // ~ PUBLIC METHODS
 //------------------------------------------------------------------
 
-// Returns GLOBAL_PERSISTOR. If GLOBAL_PERSISTOR is nil, a new persistor is created, set as GLOBAL_PERSISTOR and returned
+// GetOrderPersistor will return a singleton instance of an order mongo persistor
 func GetOrderPersistor() *persistence.Persistor {
 	url := configuration.GetMongoURL()
 	collection := configuration.MONGO_COLLECTION_ORDERS
 	if globalOrderPersistor == nil {
-		p, err := persistence.NewPersistor(url, collection)
+		p, err := persistence.NewPersistorWithIndexes(url, collection, orderEnsuredIndexes)
 		if err != nil || p == nil {
 			panic(errors.New("failed to create mongoDB order persistor: " + err.Error()))
 		}
@@ -43,7 +52,7 @@ func GetOrderPersistor() *persistence.Persistor {
 		return globalOrderPersistor
 	}
 
-	p, err := persistence.NewPersistor(url, collection)
+	p, err := persistence.NewPersistorWithIndexes(url, collection, orderEnsuredIndexes)
 	if err != nil || p == nil {
 		panic(err)
 	}
@@ -51,7 +60,7 @@ func GetOrderPersistor() *persistence.Persistor {
 	return globalOrderPersistor
 }
 
-// Returns GLOBAL_PERSISTOR. If GLOBAL_PERSISTOR is nil, a new persistor is created, set as GLOBAL_PERSISTOR and returned
+// GetOrderVersionsPersistor will return a singleton instance of a versioned order mongo persistor
 func GetOrderVersionsPersistor() *persistence.Persistor {
 	url := configuration.GetMongoURL()
 	collection := configuration.MONGO_COLLECTION_ORDERS_HISTORY

@@ -24,19 +24,30 @@ type Persistor struct {
 // ~ CONSTRUCTOR
 //------------------------------------------------------------------
 
-func NewPersistorWithIndex(mongoURL string, collectionName string, index mgo.Index) (p *Persistor, err error) {
+// NewPersistorWithIndexes will construct a new persistor and ensure indices
+func NewPersistorWithIndexes(mongoURL string, collectionName string, indexes []mgo.Index) (p *Persistor, err error) {
+
+	// construct persitor
 	p, err = NewPersistor(mongoURL, collectionName)
 	if err != nil {
 		return
 	}
 
+	// get collection
 	session, collection := p.GetCollection()
 	defer session.Close()
 
-	err = collection.EnsureIndex(index)
-	if err != nil {
-		return
+	// iterate indexes
+	for _, index := range indexes {
+
+		// ensure index
+		indexErr := collection.EnsureIndex(index)
+		if indexErr != nil {
+			return nil, indexErr
+		}
+
 	}
+
 	return p, nil
 }
 
