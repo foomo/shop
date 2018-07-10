@@ -28,7 +28,7 @@ type CustomerCredentials struct {
 
 // GetCredentials from db
 func GetCredentials(email string) (*CustomerCredentials, error) {
-	session, collection := GetCustomerPersistor().GetCollection()
+	session, collection := GetCredentialsPersistor().GetCollection()
 	defer session.Close()
 
 	credentials := &CustomerCredentials{}
@@ -60,7 +60,7 @@ func CreateCustomerCredentials(email, password string) error {
 		Email:   lc(email),
 		Crypto:  crypto,
 	}
-	session, collection := GetCustomerPersistor().GetCollection()
+	session, collection := GetCredentialsPersistor().GetCollection()
 	defer session.Close()
 	return collection.Insert(credentials)
 
@@ -116,7 +116,7 @@ func ChangePassword(email, password, passwordNew string, force bool) error {
 		credentials.Crypto = newCrypto
 		credentials.Version.Increment()
 
-		session, collection := GetCustomerPersistor().GetCollection()
+		session, collection := GetCredentialsPersistor().GetCollection()
 		defer session.Close()
 
 		_, err = collection.UpsertId(credentials.BsonId, credentials)
@@ -141,7 +141,7 @@ func ChangeEmail(email, newEmail string) error {
 	credentials.Email = lc(newEmail)
 	credentials.Version.Increment()
 
-	session, collection := GetCustomerPersistor().GetCollection()
+	session, collection := GetCredentialsPersistor().GetCollection()
 	defer session.Close()
 
 	_, err = collection.UpsertId(credentials.BsonId, credentials)
@@ -149,7 +149,7 @@ func ChangeEmail(email, newEmail string) error {
 }
 
 func DeleteCredential(email string) error {
-	session, collection := GetCustomerPersistor().GetCollection()
+	session, collection := GetCredentialsPersistor().GetCollection()
 	defer session.Close()
 
 	// remove credentials
