@@ -22,7 +22,7 @@ const (
 	TypePriceRulesGroups   string = "groups"
 )
 
-var globalPriceRulePersistors map[string]*persistence.Persistor
+var globalPriceRulePersistors = make(map[string]*persistence.Persistor)
 
 var ensuredIndexes = map[string][]mgo.Index{
 	TypePriceRules: []mgo.Index{},
@@ -151,36 +151,24 @@ func getPriceRulePersistorForType(persistorType string) *persistence.Persistor {
 		panic("type " + persistorType + " does not exist")
 	}
 
-	// create persistor with index
-	var mustPersist = func(u string, c string, i []mgo.Index) *persistence.Persistor {
-		p, e := persistence.NewPersistorWithIndexes(u, c, i)
-		if e != nil || p == nil {
-			panic(errors.New("failed to create mongoDB persistor: " + e.Error()))
-		}
+	// check if persistor already exists and return it
+	if p, ok := globalPriceRulePersistors[persistorType]; ok {
 		return p
 	}
 
-	if globalPriceRulePersistors[persistorType] == nil {
-		p := mustPersist(url, collection, indexes)
-		if len(globalPriceRulePersistors) == 0 {
-			globalPriceRulePersistors = make(map[string]*persistence.Persistor)
-		}
-		globalPriceRulePersistors[persistorType] = p
-		return globalPriceRulePersistors[persistorType]
+	// create a new persistor
+	p, e := persistence.NewPersistorWithIndexes(url, collection, indexes)
+	if e != nil || p == nil {
+		panic(errors.New("failed to create mongoDB persistor: " + e.Error()))
 	}
-
-	if url == globalPriceRulePersistors[persistorType].GetURL() && collection == globalPriceRulePersistors[persistorType].GetCollectionName() {
-		return globalPriceRulePersistors[persistorType]
-	}
-
-	p := mustPersist(url, collection, indexes)
 	globalPriceRulePersistors[persistorType] = p
-	return globalPriceRulePersistors[persistorType]
+	return p
 }
 
 //------------------------------------------------------------------
 // ~ PRIVATE METHODS
 //------------------------------------------------------------------
+
 // findOneGroup returns one Group from the database
 func findOneObj(obj interface{}, find *bson.M, selection *bson.M, sort string, customProvider PriceRuleCustomProvider) (interface{}, error) {
 	var p *persistence.Persistor
