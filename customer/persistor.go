@@ -30,7 +30,7 @@ var (
 		mgo.Index{
 			Name:       "id",
 			Key:        []string{"id"},
-			Unique:     true,
+			Unique:     false,
 			Background: true,
 		},
 		mgo.Index{
