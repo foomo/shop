@@ -79,6 +79,25 @@ func NewPersistor(mongoURL string, collection string) (p *Persistor, err error) 
 //------------------------------------------------------------------
 // ~ PUBLIC METHODS
 //------------------------------------------------------------------
+// EnsureIndexes will create indexes on collection if not present
+func (p *Persistor) EnsureIndexes(indexes []mgo.Index) error {
+	// get collection
+	session, collection := p.GetCollection()
+	defer session.Close()
+
+	// iterate indexes
+	for _, index := range indexes {
+
+		// ensure index
+		indexErr := collection.EnsureIndex(index)
+		if indexErr != nil {
+			return indexErr
+		}
+
+	}
+
+	return nil
+}
 
 func (p *Persistor) GetCollection() (session *mgo.Session, collection *mgo.Collection) {
 	session = p.session.Clone()
