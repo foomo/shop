@@ -62,11 +62,12 @@ func bsonDecodeOldPersonStruct(p *Person, raw bson.Raw) error {
 		}
 	}
 
-	appendContact(p, decodedOld.Contacts.Email, ContactTypeEmail)
-	appendContact(p, decodedOld.Contacts.PhoneLandLine, ContactTypePhoneLandline)
-	appendContact(p, decodedOld.Contacts.PhoneMobile, ContactTypePhoneMobile)
-	appendContact(p, decodedOld.Contacts.Skype, ContactTypeSkype)
-
+	if decodedOld.Contacts != nil {
+		appendContact(p, decodedOld.Contacts.Email, ContactTypeEmail)
+		appendContact(p, decodedOld.Contacts.PhoneLandLine, ContactTypePhoneLandline)
+		appendContact(p, decodedOld.Contacts.PhoneMobile, ContactTypePhoneMobile)
+		appendContact(p, decodedOld.Contacts.Skype, ContactTypeSkype)
+	}
 	// no error
 	return nil
 }
