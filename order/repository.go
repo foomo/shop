@@ -54,7 +54,7 @@ func Find(query *bson.M, customProvider OrderCustomProvider) (iter func() (o *Or
 		log.Println(err)
 	}
 	//log.Println("Persistor.Find(): ", n, "items found for query ", query)
-	q := collection.Find(query)
+	q := collection.Find(query).Sort("_id")
 	// fields := customProvider.Fields()
 	// if fields != nil {
 	// 	q.Select(fields)
