@@ -40,22 +40,23 @@ type LanguageCode string
 // Order of item
 // create revisions
 type Order struct {
-	BsonId           bson.ObjectId `bson:"_id,omitempty"`
-	CartId           string        // unique cartId. This is the initial id when the cart is created
-	Id               string        // unique orderId. This is set when the order is confirmed and sent
-	Version          *version.Version
-	referenceVersion int  // Version of final order as it was submitted by customer
-	unlinkDB         bool // if true, changes to Customer are not stored in database
-	Flags            *Flags
-	State            *state.State
-	CustomerData     *CustomerData
-	CreatedAt        time.Time
-	ConfirmedAt      time.Time
-	TransmittedAt    time.Time
-	LastModifiedAt   time.Time
-	CompletedAt      time.Time
-	ATPAt            time.Time
-	Positions        []*Position
+	BsonId                     bson.ObjectId `bson:"_id,omitempty"`
+	CartId                     string        // unique cartId. This is the initial id when the cart is created
+	Id                         string        // unique orderId. This is set when the order is confirmed and sent
+	Version                    *version.Version
+	referenceVersion           int  // Version of final order as it was submitted by customer
+	unlinkDB                   bool // if true, changes to Customer are not stored in database
+	Flags                      *Flags
+	State                      *state.State
+	CustomerData               *CustomerData
+	CreatedAt                  time.Time
+	ConfirmedAt                time.Time
+	TransmittedAt              time.Time
+	TransmittedAsReservationAt time.Time
+	LastModifiedAt             time.Time
+	CompletedAt                time.Time
+	ATPAt                      time.Time
+	Positions                  []*Position
 	//	Payment          *payment.Payment
 	//	PriceInfo        *OrderPriceInfo
 	//	Shipping         *shipping.ShippingProperties
