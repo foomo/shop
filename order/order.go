@@ -28,6 +28,11 @@ const (
 	LanguageCodeFrench LanguageCode = "fr"
 )
 
+const (
+	ProcessingTypeOrder       ProcessingType = "ProcessingTypeOrder"
+	ProcessingTypeReservation ProcessingType = "ProcessingTypeReservation"
+)
+
 //------------------------------------------------------------------
 // ~ PUBLIC TYPES
 //------------------------------------------------------------------
@@ -36,6 +41,16 @@ type ActionOrder string
 
 type OrderStatus string
 type LanguageCode string
+
+type ProcessingType string
+type Processing string
+
+type Processing struct {
+	Type              ProcessingType
+	PausedUntil       time.Time // Order will not be further processed before specified time. If time.Zero() is set, order will be processed.
+	RequiresManualFix bool
+	Note              string
+}
 
 // Order of item
 // create revisions
@@ -48,6 +63,7 @@ type Order struct {
 	unlinkDB                   bool // if true, changes to Customer are not stored in database
 	Flags                      *Flags
 	State                      *state.State
+	Processing                 *Processing
 	CustomerData               *CustomerData
 	CreatedAt                  time.Time
 	ConfirmedAt                time.Time
@@ -64,6 +80,7 @@ type Order struct {
 	CustomProvider OrderCustomProvider
 	Coupons        []string
 	Custom         interface{} `bson:",omitempty"`
+	Freeze
 }
 
 type CustomerData struct {
@@ -116,11 +133,6 @@ type Position struct {
 	Custom        interface{}
 }
 
-type Freeze struct {
-	Version int
-	Time    time.Time
-}
-
 //------------------------------------------------------------------
 // ~ CONSTRUCTOR
 //------------------------------------------------------------------
@@ -144,8 +156,12 @@ func NewOrderWithCustomId(customProvider OrderCustomProvider, orderIdFunc func()
 		orderId = unique.GetNewID()
 	}
 	order := &Order{
-		State:          DefaultStateMachine.GetInitialState(),
-		Flags:          &Flags{},
+		State: DefaultStateMachine.GetInitialState(),
+		Flags: &Flags{},
+		Processing: &Processing{
+			Type:        ProcessingTypeOrder,
+			PausedUntil: time.Time{},
+		},
 		CartId:         unique.GetNewID(),
 		Id:             orderId,
 		Version:        version.NewVersion(),
