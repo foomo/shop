@@ -43,7 +43,6 @@ type OrderStatus string
 type LanguageCode string
 
 type ProcessingType string
-type Processing string
 
 type Processing struct {
 	Type              ProcessingType
@@ -80,7 +79,6 @@ type Order struct {
 	CustomProvider OrderCustomProvider
 	Coupons        []string
 	Custom         interface{} `bson:",omitempty"`
-	Freeze
 }
 
 type CustomerData struct {
