@@ -31,6 +31,14 @@ const (
 const (
 	ProcessingTypeOrder       ProcessingType = "ProcessingTypeOrder"
 	ProcessingTypeReservation ProcessingType = "ProcessingTypeReservation"
+
+	PaymentProcessorWebshop   PaymentProcessor = "PaymentProcessorWebshop"
+	PaymentProcessorRetailPos PaymentProcessor = "PaymentProcessorRetailPos"
+	// PaymentProcessorMPos      PaymentProcessor = "PaymentProcessorMPos"
+
+	LogisticProcessDefault         LogisticProcess = "LogisticProcessDefault"
+	LogisticProcessClickAndCollect LogisticProcess = "LogisticProcessClickAndCollect"
+	LogisticProcessClickAndReserve LogisticProcess = "LogisticProcessClickAndReserve"
 )
 
 //------------------------------------------------------------------
@@ -43,9 +51,14 @@ type OrderStatus string
 type LanguageCode string
 
 type ProcessingType string
+type PaymentProcessor string
+type LogisticProcess string
 
 type Processing struct {
-	Type              ProcessingType
+	Type             ProcessingType
+	PaymentProcessor PaymentProcessor
+	LogisticProcess  LogisticProcess
+
 	PausedUntil       time.Time // Order will not be further processed before specified time. If time.Zero() is set, order will be processed.
 	RequiresManualFix bool
 	Note              string
@@ -157,8 +170,10 @@ func NewOrderWithCustomId(customProvider OrderCustomProvider, orderIdFunc func()
 		State: DefaultStateMachine.GetInitialState(),
 		Flags: &Flags{},
 		Processing: &Processing{
-			Type:        ProcessingTypeOrder,
-			PausedUntil: time.Time{},
+			Type:             ProcessingTypeOrder,
+			PaymentProcessor: PaymentProcessorWebshop,
+			LogisticProcess:  LogisticProcessDefault,
+			PausedUntil:      time.Time{},
 		},
 		CartId:         unique.GetNewID(),
 		Id:             orderId,
