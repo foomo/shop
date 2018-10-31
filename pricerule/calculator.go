@@ -733,7 +733,7 @@ func validatePriceRule(priceRule PriceRule, checkedPosition *Article, calculatio
 
 	if calculationParameters.isCatalogCalculation {
 		if !checkedPosition.AllowCrossPriceCalculation {
-			log.Printf("Position %s already discounted on SAP. AllowCrossPriceCalculation = false (price = %f, crossprice = %f)", checkedPosition.ID, checkedPosition.Price, checkedPosition.CrossPrice)
+			//log.Printf("Position %s already discounted on SAP. AllowCrossPriceCalculation = false (price = %f, crossprice = %f)", checkedPosition.ID, checkedPosition.Price, checkedPosition.CrossPrice)
 			return false, ValidationArticleAlreadyDiscountedOnSAP
 		}
 		if priceRule.QtyThreshold > 0 || priceRule.MinOrderAmount > 0 {
