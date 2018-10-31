@@ -28,6 +28,19 @@ const (
 	LanguageCodeFrench LanguageCode = "fr"
 )
 
+const (
+	ProcessingTypeOrder       ProcessingType = "ProcessingTypeOrder"
+	ProcessingTypeReservation ProcessingType = "ProcessingTypeReservation"
+
+	PaymentProcessorWebshop   PaymentProcessor = "PaymentProcessorWebshop"
+	PaymentProcessorRetailPos PaymentProcessor = "PaymentProcessorRetailPos"
+	// PaymentProcessorMPos      PaymentProcessor = "PaymentProcessorMPos"
+
+	LogisticProcessDefault         LogisticProcess = "LogisticProcessDefault"
+	LogisticProcessClickAndCollect LogisticProcess = "LogisticProcessClickAndCollect"
+	LogisticProcessClickAndReserve LogisticProcess = "LogisticProcessClickAndReserve"
+)
+
 //------------------------------------------------------------------
 // ~ PUBLIC TYPES
 //------------------------------------------------------------------
@@ -37,25 +50,41 @@ type ActionOrder string
 type OrderStatus string
 type LanguageCode string
 
+type ProcessingType string
+type PaymentProcessor string
+type LogisticProcess string
+
+type Processing struct {
+	Type             ProcessingType
+	PaymentProcessor PaymentProcessor
+	LogisticProcess  LogisticProcess
+
+	PausedUntil       time.Time // Order will not be further processed before specified time. If time.Zero() is set, order will be processed.
+	RequiresManualFix bool
+	Note              string
+}
+
 // Order of item
 // create revisions
 type Order struct {
-	BsonId           bson.ObjectId `bson:"_id,omitempty"`
-	CartId           string        // unique cartId. This is the initial id when the cart is created
-	Id               string        // unique orderId. This is set when the order is confirmed and sent
-	Version          *version.Version
-	referenceVersion int  // Version of final order as it was submitted by customer
-	unlinkDB         bool // if true, changes to Customer are not stored in database
-	Flags            *Flags
-	State            *state.State
-	CustomerData     *CustomerData
-	CreatedAt        time.Time
-	ConfirmedAt      time.Time
-	TransmittedAt    time.Time
-	LastModifiedAt   time.Time
-	CompletedAt      time.Time
-	ATPAt            time.Time
-	Positions        []*Position
+	BsonId                     bson.ObjectId `bson:"_id,omitempty"`
+	CartId                     string        // unique cartId. This is the initial id when the cart is created
+	Id                         string        // unique orderId. This is set when the order is confirmed and sent
+	Version                    *version.Version
+	referenceVersion           int  // Version of final order as it was submitted by customer
+	unlinkDB                   bool // if true, changes to Customer are not stored in database
+	Flags                      *Flags
+	State                      *state.State
+	Processing                 *Processing
+	CustomerData               *CustomerData
+	CreatedAt                  time.Time
+	ConfirmedAt                time.Time
+	TransmittedAt              time.Time
+	TransmittedAsReservationAt time.Time
+	LastModifiedAt             time.Time
+	CompletedAt                time.Time
+	ATPAt                      time.Time
+	Positions                  []*Position
 	//	Payment          *payment.Payment
 	//	PriceInfo        *OrderPriceInfo
 	//	Shipping         *shipping.ShippingProperties
@@ -115,11 +144,6 @@ type Position struct {
 	Custom        interface{}
 }
 
-type Freeze struct {
-	Version int
-	Time    time.Time
-}
-
 //------------------------------------------------------------------
 // ~ CONSTRUCTOR
 //------------------------------------------------------------------
@@ -143,8 +167,14 @@ func NewOrderWithCustomId(customProvider OrderCustomProvider, orderIdFunc func()
 		orderId = unique.GetNewID()
 	}
 	order := &Order{
-		State:          DefaultStateMachine.GetInitialState(),
-		Flags:          &Flags{},
+		State: DefaultStateMachine.GetInitialState(),
+		Flags: &Flags{},
+		Processing: &Processing{
+			Type:             ProcessingTypeOrder,
+			PaymentProcessor: PaymentProcessorWebshop,
+			LogisticProcess:  LogisticProcessDefault,
+			PausedUntil:      time.Time{},
+		},
 		CartId:         unique.GetNewID(),
 		Id:             orderId,
 		Version:        version.NewVersion(),
