@@ -70,6 +70,7 @@ type Order struct {
 	BsonId                     bson.ObjectId `bson:"_id,omitempty"`
 	CartId                     string        // unique cartId. This is the initial id when the cart is created
 	Id                         string        // unique orderId. This is set when the order is confirmed and sent
+	ShopID                     string
 	Version                    *version.Version
 	referenceVersion           int  // Version of final order as it was submitted by customer
 	unlinkDB                   bool // if true, changes to Customer are not stored in database
