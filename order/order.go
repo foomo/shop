@@ -80,8 +80,8 @@ type Order struct {
 	CustomerData               *CustomerData
 	CreatedAt                  time.Time
 	ConfirmedAt                time.Time
+	TransmittedAsReservationAt time.Time // before TransmittedAt for Reservations
 	TransmittedAt              time.Time
-	TransmittedAsReservationAt time.Time
 	LastModifiedAt             time.Time
 	CompletedAt                time.Time
 	ATPAt                      time.Time
