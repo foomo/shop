@@ -92,18 +92,18 @@ func (sm *StateMachine) transitionToState(currentState *State, targetState strin
 			return err
 		}
 		*currentState = *state
-		log.Println("force transitionToState() New current State: ", currentState.Key)
+		//log.Println("force transitionToState() New current State: ", currentState.Key)
 		return nil
 	}
 	if currentState == nil {
 		currentState = sm.GetInitialState()
-		log.Println("Warning: State was nil. Set initial State.")
+		//log.Println("Warning: State was nil. Set initial State.")
 	}
 	// Get the possible transitions for currentState
 	transitions, ok := sm.Transitions[currentState.Key]
 	if !ok {
 		e := "StateMachineError: No transitions defined for " + currentState.Key
-		log.Println("Warning:", e)
+		//log.Println("Warning:", e)
 		return errors.New(e)
 	}
 
@@ -120,7 +120,7 @@ func (sm *StateMachine) transitionToState(currentState *State, targetState strin
 		}
 	}
 	e := "StateMachineError: Transition from " + currentState.Key + " to " + targetState + " not possible."
-	log.Println("Error:", e)
+	//log.Println("Error:", e)
 	return errors.New(e)
 
 }
@@ -130,7 +130,7 @@ func (sm *StateMachine) stateFactory(key string) (*State, error) {
 	blueprint, ok := sm.BluePrints[key]
 	if !ok {
 		e := "StateMachineError: " + key + " is not a valid state."
-		log.Println("Error:", e)
+		//log.Println("Error:", e)
 		return nil, errors.New(e)
 	}
 
