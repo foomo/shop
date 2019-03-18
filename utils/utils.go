@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
 )
 
 const UTCOffsetSummer = time.Duration(2)
@@ -110,7 +109,7 @@ func GetTimeFromYYYYMMDD(date string) (time.Time, error) {
 	if err != nil {
 		return time.Time{}, err
 	}
-	if IsSummerTime(time.Now()) {
+	if IsSummerTime(t.In(CET)) {
 		UTCOffset = UTCOffsetSummer
 	} else {
 		UTCOffset = UTCOffsetWinter
@@ -122,7 +121,7 @@ func GetTimeFromYYY_MM_DD(date string) (time.Time, error) {
 	if err != nil {
 		return time.Time{}, err
 	}
-	if IsSummerTime(time.Now()) {
+	if IsSummerTime(t.In(CET)) {
 		UTCOffset = UTCOffsetSummer
 	} else {
 		UTCOffset = UTCOffsetWinter
