@@ -5,6 +5,8 @@ import (
 	"log"
 	"testing"
 	"time"
+
+	"github.com/docker/docker/pkg/testutil/assert"
 )
 
 func TestTimeTransform(t *testing.T) {
@@ -109,4 +111,46 @@ func TestSummerTime(t *testing.T) {
 		t.Fail()
 	}
 
+}
+
+func TestGetTimeFromDateString(t *testing.T) {
+	date := "2019-03-30"
+	ti, _ := GetTimeFromYYY_MM_DD(date)
+	t.Log(date, ti)
+	assert.Equal(t, "2019-03-30 00:00:00 +0100 CET", ti.String())
+
+	date = "2019-03-31"
+	ti, _ = GetTimeFromYYY_MM_DD(date)
+	t.Log(date, ti)
+	assert.Equal(t, "2019-03-31 00:00:00 +0100 CET", ti.String())
+
+	date = "2019-04-01"
+	ti, _ = GetTimeFromYYY_MM_DD(date)
+	t.Log(date, ti)
+	assert.Equal(t, "2019-04-01 00:00:00 +0200 CEST", ti.String())
+
+	date = "2019-04-02"
+	ti, _ = GetTimeFromYYY_MM_DD(date)
+	t.Log(date, ti)
+	assert.Equal(t, "2019-04-02 00:00:00 +0200 CEST", ti.String())
+
+	date = "20190330"
+	ti, _ = GetTimeFromYYYYMMDD(date)
+	t.Log(date, ti)
+	assert.Equal(t, "2019-03-30 00:00:00 +0100 CET", ti.String())
+
+	date = "20190331"
+	ti, _ = GetTimeFromYYYYMMDD(date)
+	t.Log(date, ti)
+	assert.Equal(t, "2019-03-31 00:00:00 +0100 CET", ti.String())
+
+	date = "20190401"
+	ti, _ = GetTimeFromYYYYMMDD(date)
+	t.Log(date, ti)
+	assert.Equal(t, "2019-04-01 00:00:00 +0200 CEST", ti.String())
+
+	date = "20190402"
+	ti, _ = GetTimeFromYYYYMMDD(date)
+	t.Log(date, ti)
+	assert.Equal(t, "2019-04-02 00:00:00 +0200 CEST", ti.String())
 }
