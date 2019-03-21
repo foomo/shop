@@ -2,7 +2,6 @@ package state
 
 import (
 	"errors"
-	"log"
 	"time"
 
 	"github.com/foomo/shop/utils"
@@ -115,7 +114,7 @@ func (sm *StateMachine) transitionToState(currentState *State, targetState strin
 				return err
 			}
 			*currentState = *state
-			log.Println("StateMachine - New current State: ", currentState.Key)
+			//log.Println("StateMachine - New current State: ", currentState.Key)
 			return nil
 		}
 	}
