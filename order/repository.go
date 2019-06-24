@@ -3,10 +3,11 @@ package order
 import (
 	"errors"
 	"fmt"
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
 	"log"
 	"strconv"
+
+	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 )
 
 // OverrideID may be used to use a different than the automatially generated id (Unit tests)
@@ -79,6 +80,16 @@ func Find(query *bson.M, customProvider OrderCustomProvider) (iter func() (o *Or
 }
 
 func UpsertOrder(o *Order) error {
+	errUpsert := _cachedUpsertOrder(o)
+	if errUpsert != nil {
+		return errUpsert
+	}
+
+	// @todo can we update the cache entry directly with given order? (check version increment, ...)
+	return RemoveOrderCacheEntry(o.Id)
+}
+
+func _cachedUpsertOrder(o *Order) error {
 	// order is unlinked or not yet inserted in db
 
 	if o.unlinkDB || o.BsonId == "" {
