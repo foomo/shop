@@ -17,8 +17,6 @@ var cache *bigcache.BigCache
 
 func init() {
 
-	log.Println("init order cache")
-
 	gob.Register(time.Time{})
 	gob.Register(order.Position{})
 	gob.Register(order.CustomerData{})
@@ -38,7 +36,7 @@ func init() {
 		// max entry size in bytes, used only in initial memory allocation
 		MaxEntrySize: 1024,
 		// prints information about additional memory allocation
-		Verbose: true,
+		Verbose: false,
 		// cache will not allocate more memory than this limit, value in MB
 		// if value is reached then the oldest entries can be overridden for the new ones
 		// 0 value means no size limit
