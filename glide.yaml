@@ -23,6 +23,8 @@ import:
   - bson
 - package: github.com/allegro/bigcache
   version: ~2.0.0
+- package: github.com/vmihailenco/msgpack
+  version: ~4.0.4
 testImport:
 - package: github.com/davecgh/go-spew
   version: ^1.1.0

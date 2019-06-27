@@ -1,8 +1,10 @@
-hash: 46d72a326a4dd4f78a94f5a2bec61abfb8b5e656ca8e49555f450aba8eae4b30
-updated: 2019-06-25T00:03:32.09854+02:00
+hash: 8e7151d2d087802be212a949436ce9d41a5babdb4d8bd2cab2775b0b28b3006c
+updated: 2019-06-28T00:59:54.461928+02:00
 imports:
 - name: github.com/allegro/bigcache
   version: 69ea0af04088faa57adb9ac683934277141e92a5
+  subpackages:
+  - queue
 - name: github.com/bwmarrin/snowflake
   version: 3107b1dd8c5258a02e5f63347dc1c30288c75af5
 - name: github.com/mitchellh/mapstructure
@@ -28,6 +30,8 @@ imports:
   - open
 - name: github.com/ventu-io/go-shortid
   version: 6c56cef5189ca1b3d5ef01dc07f4d611dfc0bb33
+- name: github.com/vmihailenco/msgpack
+  version: c2fc210f30a2aca9db880cc017a92c169c999253
 - name: golang.org/x/crypto
   version: c197bcf24cde29d3f73c7b4ac6fd41f4384e8af6
   subpackages:
