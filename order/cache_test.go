@@ -18,6 +18,10 @@ func TestOrderCache(t *testing.T) {
 	var cachedOrder *Order
 	var err error
 
+	// clear cache, since NewOrderWithCustomId gets the order at the end which automatically warms the cache
+	errRemove := RemoveOrderCacheEntry(order.Id)
+	assert.NoError(t, errRemove, "cache cleanup failed")
+
 	assert.NotEmpty(t, order.Id, "unexpected empty orderID")
 	assert.Equal(t, "0815", order.Id, "unexpected orderID")
 

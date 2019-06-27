@@ -1,7 +1,6 @@
 package order
 
 import (
-	"log"
 	"time"
 
 	"github.com/allegro/bigcache"
@@ -10,7 +9,11 @@ import (
 
 var cache *bigcache.BigCache
 
-func init() {
+func GetCache() (bg *bigcache.BigCache, err error) {
+
+	if cache != nil {
+		return cache, nil
+	}
 
 	config := bigcache.Config{
 		// number of shards (must be a power of 2)
@@ -38,15 +41,25 @@ func init() {
 		OnRemoveWithReason: nil,
 	}
 
-	var errInitCache error
-	cache, errInitCache = bigcache.NewBigCache(config)
+	cacheInstance, errInitCache := bigcache.NewBigCache(config)
 	if errInitCache != nil {
-		log.Fatal(errInitCache)
+		err = errInitCache
+		return
 	}
+
+	cache = cacheInstance
+	bg = cacheInstance
+	return
 }
 
 func GetOrderCacheEntry(orderID string) (order *Order, err error) {
-	orderBytes, errCacheHit := cache.Get(orderID)
+	c, errCache := GetCache()
+	if errCache != nil {
+		err = errCache
+		return
+	}
+
+	orderBytes, errCacheHit := c.Get(orderID)
 	if errCacheHit != nil {
 		err = errCacheHit
 		return
@@ -62,14 +75,24 @@ func GetOrderCacheEntry(orderID string) (order *Order, err error) {
 }
 
 func SetOrderCacheEntry(order *Order) error {
+	c, errCache := GetCache()
+	if errCache != nil {
+		return errCache
+	}
+
 	orderBytes, errMarshall := msgpack.Marshal(order)
 	if errMarshall != nil {
 		return errMarshall
 	}
 
-	return cache.Set(order.Id, orderBytes)
+	return c.Set(order.Id, orderBytes)
 }
 
 func RemoveOrderCacheEntry(orderID string) error {
-	return cache.Delete(orderID)
+	c, errCache := GetCache()
+	if errCache != nil {
+		return errCache
+	}
+
+	return c.Delete(orderID)
 }

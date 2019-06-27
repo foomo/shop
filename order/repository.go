@@ -1,11 +1,11 @@
 package order
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"strconv"
 
+	"github.com/pkg/errors"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -80,20 +80,22 @@ func Find(query *bson.M, customProvider OrderCustomProvider) (iter func() (o *Or
 }
 
 func UpsertOrder(o *Order) error {
-	errUpsert := _cachedUpsertOrder(o)
+	order, errUpsert := _cachedUpsertOrder(o)
 	if errUpsert != nil {
 		return errUpsert
 	}
 
-	// @todo can we update the cache entry directly with given order? (check version increment, ...)
-	return RemoveOrderCacheEntry(o.Id)
+	if order == nil {
+		return RemoveOrderCacheEntry(o.Id)
+	}
+
+	return SetOrderCacheEntry(order)
 }
 
-func _cachedUpsertOrder(o *Order) error {
+func _cachedUpsertOrder(o *Order) (order *Order, err error) {
 	// order is unlinked or not yet inserted in db
-
 	if o.unlinkDB || o.BsonId == "" {
-		return nil
+		return nil, nil
 	}
 	session, collection := GetOrderPersistor().GetCollection()
 	defer session.Close()
@@ -102,18 +104,17 @@ func _cachedUpsertOrder(o *Order) error {
 	// If they are not identical, there must have been another upsert which would be overwritten by this one.
 	// In this case upsert is skipped and an error is returned,
 	orderLatestFromDb := &Order{}
-	err := collection.Find(&bson.M{"id": o.GetID()}).Select(&bson.M{"version": 1}).One(orderLatestFromDb)
-
-	if err != nil {
-		log.Println("Upsert failed: Could not find order with id", o.GetID(), "Error:", err)
-		return err
+	errFind := collection.Find(&bson.M{"id": o.GetID()}).Select(&bson.M{"version": 1}).One(orderLatestFromDb)
+	if errFind != nil {
+		err = errors.Wrap(errFind, "could not find order")
+		return
 	}
 
 	latestVersionInDb := orderLatestFromDb.Version.GetVersion()
 	if latestVersionInDb != o.Version.GetVersion() && !o.Flags.forceUpsert {
-		errMsg := fmt.Sprintln("WARNING: Cannot upsert latest version ", strconv.Itoa(latestVersionInDb), "in db with version", strconv.Itoa(o.Version.GetVersion()), "!")
-		log.Println(errMsg)
-		return errors.New(errMsg)
+		errMsg := fmt.Sprintln("cannot upsert latest version ", strconv.Itoa(latestVersionInDb), "in db with version", strconv.Itoa(o.Version.GetVersion()), "!")
+		err = errors.New(errMsg)
+		return
 	}
 
 	if o.Flags.forceUpsert {
@@ -130,12 +131,16 @@ func _cachedUpsertOrder(o *Order) error {
 	}
 
 	o.State.SetModified()
-	_, err = collection.UpsertId(o.BsonId, o)
-	if err != nil {
-		return err
+	_, errUpsert := collection.UpsertId(o.BsonId, o)
+	if errUpsert != nil {
+		err = errUpsert
+		return
 	}
 
-	return storeOrderVersionInHistory(o)
+	order = o
+	// @todo send save to history to a worker channel
+	err = storeOrderVersionInHistory(o)
+	return
 }
 
 func storeOrderVersionInHistory(o *Order) error {
