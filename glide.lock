@@ -1,5 +1,5 @@
-hash: 8e7151d2d087802be212a949436ce9d41a5babdb4d8bd2cab2775b0b28b3006c
-updated: 2019-06-28T00:59:54.461928+02:00
+hash: 3992e3c5fba9b15a2ae2c81dceaa0b995c95a5260c93b087b13bc72053b8957e
+updated: 2019-06-29T14:28:19.285068+02:00
 imports:
 - name: github.com/allegro/bigcache
   version: 69ea0af04088faa57adb9ac683934277141e92a5
@@ -7,6 +7,10 @@ imports:
   - queue
 - name: github.com/bwmarrin/snowflake
   version: 3107b1dd8c5258a02e5f63347dc1c30288c75af5
+- name: github.com/golang/protobuf
+  version: 1643683e1b54a9e88ad26d98f81400c8c9d9f4f9
+  subpackages:
+  - proto
 - name: github.com/mitchellh/mapstructure
   version: f3009df150dadf309fdee4a54ed65c124afad715
 - name: github.com/nbutton23/zxcvbn-go
@@ -20,6 +24,8 @@ imports:
   - matching
   - scoring
   - utils/math
+- name: github.com/pkg/errors
+  version: ba968bfe8b2f7e042a574c888954fccecfa385b4
 - name: github.com/sergi/go-diff
   version: 1744e2970ca51c86172c8190fadad617561ed6e7
   subpackages:
@@ -32,11 +38,30 @@ imports:
   version: 6c56cef5189ca1b3d5ef01dc07f4d611dfc0bb33
 - name: github.com/vmihailenco/msgpack
   version: c2fc210f30a2aca9db880cc017a92c169c999253
+  subpackages:
+  - codes
 - name: golang.org/x/crypto
   version: c197bcf24cde29d3f73c7b4ac6fd41f4384e8af6
   subpackages:
   - bcrypt
   - blowfish
+- name: golang.org/x/net
+  version: 1c05540f6879653db88113bc4a2b70aec4bd491f
+  subpackages:
+  - context
+- name: google.golang.org/appengine
+  version: b2f4a3cf3c67576a2ee09e1fe62656a5086ce880
+  subpackages:
+  - datastore
+  - datastore/internal/cloudkey
+  - datastore/internal/cloudpb
+  - internal
+  - internal/app_identity
+  - internal/base
+  - internal/datastore
+  - internal/log
+  - internal/modules
+  - internal/remote_api
 - name: gopkg.in/mgo.v2
   version: 3f83fa5005286a7fe593b055f0d7771a7dce4655
   subpackages:
