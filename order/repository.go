@@ -79,9 +79,11 @@ func Find(query *bson.M, customProvider OrderCustomProvider) (iter func() (o *Or
 	return
 }
 
+// UpsertOrder will upsert the given order in DB and invalidate in-memory caches
 func UpsertOrder(o *Order) error {
-	order, errUpsert := _cachedUpsertOrder(o)
+	order, errUpsert := upsertOrderInDB(o)
 	if errUpsert != nil {
+		RemoveOrderCacheEntry(o.Id)
 		return errUpsert
 	}
 
@@ -92,7 +94,7 @@ func UpsertOrder(o *Order) error {
 	return SetOrderCacheEntry(order)
 }
 
-func _cachedUpsertOrder(o *Order) (order *Order, err error) {
+func upsertOrderInDB(o *Order) (order *Order, err error) {
 	// order is unlinked or not yet inserted in db
 	if o.unlinkDB || o.BsonId == "" {
 		return nil, nil

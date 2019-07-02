@@ -93,7 +93,7 @@ func GetOrderById(id string, customProvider OrderCustomProvider) (*Order, error)
 		return order, nil
 	}
 
-	orderUncached, errUncached := _uncachedGetOrderById(id, customProvider)
+	orderUncached, errUncached := getUncachedOrderByIDFromDB(id, customProvider)
 	if errUncached != nil {
 		return nil, errUncached
 	}
@@ -103,7 +103,7 @@ func GetOrderById(id string, customProvider OrderCustomProvider) (*Order, error)
 	return orderUncached, nil
 }
 
-func _uncachedGetOrderById(id string, customProvider OrderCustomProvider) (*Order, error) {
+func getUncachedOrderByIDFromDB(id string, customProvider OrderCustomProvider) (*Order, error) {
 	return findOneOrder(&bson.M{"id": id}, nil, "", customProvider, false)
 }
 
