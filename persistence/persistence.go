@@ -100,8 +100,15 @@ func (p *Persistor) EnsureIndexes(indexes []mgo.Index) error {
 }
 
 func (p *Persistor) GetCollection() (session *mgo.Session, collection *mgo.Collection) {
-	session = p.session.Clone()
+
+	// From the documentation of session.Clone: ..., it also means that long operations may cause other goroutines using the original session to wait.
+	// Lets try using Copy here and observe the impact
+	session = p.session.Copy()
 	collection = session.DB(p.db).C(p.collection)
+
+	// increment metrics for acquiring the STANDARD session
+	getStandardSessionCounter.WithLabelValues(p.db, p.collection).Inc()
+
 	return session, collection
 }
 
@@ -112,6 +119,10 @@ func (p *Persistor) GetGlobalSessionCollection() (collection *mgo.Collection) {
 	if err := p.session.Ping(); err != nil {
 		p.session.Refresh()
 	}
+
+	// increment metrics for acquiring the GLOBAL session
+	getGlobalSessionCounter.WithLabelValues(p.db, p.collection).Inc()
+
 	return p.session.DB(p.db).C(p.collection)
 }
 
