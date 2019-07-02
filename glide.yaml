@@ -18,6 +18,7 @@ import:
 - package: golang.org/x/crypto
   subpackages:
   - bcrypt
+- package: github.com/prometheus/client_golang
 - package: gopkg.in/mgo.v2
   subpackages:
   - bson
