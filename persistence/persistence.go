@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-
-	"gopkg.in/mgo.v2"
 )
 
 //------------------------------------------------------------------
@@ -107,7 +105,7 @@ func (p *Persistor) GetCollection() (session *mgo.Session, collection *mgo.Colle
 	collection = session.DB(p.db).C(p.collection)
 
 	// increment metrics for acquiring the STANDARD session
-	getStandardSessionCounter.WithLabelValues(p.db, p.collection).Inc()
+	getCollectionCounter.WithLabelValues(p.db, p.collection, "standard").Inc()
 
 	return session, collection
 }
@@ -121,7 +119,7 @@ func (p *Persistor) GetGlobalSessionCollection() (collection *mgo.Collection) {
 	}
 
 	// increment metrics for acquiring the GLOBAL session
-	getGlobalSessionCounter.WithLabelValues(p.db, p.collection).Inc()
+	getCollectionCounter.WithLabelValues(p.db, p.collection, "global").Inc()
 
 	return p.session.DB(p.db).C(p.collection)
 }

@@ -3,33 +3,21 @@ package persistence
 import "github.com/prometheus/client_golang/prometheus"
 
 const (
-	labelDB         = "db"
-	labelCollection = "collection"
-
 	namespace        = "foomo_shop"
 	subsystemService = "persistor"
 )
 
 var (
-	getStandardSessionCounter = prometheus.NewCounterVec(
+	getCollectionCounter = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Namespace: namespace,
 			Subsystem: subsystemService,
-			Name:      "get_standard_session_count",
-			Help:      "count of standard session acquirements",
-		}, []string{labelDB, labelCollection},
-	)
-	getGlobalSessionCounter = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Namespace: namespace,
-			Subsystem: subsystemService,
-			Name:      "get_global_session_count",
-			Help:      "count of global session acquirements",
-		}, []string{labelDB, labelCollection},
+			Name:      "get_collection_total",
+			Help:      "Counts the number of invocations to 'getCollection (global/standard)' per database and collection.",
+		}, []string{"db", "collection", "scope"},
 	)
 )
 
 func init() {
-	prometheus.MustRegister(getStandardSessionCounter)
-	prometheus.MustRegister(getGlobalSessionCounter)
+	prometheus.MustRegister(getCollectionCounter)
 }
