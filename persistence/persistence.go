@@ -3,6 +3,7 @@ package persistence
 import (
 	"errors"
 	"fmt"
+	"gopkg.in/mgo.v2"
 	"net/url"
 )
 
