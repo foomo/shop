@@ -52,13 +52,15 @@ func GetCache() (bg *bigcache.BigCache, err error) {
 	return
 }
 
-func GetOrderCacheEntry(orderID string) (order *Order, err error) {
+func GetOrderCacheEntry(orderID string, customProvider OrderCustomProvider) (order *Order, err error) {
+	// get cache
 	c, errCache := GetCache()
 	if errCache != nil {
 		err = errCache
 		return
 	}
 
+	// get order bytes from cache
 	orderBytes, errCacheHit := c.Get(orderID)
 	if errCacheHit != nil {
 		err = errCacheHit
@@ -66,9 +68,19 @@ func GetOrderCacheEntry(orderID string) (order *Order, err error) {
 	}
 
 	errUnmarshal := msgpack.Unmarshal(orderBytes, &order)
+	// errUnmarshal := json.Unmarshal(orderBytes, &order)
 	if errUnmarshal != nil {
 		err = errUnmarshal
 		return
+	}
+
+	// custom provider mapdecode
+	if customProvider != nil {
+		var errMapDecode error
+		order, errMapDecode = mapDecode(order, customProvider)
+		if errMapDecode != nil {
+			return nil, errMapDecode
+		}
 	}
 
 	return
@@ -81,6 +93,7 @@ func SetOrderCacheEntry(order *Order) error {
 	}
 
 	orderBytes, errMarshall := msgpack.Marshal(order)
+	// orderBytes, errMarshall := json.Marshal(order)
 	if errMarshall != nil {
 		return errMarshall
 	}

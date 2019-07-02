@@ -88,7 +88,7 @@ func GetOrderVersionsPersistor() *persistence.Persistor {
 // GetOrderById returns the order with id
 func GetOrderById(id string, customProvider OrderCustomProvider) (*Order, error) {
 
-	order, errCacheHit := GetOrderCacheEntry(id)
+	order, errCacheHit := GetOrderCacheEntry(id, customProvider)
 	if errCacheHit == nil && order != nil {
 		return order, nil
 	}
