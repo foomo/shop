@@ -119,7 +119,7 @@ func GetCartID(customerId string) (string, error) {
 
 func GetOrdersOfCustomerPaged(customerId string, query *bson.M, page int, limit int, customProvider OrderCustomProvider) ([]*Order, error) {
 	
-	if customerId == nil {
+	if customProvider == nil {
 		return nil, errors.New("customerProvider is nil")
 	}
 	if limit <= 0 || page < 0  {
