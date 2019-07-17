@@ -117,6 +117,35 @@ func GetCartID(customerId string) (string, error) {
 	return order.GetID(), nil
 }
 
+func GetOrdersOfCustomerPaged(customerId string, query *bson.M, page int, limit int, customProvider OrderCustomProvider) ([]*Order, error) {
+	if limit < 0 || page < 0 || page > limit {
+		return nil, errors.New("could not get reservations: invalid limit / page")
+		
+	}
+	
+	var result []*Order
+
+	// sort by last name
+	errFind := collection.Find(query).Sort("-confirmedat").Skip(page * limit).Limit(limit).All(&result)
+	if errFind != nil {
+		return nil, errFind
+	}
+
+	orders := []*Order{}
+	for _, order := range result {
+		mapDecodedOrder, errMapDecode  := mapDecode(order, customProvider)
+		if errMapDecode != nil {
+			return nil,  errMapDecode
+			
+		}
+		orders = append(orders, mapDecodedOrder)
+	}
+
+	return orders, nil
+}
+
+
+
 func GetOrdersOfCustomer(customerId string, customProvider OrderCustomProvider) ([]*Order, error) {
 
 	if customProvider == nil {
