@@ -120,11 +120,13 @@ func GetCartID(customerId string) (string, error) {
 func GetOrdersOfCustomerPaged(customerId string, query *bson.M, page int, limit int, customProvider OrderCustomProvider) ([]*Order, error) {
 	if limit < 0 || page < 0 || page > limit {
 		return nil, errors.New("could not get reservations: invalid limit / page")
-		
-	}
-	
-	var result []*Order
 
+	}
+
+	session, collection := GetOrderPersistor().GetCollection()
+	defer session.Close()
+
+	var result []*Order
 	// sort by last name
 	errFind := collection.Find(query).Sort("-confirmedat").Skip(page * limit).Limit(limit).All(&result)
 	if errFind != nil {
@@ -133,18 +135,16 @@ func GetOrdersOfCustomerPaged(customerId string, query *bson.M, page int, limit 
 
 	orders := []*Order{}
 	for _, order := range result {
-		mapDecodedOrder, errMapDecode  := mapDecode(order, customProvider)
+		mapDecodedOrder, errMapDecode := mapDecode(order, customProvider)
 		if errMapDecode != nil {
-			return nil,  errMapDecode
-			
+			return nil, errMapDecode
+
 		}
 		orders = append(orders, mapDecodedOrder)
 	}
 
 	return orders, nil
 }
-
-
 
 func GetOrdersOfCustomer(customerId string, customProvider OrderCustomProvider) ([]*Order, error) {
 
