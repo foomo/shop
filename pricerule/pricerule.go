@@ -341,7 +341,7 @@ func (pricerule *PriceRule) Delete() error {
 	return err
 }
 
-func DeletePricesRules(query bson.M) error {
+func DeletePriceRules(query bson.M) error {
 	session, collection := GetPersistorForObject(new(PriceRule)).GetCollection()
 	defer session.Close()
 
