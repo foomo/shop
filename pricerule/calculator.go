@@ -1,6 +1,7 @@
 package pricerule
 
 import (
+	"fmt"
 	"log"
 	"sort"
 	"time"
@@ -302,6 +303,10 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 			}
 		}
 		//apply them
+		calculationParameters.bestOptionCustomeProductRulePerItem = make(map[string]string)
+		bestOptionOtherRulePerItem := getBestOptionCustomerProductRulePerItem(ruleVoucherPairsStep2, calculationParameters)
+		calculationParameters.bestOptionCustomeProductRulePerItem = bestOptionOtherRulePerItem
+
 		for _, priceRulePair := range ruleVoucherPairsStep2 {
 			orderDiscounts = calculateRule(orderDiscounts, priceRulePair, calculationParameters)
 		}
@@ -957,11 +962,11 @@ func getBestOptionCustomerProductRulePerItem(ruleVoucherPairs []RuleVoucherPair,
 			if discount > currentDiscounts[itemID] {
 				overwrite = true
 			}
-
 			if overwrite && discount > 0 {
 				currentDiscounts[itemID] = discount
 				currentBestDiscountType[itemID] = priceRulePair.Rule.Type
 				ret[itemID] = tempDiscounts[itemID].AppliedDiscounts[0].PriceRuleID
+				fmt.Println("OVERWRITE", itemID, ret[itemID])
 			}
 		}
 	}

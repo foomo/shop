@@ -12,9 +12,12 @@ import (
 )
 
 const (
-	GroupIDSale   = "Sale"
-	GroupIDNormal = "Products"
-	GroupIDShirts = "Shirts"
+	GroupSingleSku1 = "SingleSku1"
+	GroupSingleSku2 = "SingleSku2"
+	GroupIDTwoSkus  = "TwoSkus"
+	GroupIDSale     = "Sale"
+	GroupIDNormal   = "Products"
+	GroupIDShirts   = "Shirts"
 
 	PriceRuleIDSale          = "PriceRuleSale"
 	PriceRuleIDSaleProduct1  = "PriceRuleSaleProduct1"
@@ -38,7 +41,8 @@ const (
 	ProductID5 = "product-5"
 
 	//SKUs
-
+	Sku1           = "sku1"
+	Sku2           = "sku2"
 	ProductID1SKU1 = "product-1-sku1"
 	ProductID1SKU2 = "product-1-sku2"
 
@@ -69,6 +73,9 @@ var productsInGroups map[string][]string
 func Init(t *testing.T) {
 
 	productsInGroups = make(map[string][]string)
+	productsInGroups[GroupSingleSku1] = []string{Sku1}
+	productsInGroups[GroupSingleSku2] = []string{Sku2}
+	productsInGroups[GroupIDTwoSkus] = []string{Sku1, Sku2}
 	productsInGroups[GroupIDSale] = []string{ProductID1, ProductID2, ProductID1SKU1, ProductID1SKU2, ProductID2SKU1, ProductID2SKU2}
 	productsInGroups[GroupIDNormal] = []string{ProductID4, ProductID5, ProductID4SKU1, ProductID4SKU2, ProductID5SKU1, ProductID5SKU2}
 	productsInGroups[GroupIDShirts] = []string{ProductID3, ProductID4, ProductID5, ProductID3SKU1, ProductID4SKU1, ProductID5SKU1, ProductID3SKU2, ProductID4SKU2, ProductID5SKU2}
@@ -123,7 +130,7 @@ func TestBuyXPayY(t *testing.T) {
 	}
 	priceRule.Type = TypePromotionProduct
 	priceRule.Description = priceRule.Name
-	priceRule.Action = ActionBuyXPayY
+	priceRule.Action = ActionItemByPercent
 	priceRule.Amount = 20.0
 	priceRule.X = 3
 	priceRule.Y = 2
@@ -277,7 +284,7 @@ func testBonuVoucher(t *testing.T) {
 }
 
 // Test groups creation
-func testGetApplicableVouchers(t *testing.T) {
+func TestGetApplicableVouchers(t *testing.T) {
 	//remove all and add again
 	productsInGroups = make(map[string][]string)
 	productsInGroups[GroupIDSale] = []string{ProductID1, ProductID2, ProductID1SKU1, ProductID1SKU2, ProductID2SKU1, ProductID2SKU2}
@@ -1929,7 +1936,7 @@ func testCheckoutWorkflow(t *testing.T) {
 
 // GROUPS -----------------------------------
 func checkGroupsNotExists(t *testing.T) {
-	for _, groupID := range []string{GroupIDSale, GroupIDNormal, GroupIDShirts} {
+	for _, groupID := range []string{GroupSingleSku1, GroupSingleSku2, GroupIDTwoSkus, GroupIDSale, GroupIDNormal, GroupIDShirts} {
 		group, _ := GetGroupByID(groupID, nil)
 		if group != nil {
 			t.Error("Group " + groupID + " should NOT exist after deletion")
@@ -1938,7 +1945,7 @@ func checkGroupsNotExists(t *testing.T) {
 }
 
 func checkGroupsExists(t *testing.T) {
-	for _, groupID := range []string{GroupIDSale, GroupIDNormal, GroupIDShirts} {
+	for _, groupID := range []string{GroupSingleSku1, GroupSingleSku2, GroupIDTwoSkus, GroupIDSale, GroupIDNormal, GroupIDShirts} {
 		group, _ := GetGroupByID(groupID, nil)
 		if group == nil {
 			t.Error("Group " + groupID + " should EXIST after creation")
@@ -1947,7 +1954,7 @@ func checkGroupsExists(t *testing.T) {
 }
 
 func createMockProductGroups(t *testing.T) {
-	for _, groupID := range []string{GroupIDSale, GroupIDNormal, GroupIDShirts} {
+	for _, groupID := range []string{GroupSingleSku1, GroupSingleSku2, GroupIDTwoSkus, GroupIDSale, GroupIDNormal, GroupIDShirts} {
 		group := new(Group)
 		group.Type = ProductGroup
 		group.ID = groupID
