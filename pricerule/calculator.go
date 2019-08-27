@@ -1,7 +1,6 @@
 package pricerule
 
 import (
-	"fmt"
 	"log"
 	"sort"
 	"time"
@@ -966,7 +965,6 @@ func getBestOptionCustomerProductRulePerItem(ruleVoucherPairs []RuleVoucherPair,
 				currentDiscounts[itemID] = discount
 				currentBestDiscountType[itemID] = priceRulePair.Rule.Type
 				ret[itemID] = tempDiscounts[itemID].AppliedDiscounts[0].PriceRuleID
-				fmt.Println("OVERWRITE", itemID, ret[itemID])
 			}
 		}
 	}
