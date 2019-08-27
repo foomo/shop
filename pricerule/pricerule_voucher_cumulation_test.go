@@ -65,8 +65,8 @@ func TestCumulationTwoVouchers_OnePerSku(t *testing.T) {
 	helper := cumulationTestHelper{}
 	articleCollection := helper.getMockArticleCollection()
 
-	voucherCode1 := helper.setMockPriceRuleAndVoucher(t, "voucher-sku1", 10.0, []string{GroupSingleSku1})
-	voucherCode2 := helper.setMockPriceRuleAndVoucher(t, "voucher-sku2", 10.0, []string{GroupSingleSku2})
+	voucherCode1 := helper.setMockPriceRuleAndVoucher(t, "voucher-sku1", 10.0, []string{GroupIDSingleSku1})
+	voucherCode2 := helper.setMockPriceRuleAndVoucher(t, "voucher-sku2", 10.0, []string{GroupIDSingleSku2})
 
 	discounts, summary, errApply := ApplyDiscounts(articleCollection, nil, []string{voucherCode1, voucherCode2}, nil, 0.05, nil)
 	assert.Nil(t, errApply)
@@ -87,8 +87,8 @@ func TestCumulationTwoVouchers_BothForSameSku(t *testing.T) {
 	helper := cumulationTestHelper{}
 	articleCollection := helper.getMockArticleCollection()
 
-	voucherCode1 := helper.setMockPriceRuleAndVoucher(t, "voucher-sku1", 10.0, []string{GroupSingleSku1})
-	voucherCode2 := helper.setMockPriceRuleAndVoucher(t, "voucher-sku2", 10.0, []string{GroupSingleSku1})
+	voucherCode1 := helper.setMockPriceRuleAndVoucher(t, "voucher-sku1", 10.0, []string{GroupIDSingleSku1})
+	voucherCode2 := helper.setMockPriceRuleAndVoucher(t, "voucher-sku2", 10.0, []string{GroupIDSingleSku1})
 
 	discounts, summary, errApply := ApplyDiscounts(articleCollection, nil, []string{voucherCode1, voucherCode2}, nil, 0.05, nil)
 	assert.Nil(t, errApply)
@@ -135,8 +135,8 @@ func TestCumulationTwoVouchers_BothForSameSku_AdditonalCrossPrice(t *testing.T) 
 	articleCollection := helper.getMockArticleCollection()
 
 	helper.setMockPriceRuleCrossPrice(t, "crossprice1", 5.0)
-	voucherCode1 := helper.setMockPriceRuleAndVoucher(t, "voucher-sku1", 5.0, []string{GroupSingleSku1})
-	voucherCode2 := helper.setMockPriceRuleAndVoucher(t, "voucher-sku2", 10.0, []string{GroupSingleSku1})
+	voucherCode1 := helper.setMockPriceRuleAndVoucher(t, "voucher-sku1", 5.0, []string{GroupIDSingleSku1})
+	voucherCode2 := helper.setMockPriceRuleAndVoucher(t, "voucher-sku2", 10.0, []string{GroupIDSingleSku1})
 
 	discounts, summary, errApply := ApplyDiscounts(articleCollection, nil, []string{voucherCode1, voucherCode2}, nil, 0.05, nil)
 	assert.Nil(t, errApply)

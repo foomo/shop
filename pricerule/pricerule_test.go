@@ -12,12 +12,12 @@ import (
 )
 
 const (
-	GroupSingleSku1 = "SingleSku1"
-	GroupSingleSku2 = "SingleSku2"
-	GroupIDTwoSkus  = "TwoSkus"
-	GroupIDSale     = "Sale"
-	GroupIDNormal   = "Products"
-	GroupIDShirts   = "Shirts"
+	GroupIDSingleSku1 = "SingleSku1"
+	GroupIDSingleSku2 = "SingleSku2"
+	GroupIDTwoSkus    = "TwoSkus"
+	GroupIDSale       = "Sale"
+	GroupIDNormal     = "Products"
+	GroupIDShirts     = "Shirts"
 
 	PriceRuleIDSale          = "PriceRuleSale"
 	PriceRuleIDSaleProduct1  = "PriceRuleSaleProduct1"
@@ -73,8 +73,8 @@ var productsInGroups map[string][]string
 func Init(t *testing.T) {
 
 	productsInGroups = make(map[string][]string)
-	productsInGroups[GroupSingleSku1] = []string{Sku1}
-	productsInGroups[GroupSingleSku2] = []string{Sku2}
+	productsInGroups[GroupIDSingleSku1] = []string{Sku1}
+	productsInGroups[GroupIDSingleSku2] = []string{Sku2}
 	productsInGroups[GroupIDTwoSkus] = []string{Sku1, Sku2}
 	productsInGroups[GroupIDSale] = []string{ProductID1, ProductID2, ProductID1SKU1, ProductID1SKU2, ProductID2SKU1, ProductID2SKU2}
 	productsInGroups[GroupIDNormal] = []string{ProductID4, ProductID5, ProductID4SKU1, ProductID4SKU2, ProductID5SKU1, ProductID5SKU2}
@@ -1936,7 +1936,7 @@ func testCheckoutWorkflow(t *testing.T) {
 
 // GROUPS -----------------------------------
 func checkGroupsNotExists(t *testing.T) {
-	for _, groupID := range []string{GroupSingleSku1, GroupSingleSku2, GroupIDTwoSkus, GroupIDSale, GroupIDNormal, GroupIDShirts} {
+	for _, groupID := range []string{GroupIDSingleSku1, GroupIDSingleSku2, GroupIDTwoSkus, GroupIDSale, GroupIDNormal, GroupIDShirts} {
 		group, _ := GetGroupByID(groupID, nil)
 		if group != nil {
 			t.Error("Group " + groupID + " should NOT exist after deletion")
@@ -1945,7 +1945,7 @@ func checkGroupsNotExists(t *testing.T) {
 }
 
 func checkGroupsExists(t *testing.T) {
-	for _, groupID := range []string{GroupSingleSku1, GroupSingleSku2, GroupIDTwoSkus, GroupIDSale, GroupIDNormal, GroupIDShirts} {
+	for _, groupID := range []string{GroupIDSingleSku1, GroupIDSingleSku2, GroupIDTwoSkus, GroupIDSale, GroupIDNormal, GroupIDShirts} {
 		group, _ := GetGroupByID(groupID, nil)
 		if group == nil {
 			t.Error("Group " + groupID + " should EXIST after creation")
@@ -1954,7 +1954,7 @@ func checkGroupsExists(t *testing.T) {
 }
 
 func createMockProductGroups(t *testing.T) {
-	for _, groupID := range []string{GroupSingleSku1, GroupSingleSku2, GroupIDTwoSkus, GroupIDSale, GroupIDNormal, GroupIDShirts} {
+	for _, groupID := range []string{GroupIDSingleSku1, GroupIDSingleSku2, GroupIDTwoSkus, GroupIDSale, GroupIDNormal, GroupIDShirts} {
 		group := new(Group)
 		group.Type = ProductGroup
 		group.ID = groupID
