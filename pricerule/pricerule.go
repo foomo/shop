@@ -128,6 +128,8 @@ type PriceRule struct {
 	LastModifiedAt time.Time // updated at
 
 	Custom interface{} `bson:",omitempty"` //make it extensible if needed (included, excluded group IDs)
+
+	ExcludeAlreadyDiscountedForVoucher bool
 }
 
 //Type the type of the price rule

@@ -302,6 +302,7 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 			}
 		}
 		//apply them
+		sort.Sort(ByPriority(ruleVoucherPairsStep2))
 		calculationParameters.bestOptionCustomeProductRulePerItem = make(map[string]string)
 		bestOptionOtherRulePerItem := getBestOptionCustomerProductRulePerItem(ruleVoucherPairsStep2, calculationParameters)
 		calculationParameters.bestOptionCustomeProductRulePerItem = bestOptionOtherRulePerItem
@@ -714,6 +715,17 @@ func validatePriceRuleForPosition(priceRule PriceRule, article *Article, calcula
 
 // validatePriceRule -
 func validatePriceRule(priceRule PriceRule, checkedPosition *Article, calculationParameters *CalculationParameters, orderDiscounts OrderDiscounts) (ok bool, reason TypeRuleValidationMsg) {
+	if checkedPosition != nil && priceRule.Type == TypeVoucher && priceRule.ExcludeAlreadyDiscountedForVoucher {
+		// Check if there is already a SAP discount
+		if !checkedPosition.AllowCrossPriceCalculation {
+			return false, ValidationVoucherNotApplicableToAlreadyDiscountedItemsBySap
+		}
+		// Check if there is already any webshop promo discount
+		discounts, ok := orderDiscounts[checkedPosition.ID]
+		if ok && len(discounts.AppliedDiscounts) > 0 {
+			return false, ValidationVoucherNotApplicableToAlreadyDiscountedItemsByWebshop
+		}
+	}
 
 	if priceRule.Type == TypeBonusVoucher {
 		bonusApplicableAmount := getOrderTotalForPriceRule(&priceRule, calculationParameters, orderDiscounts)
