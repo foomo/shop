@@ -130,7 +130,7 @@ func TestBuyXPayY(t *testing.T) {
 	}
 	priceRule.Type = TypePromotionProduct
 	priceRule.Description = priceRule.Name
-	priceRule.Action = ActionItemByPercent
+	priceRule.Action = ActionBuyXPayY
 	priceRule.Amount = 20.0
 	priceRule.X = 3
 	priceRule.Y = 2
@@ -284,7 +284,7 @@ func testBonuVoucher(t *testing.T) {
 }
 
 // Test groups creation
-func TestGetApplicableVouchers(t *testing.T) {
+func testGetApplicableVouchers(t *testing.T) {
 	//remove all and add again
 	productsInGroups = make(map[string][]string)
 	productsInGroups[GroupIDSale] = []string{ProductID1, ProductID2, ProductID1SKU1, ProductID1SKU2, ProductID2SKU1, ProductID2SKU2}
@@ -1220,7 +1220,7 @@ func testScaled(t *testing.T) {
 }
 
 // Test groups creation
-func testBuyXGetY(t *testing.T) {
+func TestBuyXGetY(t *testing.T) {
 	//Init
 	RemoveAllGroups()
 	RemoveAllPriceRules()
