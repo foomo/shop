@@ -715,7 +715,7 @@ func validatePriceRuleForPosition(priceRule PriceRule, article *Article, calcula
 
 // validatePriceRule -
 func validatePriceRule(priceRule PriceRule, checkedPosition *Article, calculationParameters *CalculationParameters, orderDiscounts OrderDiscounts) (ok bool, reason TypeRuleValidationMsg) {
-	if checkedPosition != nil && priceRule.Type == TypeVoucher && priceRule.ExcludeAlreadyDiscountedForVoucher {
+	if checkedPosition != nil && priceRule.Type == TypeVoucher && priceRule.ExcludeAlreadyDiscountedItemsForVoucher {
 		// Check if there is already a SAP discount
 		if !checkedPosition.AllowCrossPriceCalculation {
 			return false, ValidationVoucherNotApplicableToAlreadyDiscountedItemsBySap

@@ -36,7 +36,7 @@ func (helper cumulationTestHelper) setMockPriceRuleAndVoucher(t *testing.T, name
 	priceRule.Action = ActionItemByPercent
 	priceRule.Amount = amount
 	priceRule.IncludedProductGroupIDS = includedProductGroupIDS
-	priceRule.ExcludeAlreadyDiscountedForVoucher = excludeAlrreadyDiscountedItems
+	priceRule.ExcludeAlreadyDiscountedItemsForVoucher = excludeAlrreadyDiscountedItems
 	assert.Nil(t, priceRule.Upsert())
 
 	voucherCode := "voucherCode-" + priceRule.ID
