@@ -130,7 +130,6 @@ type PriceRule struct {
 	Custom interface{} `bson:",omitempty"` //make it extensible if needed (included, excluded group IDs)
 
 	ExcludeAlreadyDiscountedItemsForVoucher bool
-	ExcludeEmployeesForVoucher              bool
 }
 
 //Type the type of the price rule

@@ -25,9 +25,10 @@ func (helper cumulationTestHelper) getMockArticleCollection() *ArticleCollection
 				AllowCrossPriceCalculation: true,
 			},
 		},
+		CustomerType: CustomerID1,
 	}
 }
-func (helper cumulationTestHelper) setMockPriceRuleAndVoucher(t *testing.T, name string, amount float64, includedProductGroupIDS []string, excludeAlrreadyDiscountedItems bool) string {
+func (helper cumulationTestHelper) setMockPriceRuleAndVoucher(t *testing.T, name string, amount float64, includedProductGroupIDS []string, excludeAlreadyDiscountedItems bool) string {
 
 	// PRICERULE
 	priceRule := NewPriceRule("PriceRule-" + name)
@@ -36,7 +37,8 @@ func (helper cumulationTestHelper) setMockPriceRuleAndVoucher(t *testing.T, name
 	priceRule.Action = ActionItemByPercent
 	priceRule.Amount = amount
 	priceRule.IncludedProductGroupIDS = includedProductGroupIDS
-	priceRule.ExcludeAlreadyDiscountedItemsForVoucher = excludeAlrreadyDiscountedItems
+	priceRule.IncludedCustomerGroupIDS = []string{CustomerGroupID1}
+	priceRule.ExcludeAlreadyDiscountedItemsForVoucher = excludeAlreadyDiscountedItems
 	assert.Nil(t, priceRule.Upsert())
 
 	voucherCode := "voucherCode-" + priceRule.ID
@@ -217,5 +219,33 @@ func TestCumulationForExcludeVoucherOnCrossPriceSAP(t *testing.T) {
 
 	// Sku2: 2 CHF
 	assert.Equal(t, 2.0, summary.TotalDiscountApplicable)
+
+}
+
+func TestCumulationExcludeStaff(t *testing.T) {
+
+	// Cart with 2 Items
+	// Expected result: only regular customer gets discount
+	Init(t)
+
+	helper := cumulationTestHelper{}
+	articleCollection := helper.getMockArticleCollection()
+
+	voucherCode1 := helper.setMockPriceRuleAndVoucher(t, "voucher-sku1", 10.0, []string{GroupIDTwoSkus}, false)
+
+	// Get Discuonts for regular customer
+	_, summary, errApply := ApplyDiscounts(articleCollection, nil, []string{voucherCode1}, nil, 0.05, nil)
+	assert.Nil(t, errApply)
+
+	// 10% on 30 CHF
+	assert.Equal(t, 3.0, summary.TotalDiscountApplicable)
+
+	// Change customer type => no discount
+	articleCollection.CustomerType = "employee"
+	_, summary, errApply = ApplyDiscounts(articleCollection, nil, []string{voucherCode1}, nil, 0.05, nil)
+	assert.Nil(t, errApply)
+
+	// No discount for non-regulat customer
+	assert.Equal(t, 0.0, summary.TotalDiscountApplicable)
 
 }
