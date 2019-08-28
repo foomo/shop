@@ -29,22 +29,22 @@ type GroupType string
 type Group struct {
 	Type           GroupType
 	BsonID         bson.ObjectId `bson:"_id,omitempty"`
-	ID             string        `bson:"id"`      //group id - referenced by PriceRule (s)
-	Name           string                         //group name
+	ID             string        `bson:"id"` //group id - referenced by PriceRule (s)
+	Name           string        //group name
 	ItemIDs        []string      `bson:"itemids"` //list of product IDs or customer IDs in assigned to the group
 	CreatedAt      time.Time
 	LastModifiedAt time.Time
-	Custom         interface{}   `bson:",omitempty"` //make it extensible if needed
+	Custom         interface{} `bson:",omitempty"` //make it extensible if needed
 }
 
 type emptyGroupType struct {
 	Type           GroupType
 	BsonID         bson.ObjectId `bson:"_id,omitempty"`
-	ID             string //group id - referenced by PriceRule (s)
-	Name           string //group name
+	ID             string        //group id - referenced by PriceRule (s)
+	Name           string        //group name
 	CreatedAt      time.Time
 	LastModifiedAt time.Time
-	Custom         interface{}   `bson:",omitempty"` //make it extensible if needed
+	Custom         interface{} `bson:",omitempty"` //make it extensible if needed
 }
 
 //------------------------------------------------------------------
@@ -168,7 +168,17 @@ func (group *Group) Delete() error {
 	return nil
 }
 
-// DeleteGroup -
+// DeleteGroupy -
+func DeleteGroups(query bson.M) error {
+	session, collection := GetPersistorForObject(new(Group)).GetCollection()
+	defer session.Close()
+
+	_, err := collection.RemoveAll(query)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 func DeleteGroup(ID string) error {
 	session, collection := GetPersistorForObject(new(Group)).GetCollection()
 	defer session.Close()
