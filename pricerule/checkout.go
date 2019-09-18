@@ -21,9 +21,11 @@ const (
 	ValidationPriceRuleExpired     TypeRuleValidationMsg = "pricerule_expired"
 	ValidationPriceRuleNotValidYet TypeRuleValidationMsg = "pricerule_not_valid_yet"
 
-	ValidationVoucherUnknown      TypeRuleValidationMsg = "voucher_unknown"
-	ValidationVoucherPersonalized TypeRuleValidationMsg = "voucher_only_for_customer"
-	ValidationVoucherAlreadyUsed  TypeRuleValidationMsg = "voucher_already_used"
+	ValidationVoucherUnknown                                        TypeRuleValidationMsg = "voucher_unknown"
+	ValidationVoucherPersonalized                                   TypeRuleValidationMsg = "voucher_only_for_customer"
+	ValidationVoucherAlreadyUsed                                    TypeRuleValidationMsg = "voucher_already_used"
+	ValidationVoucherNotApplicableToAlreadyDiscountedItemsByWebshop TypeRuleValidationMsg = "voucher_not_applicable_to_already_discounted_items_by_webshop"
+	ValidationVoucherNotApplicableToAlreadyDiscountedItemsBySap     TypeRuleValidationMsg = "voucher_not_applicable_to_already_discounted_items_by_sap"
 
 	ValidationPreviouslyAppliedRuleBlock TypeRuleValidationMsg = "rule_blocked_by_previously_applied_rule" //rule application blocked
 	ValidationPriceRuleOK                TypeRuleValidationMsg = "price_rule_ok"

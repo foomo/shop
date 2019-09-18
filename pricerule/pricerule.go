@@ -128,6 +128,12 @@ type PriceRule struct {
 	LastModifiedAt time.Time // updated at
 
 	Custom interface{} `bson:",omitempty"` //make it extensible if needed (included, excluded group IDs)
+
+	ExcludeAlreadyDiscountedItemsForVoucher bool
+
+	ExcludesEmployeesForVoucher bool // Note: exclusion of employees must actually be configured by setting IncludedCustomerGroupIDS/ExcludedCustomerGroupIDS.
+	// This flag is used for external validation purposes and only provides the information that this promo is supposed to exclude employees.
+	// It has no effect on the promo calculation itself!
 }
 
 //Type the type of the price rule
