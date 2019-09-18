@@ -56,7 +56,7 @@ func previouslyAppliedExclusionInPlace(rule *PriceRule, orderDiscountsForPositio
 	itemID := orderDiscountsForPosition.OrderItemID
 	previouslyAppliedExclusion := false
 
-	if rule.Type == TypePromotionCustomer || rule.Type == TypePromotionProduct {
+	if rule.Type == TypePromotionCustomer || rule.Type == TypePromotionProduct || rule.Type == TypeVoucher {
 		if calculationParameters.bestOptionCustomeProductRulePerItem != nil {
 			if bestRuleID, ok := calculationParameters.bestOptionCustomeProductRulePerItem[itemID]; ok {
 				if rule.ID == bestRuleID {
