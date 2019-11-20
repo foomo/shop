@@ -177,3 +177,11 @@ func (order *Order) SetCustomerIdAndType(id string, customerType string) error {
 	order.CustomerData.CustomerType = customerType
 	return order.Upsert()
 }
+
+func (order *Order) SetForceUpsert(force bool) {
+	if order.Flags == nil {
+		order.Flags = &Flags{}
+	}
+	order.Flags.forceUpsert = force
+	return
+}
