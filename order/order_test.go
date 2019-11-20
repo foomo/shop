@@ -61,6 +61,7 @@ func TestForceUpsert(t *testing.T) {
 
 	// rollback to orderGlobus
 	orderGlobus.SetForceUpsert(true)
+	assert.Equal(t, true, orderGlobus.Flags.forceUpsert)
 	fnLog(t, orderGlobus, "version of order used for rollback")
 	assert.NoError(t, orderGlobus.Upsert(), "upsert")
 
@@ -70,6 +71,7 @@ func TestForceUpsert(t *testing.T) {
 	fnLog(t, orderGlobus, "load after rollback")
 	// check if change is there
 	assert.Equal(t, "globus", orderGlobus.Site)
+	assert.Equal(t, false, orderGlobus.Flags.forceUpsert)
 
 }
 
