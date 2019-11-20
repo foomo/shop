@@ -9,5 +9,4 @@ services:
   - docker
 
 script:
-  - env
-  - SHELL=bash make test
+  - make test
