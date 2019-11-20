@@ -10,7 +10,7 @@ services:
 
 env:
   - SHELL=bash
-  - SH=bash
 
 script:
-  -  make test
+  - env
+  - make test
