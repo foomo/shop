@@ -8,5 +8,9 @@ sudo: required
 services:
   - docker
 
+env:
+  - SHELL=bash
+  - SH=bash
+
 script:
   -  make test
