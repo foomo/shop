@@ -78,8 +78,19 @@ func Find(query *bson.M, customProvider OrderCustomProvider) (iter func() (o *Or
 	return
 }
 
+func SnapshotByOrderID(orderID string, customProvider OrderCustomProvider) error {
+	order, err := GetOrderById(orderID, customProvider)
+	if err != nil {
+		return err
+	}
+	return SnapShot(order)
+}
+
+func SnapShot(o *Order) error {
+	return storeOrderVersionInHistory(o)
+}
+
 func UpsertOrder(o *Order) error {
-	// order is unlinked or not yet inserted in db
 
 	if o.unlinkDB || o.BsonId == "" {
 		return nil
@@ -87,14 +98,12 @@ func UpsertOrder(o *Order) error {
 	session, collection := GetOrderPersistor().GetCollection()
 	defer session.Close()
 
-	// Get current version from db and check against verssion of c
-	// If they are not identical, there must have been another upsert which would be overwritten by this one.
-	// In this case upsert is skipped and an error is returned,
+	// Get current version from db and check against version of o
+	// If they are not identical, this upsert would be a dirty write
+	// In this case upsert is not performed and an error is returned,
 	orderLatestFromDb := &Order{}
 	err := collection.Find(&bson.M{"id": o.GetID()}).Select(&bson.M{"version": 1}).One(orderLatestFromDb)
-
 	if err != nil {
-		log.Println("Upsert failed: Could not find order with id", o.GetID(), "Error:", err)
 		return err
 	}
 
@@ -118,13 +127,13 @@ func UpsertOrder(o *Order) error {
 		o.Version.Increment()
 	}
 
-	o.State.SetModified()
+	o.State.SetModified() // this is actually false, but some Globus queries rely on it
 	_, err = collection.UpsertId(o.BsonId, o)
 	if err != nil {
 		return err
 	}
 
-	return storeOrderVersionInHistory(o)
+	return nil
 }
 
 func storeOrderVersionInHistory(o *Order) error {
