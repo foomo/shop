@@ -100,6 +100,7 @@ type CustomerData struct {
 	CustomerId          string
 	GuestCustomerID     string
 	CustomerType        string // Private / Staff etc.
+	PriceOverrideGroup  string
 	Email               string
 	BillingAddress      *address.Address
 	ShippingAddress     *address.Address
