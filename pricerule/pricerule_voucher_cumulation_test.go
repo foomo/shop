@@ -362,3 +362,44 @@ func TestCumulationTwoVouchers_BothForBothSkus_SamePromoOnlyOneApplied(t *testin
 	assert.Equal(t, 20.0, summary.TotalDiscountApplicable)
 
 }
+func TestCumulationBonusVoucher(t *testing.T) {
+
+	setPriceRule := func(t *testing.T) (string, string) {
+		// PRICERULE
+		priceRule := NewPriceRule("PriceRule-" + "Bonus10CHF")
+		priceRule.Description = priceRule.Name
+		priceRule.Type = TypeBonusVoucher
+		priceRule.Action = ActionCartByAbsolute
+		priceRule.Amount = 10.0
+		priceRule.IncludedCustomerGroupIDS = []string{CustomerGroupID1}
+
+		priceRule.CalculateDiscountedOrderAmount = true
+		priceRule.Priority = 999
+		assert.Nil(t, priceRule.Upsert())
+
+		voucherCode := "voucherCode-" + priceRule.ID
+		voucher := NewVoucher(voucherCode, voucherCode, priceRule, "")
+		assert.Nil(t, voucher.Upsert())
+		voucherCode2 := "voucherCode-" + priceRule.ID + "-2"
+		voucher2 := NewVoucher(voucherCode2, voucherCode2, priceRule, "")
+		assert.Nil(t, voucher2.Upsert())
+
+		return voucherCode, voucherCode2
+	}
+
+	Init(t)
+
+	helper := cumulationTestHelper{}
+	articleCollection := helper.getMockArticleCollection()
+
+	voucherCode1, voucherCode2 := setPriceRule(t)
+
+	discounts, summary, errApply := ApplyDiscounts(articleCollection, nil, []string{voucherCode1, voucherCode2}, nil, 0.05, nil)
+	assert.Nil(t, errApply)
+	utils.PrintJSON(discounts)
+	utils.PrintJSON(summary)
+
+	// 10 +10 = 20 CHF
+	assert.Equal(t, 20.0, summary.TotalDiscountApplicable)
+
+}

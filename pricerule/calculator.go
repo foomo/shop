@@ -258,6 +258,14 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 			log.Println("skipping voucher "+voucherCode, err)
 			continue
 		}
+
+		// bonus vouchers are not being filtered
+		if voucherPriceRule.Type == TypeBonusVoucher {
+			voucherCodesTmp = append(voucherCodesTmp, voucherCode)
+			continue
+		}
+
+		// just to be safe
 		if voucherPriceRule.Type != TypeVoucher {
 			continue
 		}
