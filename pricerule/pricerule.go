@@ -129,11 +129,14 @@ type PriceRule struct {
 
 	Custom interface{} `bson:",omitempty"` //make it extensible if needed (included, excluded group IDs)
 
-	ExcludeAlreadyDiscountedItemsForVoucher bool
+	ExcludeAlreadyDiscountedItemsForVoucher bool // flag for vouchers only
 
-	ExcludesEmployeesForVoucher bool // Note: exclusion of employees must actually be configured by setting IncludedCustomerGroupIDS/ExcludedCustomerGroupIDS.
+	// Note: exclusion of employees must actually be configured by setting IncludedCustomerGroupIDS/ExcludedCustomerGroupIDS.
 	// This flag is used for external validation purposes and only provides the information that this promo is supposed to exclude employees.
 	// It has no effect on the promo calculation itself!
+	ExcludesEmployeesForVoucher bool // flag for vouchers only
+
+	CumulateWithOtherVouchers bool // flag for vouchers only. If true, voucher will be applied on top of other vouchers (best option rule skipped)
 }
 
 //Type the type of the price rule

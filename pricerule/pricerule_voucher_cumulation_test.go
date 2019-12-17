@@ -249,3 +249,116 @@ func TestCumulationExcludeStaff(t *testing.T) {
 	assert.Equal(t, 0.0, summary.TotalDiscountApplicable)
 
 }
+
+func setPriceRule1(t *testing.T, cumulate bool) (string, string) {
+	// PRICERULE
+	priceRule := NewPriceRule("PriceRule-" + "CartAbsoluteCHF20")
+	priceRule.Type = TypeVoucher
+	priceRule.Description = priceRule.Name
+	priceRule.Action = ActionCartByAbsolute
+	priceRule.Amount = 20.0
+	priceRule.IncludedProductGroupIDS = []string{GroupIDTwoSkus}
+	priceRule.IncludedCustomerGroupIDS = []string{CustomerGroupID1}
+	priceRule.ExcludeAlreadyDiscountedItemsForVoucher = false
+	priceRule.CumulateWithOtherVouchers = cumulate
+	assert.Nil(t, priceRule.Upsert())
+
+	voucherCode := "voucherCode-" + priceRule.ID
+	voucher := NewVoucher(voucherCode, voucherCode, priceRule, "")
+	assert.Nil(t, voucher.Upsert())
+	voucherCode2 := "voucherCode-" + priceRule.ID + "-2"
+	voucher2 := NewVoucher(voucherCode2, voucherCode2, priceRule, "")
+	assert.Nil(t, voucher2.Upsert())
+
+	return voucherCode, voucherCode2
+}
+func setPriceRule2(t *testing.T, cumulate bool) string {
+	// PRICERULE
+	priceRule := NewPriceRule("PriceRule-" + "Cart10Percent")
+	priceRule.Type = TypeVoucher
+	priceRule.Description = priceRule.Name
+	priceRule.Action = ActionItemByPercent
+	priceRule.Amount = 10.0
+	priceRule.IncludedProductGroupIDS = []string{GroupIDTwoSkus}
+	priceRule.IncludedCustomerGroupIDS = []string{CustomerGroupID1}
+	priceRule.ExcludeAlreadyDiscountedItemsForVoucher = false
+	priceRule.CumulateWithOtherVouchers = cumulate
+	assert.Nil(t, priceRule.Upsert())
+
+	voucherCode := "voucherCode-" + priceRule.ID
+
+	voucher := NewVoucher(voucherCode, voucherCode, priceRule, "")
+	assert.Nil(t, voucher.Upsert())
+	return voucherCode
+}
+
+func TestCumulationTwoVouchers_BothForBothSkus_BothApplied(t *testing.T) {
+
+	// Cart with 2 Items (CHF 20 and CHF 10)
+	// Both voucher are  valid for both of the items
+	// Expected result: Both voucher are applied because on voucher has set CumulateWithOtherVouchers = true
+
+	Init(t)
+
+	helper := cumulationTestHelper{}
+	articleCollection := helper.getMockArticleCollection()
+
+	voucherCode1, _ := setPriceRule1(t, true)
+	voucherCode2 := setPriceRule2(t, false)
+
+	discounts, summary, errApply := ApplyDiscounts(articleCollection, nil, []string{voucherCode1, voucherCode2}, nil, 0.05, nil)
+	assert.Nil(t, errApply)
+	utils.PrintJSON(discounts)
+	utils.PrintJSON(summary)
+
+	// 20 CHF (absolute) + 3 (10%) = 23
+	assert.Equal(t, 23.0, summary.TotalDiscountApplicable)
+}
+func TestCumulationTwoVouchers_BothForBothSkus_SamePromo_BothApplied(t *testing.T) {
+
+	// Cart with 2 Items (CHF 20 and CHF 10)
+	// Both voucher are  valid for both of the items
+	// Vouchers are of same promo
+	// CumulateWithOtherVouchers = true
+	// Expected result: Both voucher are applied because CumulateWithOtherVouchers = true
+
+	Init(t)
+
+	helper := cumulationTestHelper{}
+	articleCollection := helper.getMockArticleCollection()
+
+	voucherCode1, voucherCode2 := setPriceRule1(t, true)
+
+	discounts, summary, errApply := ApplyDiscounts(articleCollection, nil, []string{voucherCode1, voucherCode2}, nil, 0.05, nil)
+	assert.Nil(t, errApply)
+	utils.PrintJSON(discounts)
+	utils.PrintJSON(summary)
+
+	// 20 CHF (absolute) + 10 (20 CHF but only 10 applicable) = 30
+	assert.Equal(t, 30.0, summary.TotalDiscountApplicable)
+
+}
+func TestCumulationTwoVouchers_BothForBothSkus_SamePromoOnlyOneApplied(t *testing.T) {
+
+	// Cart with 2 Items (CHF 20 and CHF 10)
+	// Both voucher are  valid for both of the items
+	// Vouchers are of same promo
+	// CumulateWithOtherVouchers = false
+	// Expected result: Only one voucher is applied because CumulateWithOtherVouchers = true
+
+	Init(t)
+
+	helper := cumulationTestHelper{}
+	articleCollection := helper.getMockArticleCollection()
+
+	voucherCode1, voucherCode2 := setPriceRule1(t, false)
+
+	discounts, summary, errApply := ApplyDiscounts(articleCollection, nil, []string{voucherCode1, voucherCode2}, nil, 0.05, nil)
+	assert.Nil(t, errApply)
+	utils.PrintJSON(discounts)
+	utils.PrintJSON(summary)
+
+	// 20 CHF (absolute)  0 = 20
+	assert.Equal(t, 20.0, summary.TotalDiscountApplicable)
+
+}
