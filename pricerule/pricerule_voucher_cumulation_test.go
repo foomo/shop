@@ -298,8 +298,6 @@ func TestCumulationTwoVouchers_BothForBothSkus_BothApplied(t *testing.T) {
 	// Both voucher are  valid for both of the items
 	// Expected result: Both voucher are applied because on voucher has set CumulateWithOtherVouchers = true
 
-	Init(t)
-
 	helper := cumulationTestHelper{}
 	articleCollection := helper.getMockArticleCollection()
 
@@ -321,8 +319,6 @@ func TestCumulationTwoVouchers_BothForBothSkus_SamePromo_BothApplied(t *testing.
 	// Vouchers are of same promo
 	// CumulateWithOtherVouchers = true
 	// Expected result: Both voucher are applied because CumulateWithOtherVouchers = true
-
-	Init(t)
 
 	helper := cumulationTestHelper{}
 	articleCollection := helper.getMockArticleCollection()
@@ -346,8 +342,6 @@ func TestCumulationTwoVouchers_BothForBothSkus_SamePromoOnlyOneApplied(t *testin
 	// CumulateWithOtherVouchers = false
 	// Expected result: Only one voucher is applied because CumulateWithOtherVouchers = true
 
-	Init(t)
-
 	helper := cumulationTestHelper{}
 	articleCollection := helper.getMockArticleCollection()
 
@@ -363,6 +357,9 @@ func TestCumulationTwoVouchers_BothForBothSkus_SamePromoOnlyOneApplied(t *testin
 
 }
 func TestCumulationBonusVoucher(t *testing.T) {
+
+	// Cart with 2 Items (CHF 20 and CHF 10)
+	// Both bonus vouchers should be applied
 
 	setPriceRule := func(t *testing.T) (string, string) {
 		// PRICERULE
@@ -386,8 +383,6 @@ func TestCumulationBonusVoucher(t *testing.T) {
 
 		return voucherCode, voucherCode2
 	}
-
-	Init(t)
 
 	helper := cumulationTestHelper{}
 	articleCollection := helper.getMockArticleCollection()
