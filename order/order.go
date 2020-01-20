@@ -90,10 +90,9 @@ type Order struct {
 	//	Payment          *payment.Payment
 	//	PriceInfo        *OrderPriceInfo
 	//	Shipping         *shipping.ShippingProperties
-	LanguageCode   LanguageCode
-	CustomProvider OrderCustomProvider
-	Coupons        []string
-	Custom         interface{} `bson:",omitempty"`
+	LanguageCode LanguageCode
+	Coupons      []string
+	Custom       interface{} `bson:",omitempty"`
 }
 
 type CustomerData struct {
