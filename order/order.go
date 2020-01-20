@@ -72,8 +72,9 @@ type Order struct {
 	Site                       string
 	ShopID                     string
 	Version                    *version.Version
-	referenceVersion           int  // Version of final order as it was submitted by customer
-	unlinkDB                   bool // if true, changes to Customer are not stored in database
+	referenceVersion           int    // Version of final order as it was submitted by customer
+	SnapshotOrigin             string // if VO is a snapshot, this may be the place to provide about where the snapshot was taken
+	unlinkDB                   bool   // if true, changes to Customer are not stored in database
 	Flags                      *Flags
 	State                      *state.State
 	Processing                 *Processing
