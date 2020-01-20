@@ -10,13 +10,12 @@ import (
 	"strconv"
 	"time"
 
-	"gopkg.in/mgo.v2/bson"
-
 	"github.com/foomo/shop/address"
 	"github.com/foomo/shop/state"
 	"github.com/foomo/shop/unique"
 	"github.com/foomo/shop/utils"
 	"github.com/foomo/shop/version"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 //------------------------------------------------------------------
@@ -67,9 +66,9 @@ type Processing struct {
 // Order of item
 // create revisions
 type Order struct {
-	BsonId                     bson.ObjectId `bson:"_id,omitempty"`
-	CartId                     string        // unique cartId. This is the initial id when the cart is created
-	Id                         string        // unique orderId. This is set when the order is confirmed and sent
+	BsonId                     primitive.ObjectID `bson:"_id,omitempty"`
+	CartId                     string             // unique cartId. This is the initial id when the cart is created
+	Id                         string             // unique orderId. This is set when the order is confirmed and sent
 	Site                       string
 	ShopID                     string
 	Version                    *version.Version

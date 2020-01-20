@@ -18,6 +18,7 @@ require (
 	github.com/sergi/go-diff v1.0.0
 	github.com/stretchr/testify v1.4.0
 	github.com/ventu-io/go-shortid v0.0.0-20160104014424-6c56cef5189c
+	go.mongodb.org/mongo-driver v1.2.1
 	golang.org/x/crypto v0.0.0-20190411191339-88737f569e3a
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
