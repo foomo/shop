@@ -69,25 +69,13 @@ func Find(query *bson.M, customProvider OrderCustomProvider) (iter func() (o *Or
 
 		if mgoiter.Next(o) {
 			if customProvider != nil {
-				return mapDecode(o, customProvider)
+				return MapDecode(o, customProvider)
 			}
 			return o, nil
 		}
 		return nil, nil
 	}
 	return
-}
-
-func SnapshotByOrderID(orderID string, customProvider OrderCustomProvider) error {
-	order, err := GetOrderById(orderID, customProvider)
-	if err != nil {
-		return err
-	}
-	return SnapShot(order)
-}
-
-func SnapShot(o *Order) error {
-	return storeOrderVersionInHistory(o)
 }
 
 func UpsertOrder(o *Order) error {
@@ -213,7 +201,7 @@ func findOneOrder(find *bson.M, selection *bson.M, sort string, customProvider O
 	}
 	if customProvider != nil {
 		var err error
-		order, err = mapDecode(order, customProvider)
+		order, err = MapDecode(order, customProvider)
 		if err != nil {
 			return nil, err
 		}

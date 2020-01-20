@@ -117,14 +117,14 @@ func GetCartID(customerId string) (string, error) {
 	return order.GetID(), nil
 }
 
-// GetOrdersPaginated returns a set of orders for the given query sorted by confirmation date descending 
+// GetOrdersPaginated returns a set of orders for the given query sorted by confirmation date descending
 // page: index of page starting with 0, limit: maximum number of returned orders
 func GetOrdersPaginated(query *bson.M, page int, limit int, customProvider OrderCustomProvider) ([]*Order, error) {
-	
+
 	if customProvider == nil {
 		return nil, errors.New("customerProvider is nil")
 	}
-	if limit <= 0 || page < 0  {
+	if limit <= 0 || page < 0 {
 		return nil, errors.New("could not load paged orders - limit <= 0 or page < 0")
 	}
 
@@ -144,7 +144,7 @@ func GetOrdersPaginated(query *bson.M, page int, limit int, customProvider Order
 
 	orders := []*Order{}
 	for _, order := range result {
-		mapDecodedOrder, errMapDecode := mapDecode(order, customProvider)
+		mapDecodedOrder, errMapDecode := MapDecode(order, customProvider)
 		if errMapDecode != nil {
 			return nil, errMapDecode
 
@@ -268,7 +268,7 @@ func Rollback(orderId string, version int) error {
 
 }
 
-func mapDecode(o *Order, customProvider OrderCustomProvider) (order *Order, err error) {
+func MapDecode(o *Order, customProvider OrderCustomProvider) (order *Order, err error) {
 	/* Map OrderCustom */
 	orderCustom := customProvider.NewOrderCustom()
 	if orderCustom != nil && o.Custom != nil {
