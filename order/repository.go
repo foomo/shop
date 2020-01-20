@@ -3,6 +3,7 @@ package order
 import (
 	"errors"
 	"fmt"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"log"
@@ -80,7 +81,7 @@ func Find(query *bson.M, customProvider OrderCustomProvider) (iter func() (o *Or
 
 func UpsertOrder(o *Order) error {
 
-	if o.unlinkDB || o.BsonId == "" {
+	if o.unlinkDB || len(o.BsonId) == 0 {
 		return nil
 	}
 	session, collection := GetOrderPersistor().GetCollection()
@@ -126,7 +127,7 @@ func UpsertOrder(o *Order) error {
 
 func storeOrderVersionInHistory(o *Order) error {
 	currentID := o.BsonId
-	o.BsonId = "" // Temporarily reset Mongo ObjectId, so that we can perfrom an Insert.
+	o.BsonId = primitive.NilObjectID // Temporarily reset Mongo ObjectId, so that we can perfrom an Insert.
 	session, collection := GetOrderVersionsPersistor().GetCollection()
 	defer session.Close()
 
