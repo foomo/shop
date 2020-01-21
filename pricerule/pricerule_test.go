@@ -64,36 +64,11 @@ const (
 	CustomerID1 = "CustomerID1"
 	CustomerID2 = "CustomerID2"
 
-	CustomerGroupID1 = "CustomerGroupID1 - super customer"
-	CustomerGroupID2 = "CustomerGroupID2 - employee"
+	CustomerGroupRegular  = "regular-customer"
+	CustomerGroupEmployee = "employee"
 )
 
 var productsInGroups map[string][]string
-
-func Init(t *testing.T) {
-
-	productsInGroups = make(map[string][]string)
-	productsInGroups[GroupIDSingleSku1] = []string{Sku1}
-	productsInGroups[GroupIDSingleSku2] = []string{Sku2}
-	productsInGroups[GroupIDTwoSkus] = []string{Sku1, Sku2}
-	productsInGroups[GroupIDSale] = []string{ProductID1, ProductID2, ProductID1SKU1, ProductID1SKU2, ProductID2SKU1, ProductID2SKU2}
-	productsInGroups[GroupIDNormal] = []string{ProductID4, ProductID5, ProductID4SKU1, ProductID4SKU2, ProductID5SKU1, ProductID5SKU2}
-	productsInGroups[GroupIDShirts] = []string{ProductID3, ProductID4, ProductID5, ProductID3SKU1, ProductID4SKU1, ProductID5SKU1, ProductID3SKU2, ProductID4SKU2, ProductID5SKU2}
-
-	RemoveAllGroups()
-	RemoveAllPriceRules()
-	RemoveAllVouchers()
-	checkGroupsNotExists(t)
-	createMockCustomerGroups(t)
-	createMockProductGroups(t)
-	checkGroupsExists(t)
-
-	createMockPriceRules(t)
-	checkPriceRulesExists(t)
-
-	createMockVouchers(t)
-	checkVouchersExists(t)
-}
 
 func TestBuyXPayY(t *testing.T) {
 	//remove all and add again
@@ -106,7 +81,7 @@ func TestBuyXPayY(t *testing.T) {
 	RemoveAllPriceRules()
 	RemoveAllVouchers()
 	checkGroupsNotExists(t)
-	createMockCustomerGroups(t)
+
 	createMockProductGroups(t)
 	checkGroupsExists(t)
 
@@ -158,7 +133,7 @@ func TestQntThreshold(t *testing.T) {
 	RemoveAllPriceRules()
 	RemoveAllVouchers()
 	checkGroupsNotExists(t)
-	createMockCustomerGroups(t)
+
 	createMockProductGroups(t)
 	checkGroupsExists(t)
 
@@ -198,7 +173,8 @@ func TestQntThreshold(t *testing.T) {
 
 }
 
-func testBonuVoucher(t *testing.T) {
+func TestBonuVoucher(t *testing.T) {
+
 	productsInGroups = make(map[string][]string)
 	productsInGroups[GroupIDSale] = []string{ProductID1, ProductID2, ProductID1SKU1, ProductID1SKU2, ProductID2SKU1, ProductID2SKU2}
 	productsInGroups[GroupIDNormal] = []string{ProductID4, ProductID5, ProductID4SKU1, ProductID4SKU2, ProductID5SKU1, ProductID5SKU2}
@@ -284,7 +260,8 @@ func testBonuVoucher(t *testing.T) {
 }
 
 // Test groups creation
-func testGetApplicableVouchers(t *testing.T) {
+func TestGetApplicableVouchers(t *testing.T) {
+
 	//remove all and add again
 	productsInGroups = make(map[string][]string)
 	productsInGroups[GroupIDSale] = []string{ProductID1, ProductID2, ProductID1SKU1, ProductID1SKU2, ProductID2SKU1, ProductID2SKU2}
@@ -295,7 +272,7 @@ func testGetApplicableVouchers(t *testing.T) {
 	RemoveAllPriceRules()
 	RemoveAllVouchers()
 	checkGroupsNotExists(t)
-	createMockCustomerGroups(t)
+
 	createMockProductGroups(t)
 	checkGroupsExists(t)
 	orderVo, err := createMockOrder(t)
@@ -316,7 +293,7 @@ func testGetApplicableVouchers(t *testing.T) {
 	priceRule.Amount = 20.0
 	priceRule.Priority = 800
 	priceRule.IncludedProductGroupIDS = []string{GroupIDSale}
-	priceRule.IncludedCustomerGroupIDS = []string{CustomerGroupID1}
+	priceRule.IncludedCustomerGroupIDS = []string{CustomerGroupRegular}
 	err = priceRule.Upsert()
 	if err != nil {
 		panic(err)
@@ -370,7 +347,7 @@ func testGetApplicableVouchers(t *testing.T) {
 
 }
 
-func testShipping1(t *testing.T) {
+func TestShipping1(t *testing.T) {
 
 	RemoveAllGroups()
 	RemoveAllPriceRules()
@@ -514,7 +491,8 @@ func testShipping1(t *testing.T) {
 
 }
 
-func testBlacklist(t *testing.T) {
+func TestBlacklist(t *testing.T) {
+
 	RemoveAllGroups()
 	RemoveAllPriceRules()
 	RemoveAllVouchers()
@@ -602,7 +580,8 @@ func testBlacklist(t *testing.T) {
 
 }
 
-func testDiscountDistribution(t *testing.T) {
+func TestDiscountDistribution(t *testing.T) {
+
 	RemoveAllGroups()
 	RemoveAllPriceRules()
 	RemoveAllVouchers()
@@ -725,7 +704,8 @@ func testDiscountDistribution(t *testing.T) {
 
 }
 
-func testBestOption(t *testing.T) {
+func TestBestOption(t *testing.T) {
+
 	RemoveAllGroups()
 	RemoveAllPriceRules()
 	RemoveAllVouchers()
@@ -856,7 +836,8 @@ func testBestOption(t *testing.T) {
 
 }
 
-func testDiscountFoItemSets(t *testing.T) {
+func TestDiscountFoItemSets(t *testing.T) {
+
 	RemoveAllGroups()
 	RemoveAllPriceRules()
 	RemoveAllVouchers()
@@ -930,7 +911,8 @@ func testDiscountFoItemSets(t *testing.T) {
 
 }
 
-func testVoucherRuleWithCheckoutAttributes(t *testing.T) {
+func TestVoucherRuleWithCheckoutAttributes(t *testing.T) {
+
 	RemoveAllGroups()
 	RemoveAllPriceRules()
 	RemoveAllVouchers()
@@ -1003,7 +985,7 @@ func testVoucherRuleWithCheckoutAttributes(t *testing.T) {
 
 }
 
-func testShipping(t *testing.T) {
+func TestShipping(t *testing.T) {
 
 	RemoveAllGroups()
 	RemoveAllPriceRules()
@@ -1078,8 +1060,7 @@ func testShipping(t *testing.T) {
 
 }
 
-func testCache(t *testing.T) {
-	Init(t)
+func TestCache(t *testing.T) {
 
 	RemoveAllGroups()
 	RemoveAllPriceRules()
@@ -1145,10 +1126,8 @@ func testCache(t *testing.T) {
 }
 
 // Test groups creation
-func testScaled(t *testing.T) {
-	//Init
+func TestScaled(t *testing.T) {
 
-	//Init
 	RemoveAllGroups()
 	RemoveAllPriceRules()
 
@@ -1221,6 +1200,7 @@ func testScaled(t *testing.T) {
 
 // Test groups creation
 func TestBuyXGetY(t *testing.T) {
+
 	//Init
 	RemoveAllGroups()
 	RemoveAllPriceRules()
@@ -1293,7 +1273,8 @@ func TestBuyXGetY(t *testing.T) {
 }
 
 // Test groups creation
-func testExclude(t *testing.T) {
+func TestExclude(t *testing.T) {
+
 	//remove all and add again
 	productsInGroups = make(map[string][]string)
 	productsInGroups[GroupIDSale] = []string{ProductID1, ProductID2, ProductID1SKU1, ProductID1SKU2, ProductID2SKU1, ProductID2SKU2}
@@ -1304,7 +1285,7 @@ func testExclude(t *testing.T) {
 	RemoveAllPriceRules()
 	RemoveAllVouchers()
 	checkGroupsNotExists(t)
-	createMockCustomerGroups(t)
+
 	createMockProductGroups(t)
 	checkGroupsExists(t)
 	orderVo, err := createMockOrder(t)
@@ -1351,7 +1332,7 @@ func testExclude(t *testing.T) {
 }
 
 // Test discounts for customers (employee)
-func testCustomerDiscounts(t *testing.T) {
+func TestCustomerDiscounts(t *testing.T) {
 
 	productsInGroups = make(map[string][]string)
 	productsInGroups[GroupIDSale] = []string{ProductID1, ProductID2, ProductID1SKU1, ProductID1SKU2, ProductID2SKU1, ProductID2SKU2}
@@ -1362,7 +1343,7 @@ func testCustomerDiscounts(t *testing.T) {
 	RemoveAllPriceRules()
 	RemoveAllVouchers()
 	checkGroupsNotExists(t)
-	createMockCustomerGroups(t)
+
 	createMockProductGroups(t)
 	checkGroupsExists(t)
 	orderVo, err := createMockOrder(t)
@@ -1425,7 +1406,7 @@ func testCustomerDiscounts(t *testing.T) {
 	priceRule.Amount = 10.0
 	priceRule.Priority = 90
 	priceRule.IncludedProductGroupIDS = []string{GroupIDShirts}
-	priceRule.IncludedCustomerGroupIDS = []string{CustomerGroupID1}
+	priceRule.IncludedCustomerGroupIDS = []string{CustomerGroupRegular}
 	priceRule.MinOrderAmount = 0
 	priceRule.MinOrderAmountApplicableItemsOnly = true
 	err = priceRule.Upsert()
@@ -1446,7 +1427,7 @@ func testCustomerDiscounts(t *testing.T) {
 	priceRule.Amount = 10.0
 	priceRule.Priority = 90
 	priceRule.IncludedProductGroupIDS = []string{GroupIDShirts}
-	priceRule.IncludedCustomerGroupIDS = []string{CustomerGroupID1}
+	priceRule.IncludedCustomerGroupIDS = []string{CustomerGroupRegular}
 	priceRule.MinOrderAmount = 0
 	priceRule.MinOrderAmountApplicableItemsOnly = true
 	err = priceRule.Upsert()
@@ -1496,7 +1477,8 @@ func testCustomerDiscounts(t *testing.T) {
 
 }
 
-func testApplicableInCatalogFlag(t *testing.T) {
+func TestApplicableInCatalogFlag(t *testing.T) {
+
 	productsInGroups = make(map[string][]string)
 	productsInGroups[GroupIDSale] = []string{ProductID1, ProductID2, ProductID1SKU1, ProductID1SKU2, ProductID2SKU1, ProductID2SKU2}
 	productsInGroups[GroupIDNormal] = []string{ProductID4, ProductID5, ProductID4SKU1, ProductID4SKU2, ProductID5SKU1, ProductID5SKU2}
@@ -1506,7 +1488,7 @@ func testApplicableInCatalogFlag(t *testing.T) {
 	RemoveAllPriceRules()
 	RemoveAllVouchers()
 	checkGroupsNotExists(t)
-	createMockCustomerGroups(t)
+
 	createMockProductGroups(t)
 	checkGroupsExists(t)
 	orderVo, err := createMockOrder(t)
@@ -1542,7 +1524,8 @@ func testApplicableInCatalogFlag(t *testing.T) {
 
 }
 
-func testAbsoluteVoucher(t *testing.T) {
+func TestAbsoluteVoucher(t *testing.T) {
+
 	productsInGroups = make(map[string][]string)
 	productsInGroups[GroupIDSale] = []string{ProductID1, ProductID2, ProductID1SKU1, ProductID1SKU2, ProductID2SKU1, ProductID2SKU2}
 	productsInGroups[GroupIDNormal] = []string{ProductID4, ProductID5, ProductID4SKU1, ProductID4SKU2, ProductID5SKU1, ProductID5SKU2}
@@ -1552,7 +1535,7 @@ func testAbsoluteVoucher(t *testing.T) {
 	RemoveAllPriceRules()
 	RemoveAllVouchers()
 	checkGroupsNotExists(t)
-	createMockCustomerGroups(t)
+
 	createMockProductGroups(t)
 	checkGroupsExists(t)
 
@@ -1645,7 +1628,8 @@ func testAbsoluteVoucher(t *testing.T) {
 }
 
 // Test groups creation
-func testMaxOrder(t *testing.T) {
+func TestMaxOrder(t *testing.T) {
+
 	//remove all and add again
 	productsInGroups = make(map[string][]string)
 	productsInGroups[GroupIDSale] = []string{ProductID1, ProductID2, ProductID1SKU1, ProductID1SKU2, ProductID2SKU1, ProductID2SKU2}
@@ -1656,7 +1640,7 @@ func testMaxOrder(t *testing.T) {
 	RemoveAllPriceRules()
 	RemoveAllVouchers()
 	checkGroupsNotExists(t)
-	createMockCustomerGroups(t)
+
 	createMockProductGroups(t)
 	checkGroupsExists(t)
 	orderVo, err := createMockOrder(t)
@@ -1679,7 +1663,7 @@ func testMaxOrder(t *testing.T) {
 	priceRule.Amount = 10.0
 	priceRule.Priority = 90
 	priceRule.IncludedProductGroupIDS = []string{GroupIDSale}
-	priceRule.IncludedCustomerGroupIDS = []string{CustomerGroupID1}
+	priceRule.IncludedCustomerGroupIDS = []string{CustomerGroupRegular}
 	priceRule.MinOrderAmount = 0
 	priceRule.MinOrderAmountApplicableItemsOnly = true
 	err = priceRule.Upsert()
@@ -1743,7 +1727,8 @@ func testMaxOrder(t *testing.T) {
 }
 
 // Test groups creation
-func testTwoStepWorkflow(t *testing.T) {
+func TestTwoStepWorkflow(t *testing.T) {
+
 	//remove all and add again
 	productsInGroups = make(map[string][]string)
 	productsInGroups[GroupIDSale] = []string{ProductID1, ProductID2, ProductID1SKU1, ProductID1SKU2, ProductID2SKU1, ProductID2SKU2}
@@ -1754,7 +1739,7 @@ func testTwoStepWorkflow(t *testing.T) {
 	RemoveAllPriceRules()
 	RemoveAllVouchers()
 	checkGroupsNotExists(t)
-	createMockCustomerGroups(t)
+
 	createMockProductGroups(t)
 	checkGroupsExists(t)
 	orderVo, err := createMockOrder(t)
@@ -1777,7 +1762,7 @@ func testTwoStepWorkflow(t *testing.T) {
 	priceRule.Amount = 10.0
 	priceRule.Priority = 90
 	priceRule.IncludedProductGroupIDS = []string{GroupIDSale}
-	priceRule.IncludedCustomerGroupIDS = []string{CustomerGroupID1}
+	priceRule.IncludedCustomerGroupIDS = []string{CustomerGroupRegular}
 	err = priceRule.Upsert()
 	if err != nil {
 		panic(err)
@@ -1795,7 +1780,7 @@ func testTwoStepWorkflow(t *testing.T) {
 	priceRule.Amount = 10.0
 	priceRule.Priority = 100
 	priceRule.IncludedProductGroupIDS = []string{GroupIDSale}
-	priceRule.IncludedCustomerGroupIDS = []string{CustomerGroupID1}
+	priceRule.IncludedCustomerGroupIDS = []string{CustomerGroupRegular}
 	err = priceRule.Upsert()
 	if err != nil {
 		panic(err)
@@ -1814,7 +1799,7 @@ func testTwoStepWorkflow(t *testing.T) {
 	priceRule.Amount = 20.0
 	priceRule.Priority = 800
 	priceRule.IncludedProductGroupIDS = []string{GroupIDSale}
-	priceRule.IncludedCustomerGroupIDS = []string{CustomerGroupID1}
+	priceRule.IncludedCustomerGroupIDS = []string{CustomerGroupRegular}
 	err = priceRule.Upsert()
 	if err != nil {
 		panic(err)
@@ -1878,9 +1863,8 @@ func testTwoStepWorkflow(t *testing.T) {
 }
 
 // Test groups creation
-func testPricerulesWorkflow(t *testing.T) {
+func TestPricerulesWorkflow(t *testing.T) {
 	//remove all and add again
-	Init(t)
 
 	orderVo, err := createMockOrder(t)
 	if err != nil {
@@ -1901,9 +1885,7 @@ func testPricerulesWorkflow(t *testing.T) {
 }
 
 // Test checkout functionality
-func testCheckoutWorkflow(t *testing.T) {
-	//remove all and add again
-	Init(t)
+func TestCheckoutWorkflow(t *testing.T) {
 
 	orderVo, err := createMockOrder(t)
 	if err != nil {
@@ -1959,28 +1941,10 @@ func createMockProductGroups(t *testing.T) {
 		group.Type = ProductGroup
 		group.ID = groupID
 		group.Name = groupID
-		group.AddGroupItemIDs(productsInGroups[groupID])
-		err := group.Upsert()
+		err := group.AddGroupItemIDsAndPersist(productsInGroups[groupID])
 		if err != nil {
-			t.Fatal("Could not upsert product group " + groupID)
+			t.Fatal(err, "Could not upsert product group "+groupID)
 		}
-	}
-}
-
-func createMockCustomerGroups(t *testing.T) {
-	for _, groupID := range []string{CustomerGroupID1, CustomerGroupID2} {
-		group := new(Group)
-		group.Type = CustomerGroup
-		group.ID = groupID
-		group.Name = groupID
-		group.AddGroupItemIDs([]string{CustomerID1})
-		err := group.Upsert()
-
-		if err != nil {
-			log.Println(err)
-			t.Fatal("Could not upsert customer group " + groupID)
-		}
-		group.AddGroupItemIDsAndPersist([]string{CustomerID2})
 	}
 }
 
@@ -2008,7 +1972,7 @@ func createMockPriceRules(t *testing.T) {
 
 	priceRule.IncludedProductGroupIDS = []string{GroupIDSale}
 
-	priceRule.IncludedCustomerGroupIDS = []string{CustomerGroupID1}
+	priceRule.IncludedCustomerGroupIDS = []string{CustomerGroupRegular}
 
 	err := priceRule.Upsert()
 	if err != nil {
@@ -2033,7 +1997,7 @@ func createMockPriceRules(t *testing.T) {
 
 	priceRule.IncludedProductGroupIDS = []string{GroupIDSale}
 
-	priceRule.IncludedCustomerGroupIDS = []string{CustomerGroupID2}
+	priceRule.IncludedCustomerGroupIDS = []string{CustomerGroupEmployee}
 
 	err = priceRule.Upsert()
 	if err != nil {
