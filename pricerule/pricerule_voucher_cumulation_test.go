@@ -30,9 +30,9 @@ func newTesthelper() cumulationTestHelper {
 }
 
 func (helper cumulationTestHelper) cleanupTestData(t *testing.T) {
-	RemoveAllGroups()
-	RemoveAllPriceRules()
-	RemoveAllVouchers()
+	assert.NoError(t, RemoveAllGroups())
+	assert.NoError(t, RemoveAllPriceRules())
+	assert.NoError(t, RemoveAllVouchers())
 }
 func (helper cumulationTestHelper) cleanupAndRecreateTestData(t *testing.T) {
 	helper.cleanupTestData(t)
@@ -51,11 +51,7 @@ func (helper cumulationTestHelper) createMockProductGroups(t *testing.T, product
 		group.Type = ProductGroup
 		group.ID = groupID
 		group.Name = groupID
-		group.AddGroupItemIDs(items)
-		err := group.Upsert()
-		if err != nil {
-			t.Fatal(err, "Could not create product groups")
-		}
+		assert.NoError(t, group.AddGroupItemIDsAndPersist(items), "Could not create product groups")
 	}
 }
 
@@ -65,11 +61,7 @@ func (helper cumulationTestHelper) createMockCustomerGroups(t *testing.T, custom
 		group.Type = CustomerGroup
 		group.ID = groupID
 		group.Name = groupID
-		err := group.Upsert()
-		if err != nil {
-			t.Fatal(err, "Could not create customer groups")
-		}
-		group.AddGroupItemIDsAndPersist([]string{groupID})
+		assert.NoError(t, group.AddGroupItemIDsAndPersist([]string{groupID}), "Could not create customer groups")
 	}
 }
 
@@ -102,7 +94,7 @@ func (helper cumulationTestHelper) setMockEmployeeDiscount10Percent(t *testing.T
 	priceRule.Amount = 10
 	priceRule.IncludedProductGroupIDS = includedProductGroupIDS
 	priceRule.IncludedCustomerGroupIDS = []string{helper.CustomerGroupEmployee}
-	assert.Nil(t, priceRule.Upsert())
+	assert.NoError(t, priceRule.Upsert())
 
 	return
 }
@@ -124,7 +116,7 @@ func (helper cumulationTestHelper) setMockPriceRuleAndVoucherXPercent(t *testing
 	voucherCode := "voucherCode-" + priceRule.ID
 
 	voucher := NewVoucher(voucherCode, voucherCode, priceRule, "")
-	assert.Nil(t, voucher.Upsert())
+	assert.NoError(t, voucher.Upsert())
 	return voucherCode
 }
 
@@ -136,7 +128,7 @@ func (helper cumulationTestHelper) setMockPriceRuleCrossPrice(t *testing.T, name
 	priceRule.Action = ActionItemByAbsolute
 	priceRule.Amount = amount
 	priceRule.IncludedProductGroupIDS = includedProductGroupIDS
-	assert.Nil(t, priceRule.Upsert())
+	assert.NoError(t, priceRule.Upsert())
 }
 
 func (helper cumulationTestHelper) setMockPriceRuleAndVoucherAbsoluteCHF20(t *testing.T, cumulate bool) (string, string) {
@@ -150,14 +142,14 @@ func (helper cumulationTestHelper) setMockPriceRuleAndVoucherAbsoluteCHF20(t *te
 	priceRule.IncludedCustomerGroupIDS = []string{helper.CustomerGroupRegular}
 	priceRule.ExcludeAlreadyDiscountedItemsForVoucher = false
 	priceRule.CumulateWithOtherVouchers = cumulate
-	assert.Nil(t, priceRule.Upsert())
+	assert.NoError(t, priceRule.Upsert())
 
 	voucherCode := "voucherCode-" + priceRule.ID
 	voucher := NewVoucher(voucherCode, voucherCode, priceRule, "")
 	assert.Nil(t, voucher.Upsert())
 	voucherCode2 := "voucherCode-" + priceRule.ID + "-2"
 	voucher2 := NewVoucher(voucherCode2, voucherCode2, priceRule, "")
-	assert.Nil(t, voucher2.Upsert())
+	assert.NoError(t, voucher2.Upsert())
 
 	return voucherCode, voucherCode2
 }
@@ -172,12 +164,12 @@ func (helper cumulationTestHelper) setMockPriceRuleAndVoucher10Percent(t *testin
 	priceRule.IncludedCustomerGroupIDS = []string{helper.CustomerGroupRegular}
 	priceRule.ExcludeAlreadyDiscountedItemsForVoucher = false
 	priceRule.CumulateWithOtherVouchers = cumulate
-	assert.Nil(t, priceRule.Upsert())
+	assert.NoError(t, priceRule.Upsert())
 
 	voucherCode := "voucherCode-" + priceRule.ID
 
 	voucher := NewVoucher(voucherCode, voucherCode, priceRule, "")
-	assert.Nil(t, voucher.Upsert())
+	assert.NoError(t, voucher.Upsert())
 	return voucherCode
 }
 
@@ -191,14 +183,14 @@ func (helper cumulationTestHelper) setMockBonusVoucherPriceRule(t *testing.T) (s
 
 	priceRule.CalculateDiscountedOrderAmount = true
 	priceRule.Priority = 999
-	assert.Nil(t, priceRule.Upsert())
+	assert.NoError(t, priceRule.Upsert())
 
 	voucherCode := "voucherCode-" + priceRule.ID
 	voucher := NewVoucher(voucherCode, voucherCode, priceRule, "")
 	assert.Nil(t, voucher.Upsert())
 	voucherCode2 := "voucherCode-" + priceRule.ID + "-2"
 	voucher2 := NewVoucher(voucherCode2, voucherCode2, priceRule, "")
-	assert.Nil(t, voucher2.Upsert())
+	assert.NoError(t, voucher2.Upsert())
 
 	return voucherCode, voucherCode2
 }
