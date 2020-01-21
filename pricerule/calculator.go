@@ -815,9 +815,17 @@ func validatePriceRule(priceRule PriceRule, checkedPosition *Article, calculatio
 		if !checkedPosition.AllowCrossPriceCalculation {
 			return false, ValidationVoucherNotApplicableToAlreadyDiscountedItemsBySap
 		}
+
 		// Check if there is already any webshop promo discount
 		discounts, ok := orderDiscounts[checkedPosition.ID]
-		if ok && len(discounts.AppliedDiscounts) > 0 {
+		// filter all employee discounts, these are an exception for flag ExcludeAlreadyDiscountedItemsForVoucher
+		filteredDiscounts := filterDiscounts(discounts.AppliedDiscounts, func(d DiscountApplied) bool {
+			if !d.IsTypePromotionCustomer {
+				return true
+			}
+			return false
+		})
+		if ok && len(filteredDiscounts) > 0 {
 			return false, ValidationVoucherNotApplicableToAlreadyDiscountedItemsByWebshop
 		}
 	}
@@ -1096,4 +1104,14 @@ func getShippingGroupIDs() (itemIDs []string, err error) {
 	}
 	itemIDs = RemoveDuplicates(itemIDs)
 	return
+}
+
+func filterDiscounts(discounts []DiscountApplied, f func(DiscountApplied) bool) []DiscountApplied {
+	filtered := []DiscountApplied{}
+	for _, discount := range discounts {
+		if f(discount) {
+			filtered = append(filtered, discount)
+		}
+	}
+	return filtered
 }
