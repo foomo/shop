@@ -129,7 +129,9 @@ type PriceRule struct {
 
 	Custom interface{} `bson:",omitempty"` //make it extensible if needed (included, excluded group IDs)
 
-	ExcludeAlreadyDiscountedItemsForVoucher bool // flag for vouchers only
+	// if true, voucher is not applied when item already has a discount (SAP or webshop pricerule)
+	// exception: employee discount is always granted when available
+	ExcludeAlreadyDiscountedItemsForVoucher bool // flag for vouchers only.
 
 	// Note: exclusion of employees must actually be configured by setting IncludedCustomerGroupIDS/ExcludedCustomerGroupIDS.
 	// This flag is used for external validation purposes and only provides the information that this promo is supposed to exclude employees.
