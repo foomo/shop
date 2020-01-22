@@ -1,6 +1,7 @@
 package pricerule
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/foomo/shop/utils"
@@ -65,6 +66,18 @@ func (helper cumulationTestHelper) createMockCustomerGroups(t *testing.T, custom
 	}
 }
 
+// createVouchers creates n voucher codes for given Pricerule
+func (helper cumulationTestHelper) createMockVouchers(t *testing.T, priceRule *PriceRule, n int) []string {
+	vouchers := make([]string, n)
+	for i, _ := range vouchers {
+		voucherCode := "voucher-" + priceRule.ID + "-" + strconv.Itoa(i)
+		voucher := NewVoucher(voucherCode, voucherCode, priceRule, "")
+		assert.NoError(t, voucher.Upsert())
+		vouchers[i] = voucherCode
+	}
+	return vouchers
+}
+
 func (helper cumulationTestHelper) getMockArticleCollection() *ArticleCollection {
 	return &ArticleCollection{
 		Articles: []*Article{
@@ -84,10 +97,10 @@ func (helper cumulationTestHelper) getMockArticleCollection() *ArticleCollection
 		CustomerType: helper.CustomerGroupRegular,
 	}
 }
-func (helper cumulationTestHelper) setMockEmployeeDiscount10Percent(t *testing.T, includedProductGroupIDS []string) {
+func (helper cumulationTestHelper) setMockEmployeeDiscount10Percent(t *testing.T, name string, includedProductGroupIDS []string) {
 
-	// PRICERULE
-	priceRule := NewPriceRule("PriceRule-EmployeeDiscount")
+	// Create pricerule
+	priceRule := NewPriceRule("PriceRule-EmployeeDiscount-" + name)
 	priceRule.Type = TypePromotionCustomer
 	priceRule.Description = priceRule.Name
 	priceRule.Action = ActionItemByPercent
@@ -100,7 +113,7 @@ func (helper cumulationTestHelper) setMockEmployeeDiscount10Percent(t *testing.T
 }
 func (helper cumulationTestHelper) setMockPriceRuleAndVoucherXPercent(t *testing.T, name string, amount float64, includedProductGroupIDS []string, excludeAlreadyDiscountedItems bool, excludeEmployees bool) string {
 
-	// PRICERULE
+	// Create pricerule
 	priceRule := NewPriceRule("PriceRule-" + name)
 	priceRule.Type = TypeVoucher
 	priceRule.Description = priceRule.Name
@@ -113,15 +126,13 @@ func (helper cumulationTestHelper) setMockPriceRuleAndVoucherXPercent(t *testing
 	priceRule.ExcludeAlreadyDiscountedItemsForVoucher = excludeAlreadyDiscountedItems
 	assert.Nil(t, priceRule.Upsert())
 
-	voucherCode := "voucherCode-" + priceRule.ID
-
-	voucher := NewVoucher(voucherCode, voucherCode, priceRule, "")
-	assert.NoError(t, voucher.Upsert())
-	return voucherCode
+	// Create voucher
+	return helper.createMockVouchers(t, priceRule, 1)[0]
 }
 
 func (helper cumulationTestHelper) setMockPriceRuleCrossPrice(t *testing.T, name string, amount float64, includedProductGroupIDS []string) {
-	// PRICERULE 0
+
+	// Create pricerule
 	priceRule := NewPriceRule("PriceRulePromotionProduct-" + name)
 	priceRule.Type = TypePromotionProduct
 	priceRule.Description = priceRule.Name
@@ -132,7 +143,8 @@ func (helper cumulationTestHelper) setMockPriceRuleCrossPrice(t *testing.T, name
 }
 
 func (helper cumulationTestHelper) setMockPriceRuleAndVoucherAbsoluteCHF20(t *testing.T, cumulate bool) (string, string) {
-	// PRICERULE
+
+	// Create pricerule
 	priceRule := NewPriceRule("PriceRule-" + "CartAbsoluteCHF20")
 	priceRule.Type = TypeVoucher
 	priceRule.Description = priceRule.Name
@@ -144,17 +156,13 @@ func (helper cumulationTestHelper) setMockPriceRuleAndVoucherAbsoluteCHF20(t *te
 	priceRule.CumulateWithOtherVouchers = cumulate
 	assert.NoError(t, priceRule.Upsert())
 
-	voucherCode := "voucherCode-" + priceRule.ID
-	voucher := NewVoucher(voucherCode, voucherCode, priceRule, "")
-	assert.Nil(t, voucher.Upsert())
-	voucherCode2 := "voucherCode-" + priceRule.ID + "-2"
-	voucher2 := NewVoucher(voucherCode2, voucherCode2, priceRule, "")
-	assert.NoError(t, voucher2.Upsert())
-
-	return voucherCode, voucherCode2
+	// Create vouchers
+	vouchers := helper.createMockVouchers(t, priceRule, 2)
+	return vouchers[0], vouchers[1]
 }
 func (helper cumulationTestHelper) setMockPriceRuleAndVoucher10Percent(t *testing.T, cumulate bool) string {
-	// PRICERULE
+
+	// Create pricerule
 	priceRule := NewPriceRule("PriceRule-" + "Cart10Percent")
 	priceRule.Type = TypeVoucher
 	priceRule.Description = priceRule.Name
@@ -166,15 +174,13 @@ func (helper cumulationTestHelper) setMockPriceRuleAndVoucher10Percent(t *testin
 	priceRule.CumulateWithOtherVouchers = cumulate
 	assert.NoError(t, priceRule.Upsert())
 
-	voucherCode := "voucherCode-" + priceRule.ID
-
-	voucher := NewVoucher(voucherCode, voucherCode, priceRule, "")
-	assert.NoError(t, voucher.Upsert())
-	return voucherCode
+	// Create voucher
+	return helper.createMockVouchers(t, priceRule, 1)[0]
 }
 
 func (helper cumulationTestHelper) setMockBonusVoucherPriceRule(t *testing.T) (string, string) {
-	// PRICERULE
+
+	// Create pricerule
 	priceRule := NewPriceRule("PriceRule-" + "Bonus10CHF")
 	priceRule.Description = priceRule.Name
 	priceRule.Type = TypeBonusVoucher
@@ -185,14 +191,9 @@ func (helper cumulationTestHelper) setMockBonusVoucherPriceRule(t *testing.T) (s
 	priceRule.Priority = 999
 	assert.NoError(t, priceRule.Upsert())
 
-	voucherCode := "voucherCode-" + priceRule.ID
-	voucher := NewVoucher(voucherCode, voucherCode, priceRule, "")
-	assert.Nil(t, voucher.Upsert())
-	voucherCode2 := "voucherCode-" + priceRule.ID + "-2"
-	voucher2 := NewVoucher(voucherCode2, voucherCode2, priceRule, "")
-	assert.NoError(t, voucher2.Upsert())
-
-	return voucherCode, voucherCode2
+	// Create vouchers
+	vouchers := helper.createMockVouchers(t, priceRule, 2)
+	return vouchers[0], vouchers[1]
 }
 
 func TestCumulationTwoVouchers_OnePerSku(t *testing.T) {
@@ -209,7 +210,7 @@ func TestCumulationTwoVouchers_OnePerSku(t *testing.T) {
 	voucherCode2 := helper.setMockPriceRuleAndVoucherXPercent(t, "voucher-sku2", 10.0, []string{helper.GroupIDSingleSku2}, false, false)
 
 	discounts, summary, errApply := ApplyDiscounts(articleCollection, nil, []string{voucherCode1, voucherCode2}, nil, 0.05, nil)
-	assert.Nil(t, errApply)
+	assert.NoError(t, errApply)
 	utils.PrintJSON(discounts)
 	utils.PrintJSON(summary)
 
@@ -231,7 +232,7 @@ func TestCumulationTwoVouchers_BothForSameSku(t *testing.T) {
 	voucherCode2 := helper.setMockPriceRuleAndVoucherXPercent(t, "voucher-sku2", 10.0, []string{helper.GroupIDSingleSku1}, false, false)
 
 	discounts, summary, errApply := ApplyDiscounts(articleCollection, nil, []string{voucherCode1, voucherCode2}, nil, 0.05, nil)
-	assert.Nil(t, errApply)
+	assert.NoError(t, errApply)
 	utils.PrintJSON(discounts)
 	utils.PrintJSON(summary)
 
@@ -254,7 +255,7 @@ func TestCumulationTwoVouchers_BothForBothSkus(t *testing.T) {
 	voucherCode2 := helper.setMockPriceRuleAndVoucherXPercent(t, "voucher-2", 10.0, []string{helper.GroupIDTwoSkus}, false, false)
 
 	discounts, summary, errApply := ApplyDiscounts(articleCollection, nil, []string{voucherCode1, voucherCode2}, nil, 0.05, nil)
-	assert.Nil(t, errApply)
+	assert.NoError(t, errApply)
 	utils.PrintJSON(discounts)
 	utils.PrintJSON(summary)
 
@@ -279,7 +280,7 @@ func TestCumulationTwoVouchers_BothForSameSku_AdditonalCrossPrice(t *testing.T) 
 	voucherCode2 := helper.setMockPriceRuleAndVoucherXPercent(t, "voucher-sku2", 10.0, []string{helper.GroupIDSingleSku1}, false, false)
 
 	discounts, summary, errApply := ApplyDiscounts(articleCollection, nil, []string{voucherCode1, voucherCode2}, nil, 0.05, nil)
-	assert.Nil(t, errApply)
+	assert.NoError(t, errApply)
 	utils.PrintJSON(discounts)
 	utils.PrintJSON(summary)
 
@@ -301,7 +302,7 @@ func TestCumulationProductPromo(t *testing.T) {
 	helper.setMockPriceRuleCrossPrice(t, "crossprice2", 5.0, []string{helper.GroupIDTwoSkus})
 
 	discounts, summary, errApply := ApplyDiscounts(articleCollection, nil, []string{}, []string{}, 0.05, nil)
-	assert.Nil(t, errApply)
+	assert.NoError(t, errApply)
 	utils.PrintJSON(discounts)
 	utils.PrintJSON(summary)
 
@@ -323,7 +324,7 @@ func TestCumulationForExcludeVoucherOnCrossPriceWebhop(t *testing.T) {
 	voucherCode1 := helper.setMockPriceRuleAndVoucherXPercent(t, "voucher-1", 10.0, []string{helper.GroupIDTwoSkus}, true, false)
 
 	discounts, summary, errApply := ApplyDiscounts(articleCollection, nil, []string{voucherCode1}, nil, 0.05, nil)
-	assert.Nil(t, errApply)
+	assert.NoError(t, errApply)
 	utils.PrintJSON(discounts)
 	utils.PrintJSON(summary)
 
@@ -350,7 +351,7 @@ func TestCumulationForExcludeVoucherOnCrossPriceSAP(t *testing.T) {
 	voucherCode1 := helper.setMockPriceRuleAndVoucherXPercent(t, "voucher-1", 10.0, []string{helper.GroupIDTwoSkus}, true, false)
 
 	discounts, summary, errApply := ApplyDiscounts(articleCollection, nil, []string{voucherCode1}, nil, 0.05, nil)
-	assert.Nil(t, errApply)
+	assert.NoError(t, errApply)
 	utils.PrintJSON(discounts)
 	utils.PrintJSON(summary)
 
@@ -374,7 +375,7 @@ func TestCumulationTwoVouchers_BothForBothSkus_BothApplied(t *testing.T) {
 	voucherCode2 := helper.setMockPriceRuleAndVoucher10Percent(t, false)
 
 	discounts, summary, errApply := ApplyDiscounts(articleCollection, nil, []string{voucherCode1, voucherCode2}, nil, 0.05, nil)
-	assert.Nil(t, errApply)
+	assert.NoError(t, errApply)
 	utils.PrintJSON(discounts)
 	utils.PrintJSON(summary)
 
@@ -397,7 +398,7 @@ func TestCumulationTwoVouchers_BothForBothSkus_SamePromo_BothApplied(t *testing.
 	voucherCode1, voucherCode2 := helper.setMockPriceRuleAndVoucherAbsoluteCHF20(t, true)
 
 	discounts, summary, errApply := ApplyDiscounts(articleCollection, nil, []string{voucherCode1, voucherCode2}, nil, 0.05, nil)
-	assert.Nil(t, errApply)
+	assert.NoError(t, errApply)
 	utils.PrintJSON(discounts)
 	utils.PrintJSON(summary)
 
@@ -421,7 +422,7 @@ func TestCumulationTwoVouchers_BothForBothSkus_SamePromoOnlyOneApplied(t *testin
 	voucherCode1, voucherCode2 := helper.setMockPriceRuleAndVoucherAbsoluteCHF20(t, false)
 
 	discounts, summary, errApply := ApplyDiscounts(articleCollection, nil, []string{voucherCode1, voucherCode2}, nil, 0.05, nil)
-	assert.Nil(t, errApply)
+	assert.NoError(t, errApply)
 	utils.PrintJSON(discounts)
 	utils.PrintJSON(summary)
 
@@ -442,7 +443,7 @@ func TestCumulationBonusVoucher(t *testing.T) {
 	voucherCode1, voucherCode2 := helper.setMockBonusVoucherPriceRule(t)
 
 	discounts, summary, errApply := ApplyDiscounts(articleCollection, nil, []string{voucherCode1, voucherCode2}, nil, 0.05, nil)
-	assert.Nil(t, errApply)
+	assert.NoError(t, errApply)
 	utils.PrintJSON(discounts)
 	utils.PrintJSON(summary)
 
@@ -464,16 +465,20 @@ func TestCumulationExcludeEmployeesFromVoucher(t *testing.T) {
 	voucherCode1 := helper.setMockPriceRuleAndVoucherXPercent(t, "voucher-sku1", 10.0, []string{helper.GroupIDTwoSkus}, false, true)
 
 	// Get Discounts for regular customer
-	_, summary, errApply := ApplyDiscounts(articleCollection, nil, []string{voucherCode1}, nil, 0.05, nil)
-	assert.Nil(t, errApply)
+	discounts, summary, errApply := ApplyDiscounts(articleCollection, nil, []string{voucherCode1}, nil, 0.05, nil)
+	assert.NoError(t, errApply)
+	utils.PrintJSON(discounts)
+	utils.PrintJSON(summary)
 
 	// 10% on 30 CHF
 	assert.Equal(t, 3.0, summary.TotalDiscountApplicable)
 
 	// Change customer type to employee => no discount
 	articleCollection.CustomerType = helper.CustomerGroupEmployee
-	_, summary, errApply = ApplyDiscounts(articleCollection, nil, []string{voucherCode1}, nil, 0.05, nil)
-	assert.Nil(t, errApply)
+	discounts, summary, errApply = ApplyDiscounts(articleCollection, nil, []string{voucherCode1}, nil, 0.05, nil)
+	assert.NoError(t, errApply)
+	utils.PrintJSON(discounts)
+	utils.PrintJSON(summary)
 
 	// No discount for employee
 	assert.Equal(t, 0.0, summary.TotalDiscountApplicable)
@@ -489,20 +494,22 @@ func TestCumulationEmployeeDiscount(t *testing.T) {
 	helper.cleanupAndRecreateTestData(t)
 	articleCollection := helper.getMockArticleCollection()
 
-	//voucherCode1 := helper.setMockPriceRuleAndVoucherXPercent(t, "voucher-sku1", 10.0, []string{helper.GroupIDTwoSkus}, false, true)
-
-	helper.setMockEmployeeDiscount10Percent(t, []string{helper.GroupIDTwoSkus})
+	helper.setMockEmployeeDiscount10Percent(t, "employee-discount", []string{helper.GroupIDTwoSkus})
 
 	// no employee discuonts for regular customer
-	_, summary, errApply := ApplyDiscounts(articleCollection, nil, []string{}, nil, 0.05, nil)
-	assert.Nil(t, errApply)
+	discounts, summary, errApply := ApplyDiscounts(articleCollection, nil, []string{}, nil, 0.05, nil)
+	assert.NoError(t, errApply)
+	utils.PrintJSON(discounts)
+	utils.PrintJSON(summary)
 
 	assert.Equal(t, 0.0, summary.TotalDiscountApplicable)
 
 	// Change customer type to eomplyee => discount applied
 	articleCollection.CustomerType = helper.CustomerGroupEmployee
-	_, summary, errApply = ApplyDiscounts(articleCollection, nil, []string{}, nil, 0.05, nil)
-	assert.Nil(t, errApply)
+	discounts, summary, errApply = ApplyDiscounts(articleCollection, nil, []string{}, nil, 0.05, nil)
+	assert.NoError(t, errApply)
+	utils.PrintJSON(discounts)
+	utils.PrintJSON(summary)
 
 	// No discount for non-regular customer
 	assert.Equal(t, 3.0, summary.TotalDiscountApplicable)
@@ -518,21 +525,24 @@ func TestCumulationCrossPriceAndEmployeeDiscount(t *testing.T) {
 	helper.cleanupAndRecreateTestData(t)
 	articleCollection := helper.getMockArticleCollection()
 
-	//voucherCode1 := helper.setMockPriceRuleAndVoucherXPercent(t, "voucher-sku1", 10.0, []string{helper.GroupIDTwoSkus}, false, true)
 	helper.setMockPriceRuleCrossPrice(t, "cross-price", 5.0, []string{helper.GroupIDTwoSkus})
-	helper.setMockEmployeeDiscount10Percent(t, []string{helper.GroupIDTwoSkus})
+	helper.setMockEmployeeDiscount10Percent(t, "employee-discount", []string{helper.GroupIDTwoSkus})
 
 	// no employee discounts for regular customer
-	_, summary, errApply := ApplyDiscounts(articleCollection, nil, []string{}, nil, 0.05, nil)
-	assert.Nil(t, errApply)
+	discounts, summary, errApply := ApplyDiscounts(articleCollection, nil, []string{}, nil, 0.05, nil)
+	assert.NoError(t, errApply)
+	utils.PrintJSON(discounts)
+	utils.PrintJSON(summary)
 
 	// 5+5 CHF Crossprices, no employee discount
 	assert.Equal(t, 10.0, summary.TotalDiscountApplicable)
 
 	// Change customer type to eomplyee => discount applied
 	articleCollection.CustomerType = helper.CustomerGroupEmployee
-	_, summary, errApply = ApplyDiscounts(articleCollection, nil, []string{}, nil, 0.05, nil)
-	assert.Nil(t, errApply)
+	discounts, summary, errApply = ApplyDiscounts(articleCollection, nil, []string{}, nil, 0.05, nil)
+	assert.NoError(t, errApply)
+	utils.PrintJSON(discounts)
+	utils.PrintJSON(summary)
 
 	// 5+5 CHF Crossprices + 2 CHF employee discount
 	assert.Equal(t, 12.0, summary.TotalDiscountApplicable)
@@ -551,13 +561,12 @@ func TestCumulationEmployeeDiscountAndVoucherIncluceDiscountedItems(t *testing.T
 	helper.cleanupAndRecreateTestData(t)
 	articleCollection := helper.getMockArticleCollection()
 
-	//voucherCode1 := helper.setMockPriceRuleAndVoucherXPercent(t, "voucher-sku1", 10.0, []string{helper.GroupIDTwoSkus}, false, true)
 	helper.setMockPriceRuleCrossPrice(t, "cross-price", 5.0, []string{helper.GroupIDSingleSku1})
-	helper.setMockEmployeeDiscount10Percent(t, []string{helper.GroupIDTwoSkus})
+	helper.setMockEmployeeDiscount10Percent(t, "employee-discount", []string{helper.GroupIDTwoSkus})
 	voucherCode1 := helper.setMockPriceRuleAndVoucherXPercent(t, "voucher-sku1", 10.0, []string{helper.GroupIDTwoSkus}, false, false)
 	// no employee discounts for regular customer
 	discounts, summary, errApply := ApplyDiscounts(articleCollection, nil, []string{voucherCode1}, nil, 0.05, nil)
-	assert.Nil(t, errApply)
+	assert.NoError(t, errApply)
 	utils.PrintJSON(discounts)
 	utils.PrintJSON(summary)
 	// 5 CHF crossprice for Sku1 + 2.5 CHF voucher discount
@@ -566,8 +575,7 @@ func TestCumulationEmployeeDiscountAndVoucherIncluceDiscountedItems(t *testing.T
 	// Change customer type to employee => additional employee discount
 	articleCollection.CustomerType = helper.CustomerGroupEmployee
 	discounts, summary, errApply = ApplyDiscounts(articleCollection, nil, []string{voucherCode1}, nil, 0.05, nil)
-	assert.Nil(t, errApply)
-
+	assert.NoError(t, errApply)
 	utils.PrintJSON(discounts)
 	utils.PrintJSON(summary)
 	// 5 CHF crossprice for Sku1 + 2.5 CHF employee discount + 2.25 CHF voucher discount
@@ -588,12 +596,12 @@ func TestCumulationEmployeeDiscountAndVoucherExcludeDiscountedItems(t *testing.T
 	articleCollection := helper.getMockArticleCollection()
 
 	helper.setMockPriceRuleCrossPrice(t, "cross-price", 5.0, []string{helper.GroupIDSingleSku1})
-	helper.setMockEmployeeDiscount10Percent(t, []string{helper.GroupIDTwoSkus})
+	helper.setMockEmployeeDiscount10Percent(t, "employee-discount", []string{helper.GroupIDTwoSkus})
 	voucherCode1 := helper.setMockPriceRuleAndVoucherXPercent(t, "voucher-sku1", 10.0, []string{helper.GroupIDTwoSkus}, true, false)
 
 	// no employee discounts for regular customer
 	discounts, summary, errApply := ApplyDiscounts(articleCollection, nil, []string{voucherCode1}, nil, 0.05, nil)
-	assert.Nil(t, errApply)
+	assert.NoError(t, errApply)
 	utils.PrintJSON(discounts)
 	utils.PrintJSON(summary)
 	// 5 CHF crossprice for Sku1 + 2 CHF voucher discount
@@ -602,7 +610,7 @@ func TestCumulationEmployeeDiscountAndVoucherExcludeDiscountedItems(t *testing.T
 	// Change customer type to employee => additional employee discount
 	articleCollection.CustomerType = helper.CustomerGroupEmployee
 	discounts, summary, errApply = ApplyDiscounts(articleCollection, nil, []string{voucherCode1}, nil, 0.05, nil)
-	assert.Nil(t, errApply)
+	assert.NoError(t, errApply)
 
 	utils.PrintJSON(discounts)
 	utils.PrintJSON(summary)
@@ -627,13 +635,12 @@ func TestCumulationEmployeeDiscountAndVoucherExcludeDiscountedItemsSAPCrossPrice
 	articleCollection.Articles[0].Price = 5.0
 	articleCollection.Articles[0].AllowCrossPriceCalculation = false
 
-	//helper.setMockPriceRuleCrossPrice(t, "cross-price", 5.0, []string{helper.GroupIDSingleSku1})
-	helper.setMockEmployeeDiscount10Percent(t, []string{helper.GroupIDTwoSkus})
+	helper.setMockEmployeeDiscount10Percent(t, "employee-discount", []string{helper.GroupIDTwoSkus})
 	voucherCode1 := helper.setMockPriceRuleAndVoucherXPercent(t, "voucher-sku1", 10.0, []string{helper.GroupIDTwoSkus}, true, false)
 
 	// no employee discounts for regular customer
 	discounts, summary, errApply := ApplyDiscounts(articleCollection, nil, []string{voucherCode1}, nil, 0.05, nil)
-	assert.Nil(t, errApply)
+	assert.NoError(t, errApply)
 	utils.PrintJSON(discounts)
 	utils.PrintJSON(summary)
 	// 2 CHF voucher discount (Sku2)
@@ -642,8 +649,7 @@ func TestCumulationEmployeeDiscountAndVoucherExcludeDiscountedItemsSAPCrossPrice
 	// Change customer type to employee => additional employee discount
 	articleCollection.CustomerType = helper.CustomerGroupEmployee
 	discounts, summary, errApply = ApplyDiscounts(articleCollection, nil, []string{voucherCode1}, nil, 0.05, nil)
-	assert.Nil(t, errApply)
-
+	assert.NoError(t, errApply)
 	utils.PrintJSON(discounts)
 	utils.PrintJSON(summary)
 	//  0.5+2.0 employee discount + 1.8 CHF voucher discount (for Sku2)
