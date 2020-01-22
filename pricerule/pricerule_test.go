@@ -70,58 +70,6 @@ const (
 
 var productsInGroups map[string][]string
 
-func TestBuyXPayY(t *testing.T) {
-	//remove all and add again
-	productsInGroups = make(map[string][]string)
-	productsInGroups[GroupIDSale] = []string{ProductID1, ProductID2, ProductID1SKU1, ProductID1SKU2, ProductID2SKU1, ProductID2SKU2}
-	productsInGroups[GroupIDNormal] = []string{ProductID4, ProductID5, ProductID4SKU1, ProductID4SKU2, ProductID5SKU1, ProductID5SKU2}
-	productsInGroups[GroupIDShirts] = []string{ProductID3, ProductID4, ProductID5, ProductID3SKU1, ProductID4SKU1, ProductID5SKU1, ProductID3SKU2, ProductID4SKU2, ProductID5SKU2}
-
-	RemoveAllGroups()
-	RemoveAllPriceRules()
-	RemoveAllVouchers()
-	checkGroupsNotExists(t)
-
-	createMockProductGroups(t)
-	checkGroupsExists(t)
-
-	orderVo := &ArticleCollection{}
-
-	orderVo.CustomerID = CustomerID1
-	orderVo.CustomerType = CustomerID1
-
-	// Position with 2 qnt
-	positionVo := &Article{}
-	positionVo.ID = ProductID1
-	positionVo.Price = 10
-	positionVo.Quantity = 3
-	orderVo.Articles = append(orderVo.Articles, positionVo)
-
-	priceRule := NewPriceRule(PriceRuleIDSaleVoucher)
-	priceRule.Name = map[string]string{
-		"de": PriceRuleIDSaleVoucher,
-		"fr": PriceRuleIDSaleVoucher,
-		"it": PriceRuleIDSaleVoucher,
-	}
-	priceRule.Type = TypePromotionProduct
-	priceRule.Description = priceRule.Name
-	priceRule.Action = ActionBuyXPayY
-	priceRule.Amount = 20.0
-	priceRule.X = 3
-	priceRule.Y = 2
-	priceRule.IncludedProductGroupIDS = []string{GroupIDSale}
-	err := priceRule.Upsert()
-	if err != nil {
-		panic(err)
-	}
-
-	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{}, []string{}, 0.05, nil)
-	utils.PrintJSON(discountsVo)
-	utils.PrintJSON(summary)
-	utils.PrintJSON(err)
-
-}
-
 func TestQntThreshold(t *testing.T) {
 	//remove all and add again
 	productsInGroups = make(map[string][]string)
@@ -1196,80 +1144,6 @@ func TestScaled(t *testing.T) {
 	fmt.Println("discounts for scaled percentage")
 	utils.PrintJSON(discountsVo)
 	utils.PrintJSON(*summary)
-}
-
-// Test groups creation
-func TestBuyXGetY(t *testing.T) {
-
-	//Init
-	RemoveAllGroups()
-	RemoveAllPriceRules()
-
-	//create group --------------------------------------------------------------------
-
-	groupID := "discounted"
-	group := new(Group)
-	group.Type = ProductGroup
-	group.ID = groupID
-	group.Name = groupID
-	group.AddGroupItemIDs([]string{ProductID1SKU1, ProductID1SKU2, ProductID2SKU1})
-	group.Upsert()
-
-	//create pricerule --------------------------------------------------------------------
-	priceRule := NewPriceRule(PriceRuleIDSale)
-	priceRule.Name = map[string]string{
-		"de": PriceRuleIDSale,
-		"fr": PriceRuleIDSale,
-		"it": PriceRuleIDSale,
-	}
-	priceRule.Type = TypePromotionOrder
-	priceRule.Description = priceRule.Name
-	priceRule.Action = ActionBuyXPayY
-	priceRule.X = 3
-	priceRule.Y = 1
-	priceRule.WhichXYFree = XYMostExpensiveFree
-	priceRule.WhichXYList = []string{ProductID2SKU1, ProductID1SKU1, ProductID1SKU2}
-	priceRule.MaxUses = 10
-	priceRule.MaxUsesPerCustomer = 10
-	priceRule.IncludedProductGroupIDS = []string{"discounted"}
-	priceRule.IncludedCustomerGroupIDS = []string{}
-
-	err := priceRule.Upsert()
-	if err != nil {
-		panic(err)
-	}
-	// Order -------------------------------------------------------------------------------
-	orderVo := &ArticleCollection{}
-	orderVo.CustomerID = CustomerID1
-
-	positionVo := &Article{}
-	positionVo.ID = ProductID1SKU1
-	positionVo.Price = 100
-	positionVo.Quantity = 2
-	orderVo.Articles = append(orderVo.Articles, positionVo)
-
-	positionVo = &Article{}
-	positionVo.ID = ProductID1SKU2
-	positionVo.Price = 300
-	positionVo.Quantity = float64(2)
-	orderVo.Articles = append(orderVo.Articles, positionVo)
-
-	positionVo = &Article{}
-	positionVo.ID = ProductID2SKU1
-	positionVo.Price = 500
-	positionVo.Quantity = float64(2)
-	orderVo.Articles = append(orderVo.Articles, positionVo)
-	// Order -------------------------------------------------------------------------------
-	discountsVo, summary, err := ApplyDiscounts(orderVo, nil, []string{""}, []string{}, 0.05, nil)
-	// defer removeOrder(orderVo)
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println("discounts for buy x get y")
-	utils.PrintJSON(discountsVo)
-	utils.PrintJSON(*summary)
-
 }
 
 // Test groups creation

@@ -251,7 +251,7 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 	for _, voucherCode := range voucherCodes {
 		voucherVo, voucherPriceRule, err := GetVoucherAndPriceRule(voucherCode, customProvider)
 		if voucherVo == nil {
-			log.Println("voucher not found for code: " + voucherCode + " in " + "priceRule.ApplyDiscounts")
+			//log.Println("voucher not found for code: " + voucherCode + " in " + "priceRule.ApplyDiscounts")
 			continue
 		}
 		if err != nil {
@@ -288,7 +288,7 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 				voucherVo, voucherPriceRule, err := GetVoucherAndPriceRule(voucherCode, customProvider)
 				if voucherVo == nil {
 					continue
-					log.Println("voucher not found for code: " + voucherCode + " in " + "priceRule.ApplyDiscounts")
+					//log.Println("voucher not found for code: " + voucherCode + " in " + "priceRule.ApplyDiscounts")
 				}
 				if err != nil {
 					log.Println("skipping voucher "+voucherCode, err)
@@ -356,7 +356,7 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 			if len(voucherCode) > 0 {
 				voucherVo, voucherPriceRule, err := GetVoucherAndPriceRule(voucherCode, customProvider)
 				if voucherVo == nil {
-					log.Println("voucher not found for code: " + voucherCode + " in " + "priceRule.ApplyDiscounts")
+					//log.Println("voucher not found for code: " + voucherCode + " in " + "priceRule.ApplyDiscounts")
 					continue
 				}
 				if err != nil {
@@ -443,7 +443,7 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 		if len(voucherCode) > 0 {
 			voucherVo, voucherPriceRule, err := GetVoucherAndPriceRule(voucherCode, customProvider)
 			if voucherVo == nil {
-				log.Println("voucher not found for code: " + voucherCode + " in " + "priceRule.ApplyDiscounts")
+				//log.Println("voucher not found for code: " + voucherCode + " in " + "priceRule.ApplyDiscounts")
 				continue
 			}
 			if err != nil {

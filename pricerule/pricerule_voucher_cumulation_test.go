@@ -13,9 +13,11 @@ type cumulationTestHelper struct {
 	CustomerGroupEmployee string
 	Sku1                  string
 	Sku2                  string
+	Sku3                  string
 	GroupIDSingleSku1     string
 	GroupIDSingleSku2     string
 	GroupIDTwoSkus        string
+	GroupIDThreeSkus      string
 }
 
 func newTesthelper() cumulationTestHelper {
@@ -26,7 +28,8 @@ func newTesthelper() cumulationTestHelper {
 		Sku2:                  "sku2",
 		GroupIDSingleSku1:     "group-with-sku1",
 		GroupIDSingleSku2:     "group-with-sku2",
-		GroupIDTwoSkus:        "group-with-both-skus",
+		GroupIDTwoSkus:        "group-with-two-skus",
+		GroupIDThreeSkus:      "group-with-three-skus",
 	}
 }
 
@@ -34,6 +37,7 @@ func (helper cumulationTestHelper) cleanupTestData(t *testing.T) {
 	assert.NoError(t, RemoveAllGroups())
 	assert.NoError(t, RemoveAllPriceRules())
 	assert.NoError(t, RemoveAllVouchers())
+	ClearCache() // reset cache for catalogue calculations
 }
 func (helper cumulationTestHelper) cleanupAndRecreateTestData(t *testing.T) {
 	helper.cleanupTestData(t)
@@ -41,6 +45,7 @@ func (helper cumulationTestHelper) cleanupAndRecreateTestData(t *testing.T) {
 	productsInGroups[helper.GroupIDSingleSku1] = []string{helper.Sku1}
 	productsInGroups[helper.GroupIDSingleSku2] = []string{helper.Sku2}
 	productsInGroups[helper.GroupIDTwoSkus] = []string{helper.Sku1, helper.Sku2}
+	productsInGroups[helper.GroupIDThreeSkus] = []string{helper.Sku1, helper.Sku2, helper.Sku3}
 
 	helper.createMockCustomerGroups(t, []string{helper.CustomerGroupRegular, helper.CustomerGroupEmployee})
 	helper.createMockProductGroups(t, productsInGroups)
@@ -138,6 +143,19 @@ func (helper cumulationTestHelper) setMockPriceRuleCrossPrice(t *testing.T, name
 	priceRule.Description = priceRule.Name
 	priceRule.Action = ActionItemByAbsolute
 	priceRule.Amount = amount
+	priceRule.IncludedProductGroupIDS = includedProductGroupIDS
+	assert.NoError(t, priceRule.Upsert())
+}
+func (helper cumulationTestHelper) setMockPriceRuleBuy3Pay2(t *testing.T, name string, includedProductGroupIDS []string) {
+
+	// Create pricerule
+	priceRule := NewPriceRule("PriceRuleBuy3Pay2-" + name)
+	priceRule.Type = TypePromotionProduct
+	priceRule.Description = priceRule.Name
+	priceRule.Action = ActionBuyXPayY
+	priceRule.X = 3
+	priceRule.Y = 2
+	priceRule.WhichXYFree = XYCheapestFree
 	priceRule.IncludedProductGroupIDS = includedProductGroupIDS
 	assert.NoError(t, priceRule.Upsert())
 }
@@ -654,4 +672,73 @@ func TestCumulationEmployeeDiscountAndVoucherExcludeDiscountedItemsSAPCrossPrice
 	utils.PrintJSON(summary)
 	//  0.5+2.0 employee discount + 1.8 CHF voucher discount (for Sku2)
 	assert.Equal(t, 4.3, summary.TotalDiscountApplicable)
+}
+
+func TestCrossPriceAndBuyXGetY(t *testing.T) {
+
+	// Expected: Crossprice and BuyXPayY are both applied
+
+	helper := newTesthelper()
+	defer helper.cleanupTestData(t)
+	helper.cleanupAndRecreateTestData(t)
+	articleCollection := helper.getMockArticleCollection()
+	allowCrossPriceCalculation := true
+	// add 3rd article required for BuyXPayY Promo
+	articleCollection.Articles = append(articleCollection.Articles, &Article{
+		ID:                         helper.Sku3,
+		Price:                      50.0,
+		CrossPrice:                 50.0,
+		Quantity:                   1,
+		AllowCrossPriceCalculation: allowCrossPriceCalculation,
+	})
+	// adjuts prices
+	articleCollection.Articles[0].Price = 100.0
+	articleCollection.Articles[1].Price = 50.0
+
+	helper.setMockPriceRuleCrossPrice(t, "crossprice1", 10.0, []string{helper.GroupIDThreeSkus})
+	helper.setMockPriceRuleBuy3Pay2(t, "buyXPayY", []string{helper.GroupIDThreeSkus})
+
+	tests := []struct {
+		qty1                         float64
+		qty2                         float64
+		qty3                         float64
+		expectedDiscountOrderService float64
+		expectedDiscountCatalogue    float64
+	}{
+		{1.0, 1.0, 1.0, 70.0, 30.0}, // 10+10+10+10+40=70
+		{2.0, 1.0, 1.0, 80.0, 40.0},
+		{2.0, 2.0, 2.0, 140.0, 60.0}, // 2 items free
+		{2.0, 1.0, 0.0, 70.0, 30.0},
+		{0.0, 1.0, 1.0, 20.0, 20.0}, // only cross prices
+	}
+
+	accumulateDiscountsOfItems := func(discounts OrderDiscounts) float64 {
+		sum := 0.0
+		for _, d := range discounts {
+			sum += d.TotalDiscountAmountApplicable
+		}
+		return sum
+	}
+
+	for i, tt := range tests {
+		// Order -------------------------------------------------------------------------------
+		articleCollection.Articles[0].Quantity = tt.qty1
+		articleCollection.Articles[1].Quantity = tt.qty2
+		articleCollection.Articles[2].Quantity = tt.qty3
+
+		// Calculation for orderservice
+		_, summary, err := ApplyDiscounts(articleCollection, nil, []string{""}, []string{}, 0.05, nil)
+		if err != nil {
+			assert.NoError(t, err)
+		}
+		assert.Equal(t, tt.expectedDiscountOrderService, summary.TotalDiscount, "case orderservice", i)
+
+		// Calculation for catalogue
+		// Note: In catalalogue calculation summary is always empty, therefore we have to get the data directly from the discounts
+		discountsCatalogue, _, err := ApplyDiscountsOnCatalog(articleCollection, nil, 0.05, nil)
+		if err != nil {
+			assert.NoError(t, err)
+		}
+		assert.Equal(t, tt.expectedDiscountCatalogue, accumulateDiscountsOfItems(discountsCatalogue), "case catalogue", i)
+	}
 }
