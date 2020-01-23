@@ -1,218 +1,11 @@
 package pricerule
 
 import (
-	"strconv"
 	"testing"
 
 	"github.com/foomo/shop/utils"
 	"github.com/stretchr/testify/assert"
 )
-
-type cumulationTestHelper struct {
-	CustomerGroupRegular  string
-	CustomerGroupEmployee string
-	Sku1                  string
-	Sku2                  string
-	Sku3                  string
-	GroupIDSingleSku1     string
-	GroupIDSingleSku2     string
-	GroupIDTwoSkus        string
-	GroupIDThreeSkus      string
-}
-
-func newTesthelper() cumulationTestHelper {
-	return cumulationTestHelper{
-		CustomerGroupRegular:  "customer-regular",
-		CustomerGroupEmployee: "customer-employee",
-		Sku1:                  "sku1",
-		Sku2:                  "sku2",
-		GroupIDSingleSku1:     "group-with-sku1",
-		GroupIDSingleSku2:     "group-with-sku2",
-		GroupIDTwoSkus:        "group-with-two-skus",
-		GroupIDThreeSkus:      "group-with-three-skus",
-	}
-}
-
-func (helper cumulationTestHelper) cleanupTestData(t *testing.T) {
-	assert.NoError(t, RemoveAllGroups())
-	assert.NoError(t, RemoveAllPriceRules())
-	assert.NoError(t, RemoveAllVouchers())
-	ClearCache() // reset cache for catalogue calculations
-}
-func (helper cumulationTestHelper) cleanupAndRecreateTestData(t *testing.T) {
-	helper.cleanupTestData(t)
-	productsInGroups := make(map[string][]string)
-	productsInGroups[helper.GroupIDSingleSku1] = []string{helper.Sku1}
-	productsInGroups[helper.GroupIDSingleSku2] = []string{helper.Sku2}
-	productsInGroups[helper.GroupIDTwoSkus] = []string{helper.Sku1, helper.Sku2}
-	productsInGroups[helper.GroupIDThreeSkus] = []string{helper.Sku1, helper.Sku2, helper.Sku3}
-
-	helper.createMockCustomerGroups(t, []string{helper.CustomerGroupRegular, helper.CustomerGroupEmployee})
-	helper.createMockProductGroups(t, productsInGroups)
-}
-
-func (helper cumulationTestHelper) createMockProductGroups(t *testing.T, productGroups map[string][]string) {
-	for groupID, items := range productGroups {
-		group := new(Group)
-		group.Type = ProductGroup
-		group.ID = groupID
-		group.Name = groupID
-		assert.NoError(t, group.AddGroupItemIDsAndPersist(items), "Could not create product groups")
-	}
-}
-
-func (helper cumulationTestHelper) createMockCustomerGroups(t *testing.T, customerGroups []string) {
-	for _, groupID := range customerGroups {
-		group := new(Group)
-		group.Type = CustomerGroup
-		group.ID = groupID
-		group.Name = groupID
-		assert.NoError(t, group.AddGroupItemIDsAndPersist([]string{groupID}), "Could not create customer groups")
-	}
-}
-
-// createVouchers creates n voucher codes for given Pricerule
-func (helper cumulationTestHelper) createMockVouchers(t *testing.T, priceRule *PriceRule, n int) []string {
-	vouchers := make([]string, n)
-	for i, _ := range vouchers {
-		voucherCode := "voucher-" + priceRule.ID + "-" + strconv.Itoa(i)
-		voucher := NewVoucher(voucherCode, voucherCode, priceRule, "")
-		assert.NoError(t, voucher.Upsert())
-		vouchers[i] = voucherCode
-	}
-	return vouchers
-}
-
-func (helper cumulationTestHelper) getMockArticleCollection() *ArticleCollection {
-	return &ArticleCollection{
-		Articles: []*Article{
-			{
-				ID:                         helper.Sku1,
-				Price:                      10.0,
-				Quantity:                   1,
-				AllowCrossPriceCalculation: true,
-			},
-			{
-				ID:                         helper.Sku2,
-				Price:                      20.0,
-				Quantity:                   1,
-				AllowCrossPriceCalculation: true,
-			},
-		},
-		CustomerType: helper.CustomerGroupRegular,
-	}
-}
-func (helper cumulationTestHelper) setMockEmployeeDiscount10Percent(t *testing.T, name string, includedProductGroupIDS []string) {
-
-	// Create pricerule
-	priceRule := NewPriceRule("PriceRule-EmployeeDiscount-" + name)
-	priceRule.Type = TypePromotionCustomer
-	priceRule.Description = priceRule.Name
-	priceRule.Action = ActionItemByPercent
-	priceRule.Amount = 10
-	priceRule.IncludedProductGroupIDS = includedProductGroupIDS
-	priceRule.IncludedCustomerGroupIDS = []string{helper.CustomerGroupEmployee}
-	assert.NoError(t, priceRule.Upsert())
-
-	return
-}
-func (helper cumulationTestHelper) setMockPriceRuleAndVoucherXPercent(t *testing.T, name string, amount float64, includedProductGroupIDS []string, excludeAlreadyDiscountedItems bool, excludeEmployees bool) string {
-
-	// Create pricerule
-	priceRule := NewPriceRule("PriceRule-" + name)
-	priceRule.Type = TypeVoucher
-	priceRule.Description = priceRule.Name
-	priceRule.Action = ActionItemByPercent
-	priceRule.Amount = amount
-	priceRule.IncludedProductGroupIDS = includedProductGroupIDS
-	if excludeEmployees {
-		priceRule.IncludedCustomerGroupIDS = []string{helper.CustomerGroupRegular}
-	}
-	priceRule.ExcludeAlreadyDiscountedItemsForVoucher = excludeAlreadyDiscountedItems
-	assert.Nil(t, priceRule.Upsert())
-
-	// Create voucher
-	return helper.createMockVouchers(t, priceRule, 1)[0]
-}
-
-func (helper cumulationTestHelper) setMockPriceRuleCrossPrice(t *testing.T, name string, amount float64, includedProductGroupIDS []string) {
-
-	// Create pricerule
-	priceRule := NewPriceRule("PriceRulePromotionProduct-" + name)
-	priceRule.Type = TypePromotionProduct
-	priceRule.Description = priceRule.Name
-	priceRule.Action = ActionItemByAbsolute
-	priceRule.Amount = amount
-	priceRule.IncludedProductGroupIDS = includedProductGroupIDS
-	assert.NoError(t, priceRule.Upsert())
-}
-func (helper cumulationTestHelper) setMockPriceRuleBuy3Pay2(t *testing.T, name string, includedProductGroupIDS []string) {
-
-	// Create pricerule
-	priceRule := NewPriceRule("PriceRuleBuy3Pay2-" + name)
-	priceRule.Type = TypePromotionProduct
-	priceRule.Description = priceRule.Name
-	priceRule.Action = ActionBuyXPayY
-	priceRule.X = 3
-	priceRule.Y = 2
-	priceRule.WhichXYFree = XYCheapestFree
-	priceRule.IncludedProductGroupIDS = includedProductGroupIDS
-	assert.NoError(t, priceRule.Upsert())
-}
-
-func (helper cumulationTestHelper) setMockPriceRuleAndVoucherAbsoluteCHF20(t *testing.T, cumulate bool) (string, string) {
-
-	// Create pricerule
-	priceRule := NewPriceRule("PriceRule-" + "CartAbsoluteCHF20")
-	priceRule.Type = TypeVoucher
-	priceRule.Description = priceRule.Name
-	priceRule.Action = ActionCartByAbsolute
-	priceRule.Amount = 20.0
-	priceRule.IncludedProductGroupIDS = []string{helper.GroupIDTwoSkus}
-	priceRule.IncludedCustomerGroupIDS = []string{helper.CustomerGroupRegular}
-	priceRule.ExcludeAlreadyDiscountedItemsForVoucher = false
-	priceRule.CumulateWithOtherVouchers = cumulate
-	assert.NoError(t, priceRule.Upsert())
-
-	// Create vouchers
-	vouchers := helper.createMockVouchers(t, priceRule, 2)
-	return vouchers[0], vouchers[1]
-}
-func (helper cumulationTestHelper) setMockPriceRuleAndVoucher10Percent(t *testing.T, cumulate bool) string {
-
-	// Create pricerule
-	priceRule := NewPriceRule("PriceRule-" + "Cart10Percent")
-	priceRule.Type = TypeVoucher
-	priceRule.Description = priceRule.Name
-	priceRule.Action = ActionItemByPercent
-	priceRule.Amount = 10.0
-	priceRule.IncludedProductGroupIDS = []string{helper.GroupIDTwoSkus}
-	priceRule.IncludedCustomerGroupIDS = []string{helper.CustomerGroupRegular}
-	priceRule.ExcludeAlreadyDiscountedItemsForVoucher = false
-	priceRule.CumulateWithOtherVouchers = cumulate
-	assert.NoError(t, priceRule.Upsert())
-
-	// Create voucher
-	return helper.createMockVouchers(t, priceRule, 1)[0]
-}
-
-func (helper cumulationTestHelper) setMockBonusVoucherPriceRule(t *testing.T) (string, string) {
-
-	// Create pricerule
-	priceRule := NewPriceRule("PriceRule-" + "Bonus10CHF")
-	priceRule.Description = priceRule.Name
-	priceRule.Type = TypeBonusVoucher
-	priceRule.Action = ActionCartByAbsolute
-	priceRule.Amount = 10.0
-
-	priceRule.CalculateDiscountedOrderAmount = true
-	priceRule.Priority = 999
-	assert.NoError(t, priceRule.Upsert())
-
-	// Create vouchers
-	vouchers := helper.createMockVouchers(t, priceRule, 2)
-	return vouchers[0], vouchers[1]
-}
 
 func TestCumulationTwoVouchers_OnePerSku(t *testing.T) {
 
@@ -293,7 +86,7 @@ func TestCumulationTwoVouchers_BothForSameSku_AdditonalCrossPrice(t *testing.T) 
 	helper.cleanupAndRecreateTestData(t)
 	articleCollection := helper.getMockArticleCollection()
 
-	helper.setMockPriceRuleCrossPrice(t, "crossprice1", 5.0, []string{helper.GroupIDTwoSkus})
+	helper.setMockPriceRuleCrossPrice(t, "crossprice1", 5.0, false, []string{helper.GroupIDTwoSkus})
 	voucherCode1 := helper.setMockPriceRuleAndVoucherXPercent(t, "voucher-sku1", 5.0, []string{helper.GroupIDSingleSku1}, false, false)
 	voucherCode2 := helper.setMockPriceRuleAndVoucherXPercent(t, "voucher-sku2", 10.0, []string{helper.GroupIDSingleSku1}, false, false)
 
@@ -316,8 +109,8 @@ func TestCumulationProductPromo(t *testing.T) {
 	helper.cleanupAndRecreateTestData(t)
 	articleCollection := helper.getMockArticleCollection()
 
-	helper.setMockPriceRuleCrossPrice(t, "crossprice1", 2.0, []string{helper.GroupIDTwoSkus})
-	helper.setMockPriceRuleCrossPrice(t, "crossprice2", 5.0, []string{helper.GroupIDTwoSkus})
+	helper.setMockPriceRuleCrossPrice(t, "crossprice1", 2.0, false, []string{helper.GroupIDTwoSkus})
+	helper.setMockPriceRuleCrossPrice(t, "crossprice2", 5.0, false, []string{helper.GroupIDTwoSkus})
 
 	discounts, summary, errApply := ApplyDiscounts(articleCollection, nil, []string{}, []string{}, 0.05, nil)
 	assert.NoError(t, errApply)
@@ -338,7 +131,7 @@ func TestCumulationForExcludeVoucherOnCrossPriceWebhop(t *testing.T) {
 	helper.cleanupAndRecreateTestData(t)
 	articleCollection := helper.getMockArticleCollection()
 
-	helper.setMockPriceRuleCrossPrice(t, "crossprice1", 5.0, []string{helper.GroupIDSingleSku1})
+	helper.setMockPriceRuleCrossPrice(t, "crossprice1", 5.0, false, []string{helper.GroupIDSingleSku1})
 	voucherCode1 := helper.setMockPriceRuleAndVoucherXPercent(t, "voucher-1", 10.0, []string{helper.GroupIDTwoSkus}, true, false)
 
 	discounts, summary, errApply := ApplyDiscounts(articleCollection, nil, []string{voucherCode1}, nil, 0.05, nil)
@@ -543,7 +336,7 @@ func TestCumulationCrossPriceAndEmployeeDiscount(t *testing.T) {
 	helper.cleanupAndRecreateTestData(t)
 	articleCollection := helper.getMockArticleCollection()
 
-	helper.setMockPriceRuleCrossPrice(t, "cross-price", 5.0, []string{helper.GroupIDTwoSkus})
+	helper.setMockPriceRuleCrossPrice(t, "cross-price", 5.0, false, []string{helper.GroupIDTwoSkus})
 	helper.setMockEmployeeDiscount10Percent(t, "employee-discount", []string{helper.GroupIDTwoSkus})
 
 	// no employee discounts for regular customer
@@ -579,7 +372,7 @@ func TestCumulationEmployeeDiscountAndVoucherIncluceDiscountedItems(t *testing.T
 	helper.cleanupAndRecreateTestData(t)
 	articleCollection := helper.getMockArticleCollection()
 
-	helper.setMockPriceRuleCrossPrice(t, "cross-price", 5.0, []string{helper.GroupIDSingleSku1})
+	helper.setMockPriceRuleCrossPrice(t, "cross-price", 5.0, false, []string{helper.GroupIDSingleSku1})
 	helper.setMockEmployeeDiscount10Percent(t, "employee-discount", []string{helper.GroupIDTwoSkus})
 	voucherCode1 := helper.setMockPriceRuleAndVoucherXPercent(t, "voucher-sku1", 10.0, []string{helper.GroupIDTwoSkus}, false, false)
 	// no employee discounts for regular customer
@@ -613,7 +406,7 @@ func TestCumulationEmployeeDiscountAndVoucherExcludeDiscountedItems(t *testing.T
 	helper.cleanupAndRecreateTestData(t)
 	articleCollection := helper.getMockArticleCollection()
 
-	helper.setMockPriceRuleCrossPrice(t, "cross-price", 5.0, []string{helper.GroupIDSingleSku1})
+	helper.setMockPriceRuleCrossPrice(t, "cross-price", 5.0, false, []string{helper.GroupIDSingleSku1})
 	helper.setMockEmployeeDiscount10Percent(t, "employee-discount", []string{helper.GroupIDTwoSkus})
 	voucherCode1 := helper.setMockPriceRuleAndVoucherXPercent(t, "voucher-sku1", 10.0, []string{helper.GroupIDTwoSkus}, true, false)
 
@@ -695,7 +488,7 @@ func TestCrossPriceAndBuyXGetY(t *testing.T) {
 	articleCollection.Articles[0].Price = 100.0
 	articleCollection.Articles[1].Price = 50.0
 
-	helper.setMockPriceRuleCrossPrice(t, "crossprice1", 10.0, []string{helper.GroupIDThreeSkus})
+	helper.setMockPriceRuleCrossPrice(t, "crossprice1", 10.0, false, []string{helper.GroupIDThreeSkus})
 	helper.setMockPriceRuleBuy3Pay2(t, "buyXPayY", []string{helper.GroupIDThreeSkus})
 
 	tests := []struct {
@@ -712,14 +505,6 @@ func TestCrossPriceAndBuyXGetY(t *testing.T) {
 		{0.0, 1.0, 1.0, 20.0, 20.0}, // only cross prices
 	}
 
-	accumulateDiscountsOfItems := func(discounts OrderDiscounts) float64 {
-		sum := 0.0
-		for _, d := range discounts {
-			sum += d.TotalDiscountAmountApplicable
-		}
-		return sum
-	}
-
 	for i, tt := range tests {
 		// Order -------------------------------------------------------------------------------
 		articleCollection.Articles[0].Quantity = tt.qty1
@@ -734,11 +519,136 @@ func TestCrossPriceAndBuyXGetY(t *testing.T) {
 		assert.Equal(t, tt.expectedDiscountOrderService, summary.TotalDiscount, "case orderservice", i)
 
 		// Calculation for catalogue
-		// Note: In catalalogue calculation summary is always empty, therefore we have to get the data directly from the discounts
 		discountsCatalogue, _, err := ApplyDiscountsOnCatalog(articleCollection, nil, 0.05, nil)
 		if err != nil {
 			assert.NoError(t, err)
 		}
-		assert.Equal(t, tt.expectedDiscountCatalogue, accumulateDiscountsOfItems(discountsCatalogue), "case catalogue", i)
+		// Note: In catalalogue calculation summary is always empty, therefore we have to get the data directly from the discounts
+		assert.Equal(t, tt.expectedDiscountCatalogue, helper.accumulateDiscountsOfItems(discountsCatalogue), "case catalogue", i)
+	}
+}
+func TestCrossPriceAndEmployeeDiscount(t *testing.T) {
+
+	// Expected: Crossprice and BuyXPayY are both applied
+
+	helper := newTesthelper()
+	defer helper.cleanupTestData(t)
+	helper.cleanupAndRecreateTestData(t)
+	articleCollection := helper.getMockArticleCollection()
+	articleCollection.CustomerType = helper.CustomerGroupEmployee
+
+	includedProdcuts := []string{helper.GroupIDTwoSkus}
+	helper.setMockEmployeeDiscount10Percent(t, "employee-discount", includedProdcuts)
+
+	tests := []struct {
+		customerType                 string
+		amountCrossPrice             float64
+		isCrosspricePercent          bool
+		expectedDiscountOrderService float64
+		expectedDiscountCatalogue    float64
+	}{
+		{helper.CustomerGroupRegular, 5.0, false, 10.0, 10.0},
+		{helper.CustomerGroupRegular, 10.0, true, 3.0, 3.0},
+		{helper.CustomerGroupEmployee, 5.0, false, 12.0, 10.0},
+		{helper.CustomerGroupEmployee, 10.0, true, 5.7, 3.0}, //@todo actual caculated result is 5.699999999999999 => fix rounding errors
+	}
+
+	for i, tt := range tests {
+		articleCollection.CustomerType = tt.customerType
+		helper.setMockPriceRuleCrossPrice(t, "crossprice1", tt.amountCrossPrice, tt.isCrosspricePercent, includedProdcuts)
+		// Calculation for orderservice
+		_, summary, err := ApplyDiscounts(articleCollection, nil, []string{""}, []string{}, 0.05, nil)
+		if err != nil {
+			assert.NoError(t, err)
+		}
+
+		assert.Equal(t, tt.expectedDiscountOrderService, utils.Round(summary.TotalDiscount, 2), "case orderservice", i)
+
+		// Calculation for catalogue
+		discountsCatalogue, _, err := ApplyDiscountsOnCatalog(articleCollection, nil, 0.05, nil)
+		if err != nil {
+			assert.NoError(t, err)
+		}
+		// Note: In catalalogue calculation summary is always empty, therefore we have to get the data directly from the discounts
+		assert.Equal(t, tt.expectedDiscountCatalogue, helper.accumulateDiscountsOfItems(discountsCatalogue), "case catalogue", i)
+	}
+}
+func TestQuantityThreshold(t *testing.T) {
+
+	// Expected: Discount is applied if qty of one item is at least equal to threshold
+	// Note: if threshold is met for ONE item, discount will be applied to ALL products eligible for this promo
+
+	helper := newTesthelper()
+	defer helper.cleanupTestData(t)
+	helper.cleanupAndRecreateTestData(t)
+	articleCollection := helper.getMockArticleCollection()
+
+	tests := []struct {
+		includedProducts []string
+		amount           float64
+		threshold        float64
+		qty1             float64
+		qty2             float64
+		expectedDiscount float64
+	}{
+		{[]string{helper.GroupIDTwoSkus}, 1.0, 3.0, 1.0, 1.0, 0.0},
+		{[]string{helper.GroupIDTwoSkus}, 1.0, 2.0, 1.0, 1.0, 2.0},
+		{[]string{helper.GroupIDTwoSkus}, 1.0, 2.0, 2.0, 1.0, 3.0},
+		{[]string{helper.GroupIDTwoSkus}, 1.0, 2.0, 2.0, 0.0, 2.0},
+		{[]string{helper.GroupIDTwoSkus}, 1.0, 2.0, 2.0, 2.0, 4.0},
+		{[]string{helper.GroupIDSingleSku1}, 1.0, 2.0, 2.0, 2.0, 2.0},
+		{[]string{helper.GroupIDSingleSku1}, 1.0, 2.0, 1.0, 1.0, 0.0},
+	}
+
+	for i, tt := range tests {
+		articleCollection.Articles[0].Quantity = tt.qty1
+		articleCollection.Articles[1].Quantity = tt.qty2
+		helper.setMockPriceRuleQtyThreshold(t, "qty-threshold", tt.amount, tt.threshold, tt.includedProducts)
+
+		_, summary, err := ApplyDiscounts(articleCollection, nil, []string{""}, []string{}, 0.05, nil)
+		if err != nil {
+			assert.NoError(t, err)
+		}
+
+		assert.Equal(t, tt.expectedDiscount, summary.TotalDiscount, "case ", i)
+
+	}
+}
+func TestThresholdAmount(t *testing.T) {
+
+	// Expected: Discount is applied if threshold amount is met by all eligible items
+
+	helper := newTesthelper()
+	defer helper.cleanupTestData(t)
+	helper.cleanupAndRecreateTestData(t)
+	articleCollection := helper.getMockArticleCollection()
+
+	tests := []struct {
+		includedProducts []string
+		thresholdAmount  float64
+		qty1             float64
+		qty2             float64
+		expectedDiscount float64
+	}{
+		{[]string{helper.GroupIDTwoSkus}, 30.0, 1.0, 1.0, 10.0},
+		{[]string{helper.GroupIDTwoSkus}, 40.0, 1.0, 1.0, 0.0},
+		{[]string{helper.GroupIDTwoSkus}, 30.0, 0.0, 2.0, 10.0},
+		{[]string{helper.GroupIDTwoSkus}, 30.0, 1.0, 1.0, 10.0},
+		{[]string{helper.GroupIDTwoSkus}, 40.0, 1.0, 1.0, 0.0},
+		{[]string{helper.GroupIDTwoSkus}, 30.0, 0.0, 2.0, 10.0},
+	}
+
+	for i, tt := range tests {
+		articleCollection.Articles[0].Quantity = tt.qty1
+		articleCollection.Articles[1].Quantity = tt.qty2
+		helper.setMockPriceRuleThresholdAmount(t, "qty-threshold", 5.0, tt.thresholdAmount, tt.includedProducts)
+
+		_, summary, err := ApplyDiscounts(articleCollection, nil, []string{""}, []string{}, 0.05, nil)
+		if err != nil {
+			assert.NoError(t, err)
+		}
+
+		assert.Equal(t, tt.expectedDiscount, summary.TotalDiscount, "case ", i)
+
 	}
 }
