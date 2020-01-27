@@ -60,14 +60,8 @@ func LoadGroup(ID string, customProvider PriceRuleCustomProvider) (*Group, error
 	return GetGroupByID(ID, customProvider)
 }
 
-// RemoveAllProductIds - clear all product IDs
-func (group *Group) RemoveAllProductIds() bool {
-	group.ItemIDs = []string{}
-	return true
-}
-
 // AddGroupItemIDsAndPersist - appends removes duplicates and persists
-func (group *Group) AddGroupItemIDsAndPersist(itemIDs []string) bool {
+func (group *Group) AddGroupItemIDsAndPersist(itemIDs []string) error {
 	group.AddGroupItemIDs(itemIDs)
 
 	//addtoset
@@ -76,17 +70,17 @@ func (group *Group) AddGroupItemIDsAndPersist(itemIDs []string) bool {
 
 	_, err := collection.Upsert(bson.M{"id": group.ID}, group)
 	if err != nil {
-		return false
+		return err
 	}
 
-	return true
+	return nil
 }
 
 // AddGroupItemIDs - appends removes duplicates and persists
-func (group *Group) AddGroupItemIDs(itemIDs []string) bool {
+func (group *Group) AddGroupItemIDs(itemIDs []string) {
 	var ids = append(group.ItemIDs, itemIDs...)
 	group.ItemIDs = RemoveDuplicates(ids)
-	return true
+	return
 }
 
 // GroupAlreadyExistsInDB checks if a Group with given ID already exists in the database

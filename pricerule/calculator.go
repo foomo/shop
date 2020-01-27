@@ -243,18 +243,52 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 		orderDiscounts = calculateRule(orderDiscounts, priceRulePair, calculationParameters)
 	}
 
+	// prepare step 2: filter vouchers
+	// Make sure only one voucher per promo is set, unless CumulateWithOtherVouchers is true (bonus vouchers are not filtered)
+	// (There is a bug in the best option calculation which applies multiple vouchers to the same item when voucher is from the same promo. This should fix it)
+	voucherCodesTmp := []string{}
+	priceruleIDs := map[string]bool{}
+	for _, voucherCode := range voucherCodes {
+		voucherVo, voucherPriceRule, err := GetVoucherAndPriceRule(voucherCode, customProvider)
+		if voucherVo == nil {
+			//log.Println("voucher not found for code: " + voucherCode + " in " + "priceRule.ApplyDiscounts")
+			continue
+		}
+		if err != nil {
+			log.Println("skipping voucher "+voucherCode, err)
+			continue
+		}
+
+		// bonus vouchers are not being filtered
+		if voucherPriceRule.Type == TypeBonusVoucher {
+			voucherCodesTmp = append(voucherCodesTmp, voucherCode)
+			continue
+		}
+
+		// just to be safe
+		if voucherPriceRule.Type != TypeVoucher {
+			continue
+		}
+		if priceruleIDs[voucherPriceRule.ID] && !voucherPriceRule.CumulateWithOtherVouchers {
+			continue // we already have a voucher for that promo
+		}
+
+		voucherCodesTmp = append(voucherCodesTmp, voucherCode)
+		priceruleIDs[voucherPriceRule.ID] = true
+	}
+	// replace vouchers with filtered ones
+	voucherCodes = voucherCodesTmp
+
 	// ----------------------------------------------------------------------------------------------------------
-	// vouchers: step 2
-	// find the vouchers and voucher rules
-	// find applicable pricerules of type TypeVoucher for
-	bonusVoucherCodes := []string{}
+	// step 2: vouchers where best option per items applies (CumulateWithOtherVouchers == false)
 	if len(voucherCodes) > 0 {
 		var ruleVoucherPairsStep2 []RuleVoucherPair
 		for _, voucherCode := range voucherCodes {
 			if len(voucherCode) > 0 {
 				voucherVo, voucherPriceRule, err := GetVoucherAndPriceRule(voucherCode, customProvider)
 				if voucherVo == nil {
-					log.Println("voucher not found for code: " + voucherCode + " in " + "priceRule.ApplyDiscounts")
+					continue
+					//log.Println("voucher not found for code: " + voucherCode + " in " + "priceRule.ApplyDiscounts")
 				}
 				if err != nil {
 					log.Println("skipping voucher "+voucherCode, err)
@@ -262,9 +296,11 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 				}
 
 				if voucherPriceRule.Type != TypeVoucher {
-					log.Println("skipping voucher "+voucherCode+" with type Voucher", err)
-					bonusVoucherCodes = append(bonusVoucherCodes, voucherCode)
-					continue
+					continue // bonus vouchers are handled later in separate step
+				}
+
+				if voucherPriceRule.CumulateWithOtherVouchers {
+					continue // voucher will be applied in next step
 				}
 
 				//check if rule is valid
@@ -313,6 +349,69 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 	}
 
 	// ----------------------------------------------------------------------------------------------------------
+	// step 2.1: vouchers which are applied on top of other vouchers (CumulateWithOtherVouchers == true)
+	if len(voucherCodes) > 0 {
+		var ruleVoucherPairsStep21 []RuleVoucherPair
+		for _, voucherCode := range voucherCodes {
+			if len(voucherCode) > 0 {
+				voucherVo, voucherPriceRule, err := GetVoucherAndPriceRule(voucherCode, customProvider)
+				if voucherVo == nil {
+					//log.Println("voucher not found for code: " + voucherCode + " in " + "priceRule.ApplyDiscounts")
+					continue
+				}
+				if err != nil {
+					log.Println("skipping voucher "+voucherCode, err)
+					continue
+				}
+				if voucherPriceRule.Type != TypeVoucher {
+					continue // bonus vouchers are handled later in separate step
+				}
+				if !voucherPriceRule.CumulateWithOtherVouchers {
+					continue
+				}
+
+				//check if rule is valid
+				if time.Now().Before(voucherPriceRule.ValidFrom) || time.Now().After(voucherPriceRule.ValidTo) {
+					log.Println("skipping vocucher" + voucherCode + " VlidFrom/ValidTo mismatch")
+					continue
+				}
+
+				//filter out the vouchers that can not be applied due to a mismatch with checkoutAttributes
+				if len(voucherPriceRule.CheckoutAttributes) > 0 {
+					match := false
+					for _, checkoutAttribute := range checkoutAttributes {
+						if contains(checkoutAttribute, voucherPriceRule.CheckoutAttributes) {
+							match = true
+							break
+						}
+					}
+					if !match {
+						continue
+					}
+				}
+
+				if !voucherVo.TimeRedeemed.IsZero() {
+					if Verbose {
+						log.Println("voucher " + voucherCode + " already redeemed ... skipping")
+					}
+					continue
+				}
+
+				pair := RuleVoucherPair{
+					Rule:    voucherPriceRule,
+					Voucher: voucherVo,
+				}
+				ruleVoucherPairsStep21 = append(ruleVoucherPairsStep21, pair)
+			}
+		}
+		//apply them
+		sort.Sort(ByPriority(ruleVoucherPairsStep21))
+		for _, priceRulePair := range ruleVoucherPairsStep21 {
+			orderDiscounts = calculateRule(orderDiscounts, priceRulePair, calculationParameters)
+		}
+	}
+
+	// ----------------------------------------------------------------------------------------------------------
 	// shipping - step 3
 	// shipping costs handling
 	// find applicable pricerules - auto promotions
@@ -335,61 +434,57 @@ func ApplyDiscounts(articleCollection *ArticleCollection, existingDiscounts Orde
 	}
 
 	// ----------------------------------------------------------------------------------------------------------
-
-	// ----------------------------------------------------------------------------------------------------------
-	// vouchers: step 5
+	// bonus vouchers: step 5
 	// find the vouchers and voucher rules
 	// find applicable pricerules of type TypeVoucher for
 
-	if len(bonusVoucherCodes) > 0 {
-		var ruleVoucherPairsStep5 []RuleVoucherPair
-		for _, voucherCode := range bonusVoucherCodes {
-			if len(voucherCode) > 0 {
-				voucherVo, voucherPriceRule, err := GetVoucherAndPriceRule(voucherCode, customProvider)
-				if voucherVo == nil {
-					log.Println("voucher not found for code: " + voucherCode + " in " + "priceRule.ApplyDiscounts")
-				}
-				if err != nil {
-					log.Println("skipping voucher "+voucherCode, err)
-					continue
-				}
-
-				if voucherPriceRule.Type != TypeBonusVoucher {
-					log.Println("skipping voucher "+voucherCode+" with type BonusVoucher", err)
-					continue
-				}
-
-				//check if rule is valid
-				if time.Now().Before(voucherPriceRule.ValidFrom) || time.Now().After(voucherPriceRule.ValidTo) {
-					log.Println("skipping vocucher" + voucherCode + " VlidFrom/ValidTo mismatch")
-					continue
-				}
-
-				if !voucherVo.TimeRedeemed.IsZero() {
-					if Verbose {
-						log.Println("voucher " + voucherCode + " already redeemed ... skipping")
-					}
-					continue
-				}
-
-				pair := RuleVoucherPair{
-					Rule:    voucherPriceRule,
-					Voucher: voucherVo,
-				}
-				ruleVoucherPairsStep5 = append(ruleVoucherPairsStep5, pair)
+	var ruleVoucherPairsStep5 []RuleVoucherPair
+	for _, voucherCode := range voucherCodes {
+		if len(voucherCode) > 0 {
+			voucherVo, voucherPriceRule, err := GetVoucherAndPriceRule(voucherCode, customProvider)
+			if voucherVo == nil {
+				//log.Println("voucher not found for code: " + voucherCode + " in " + "priceRule.ApplyDiscounts")
+				continue
 			}
+			if err != nil {
+				log.Println("skipping voucher "+voucherCode, err)
+				continue
+			}
+
+			if voucherPriceRule.Type != TypeBonusVoucher {
+				continue
+			}
+
+			//check if rule is valid
+			if time.Now().Before(voucherPriceRule.ValidFrom) || time.Now().After(voucherPriceRule.ValidTo) {
+				log.Println("skipping vocucher" + voucherCode + " VlidFrom/ValidTo mismatch")
+				continue
+			}
+
+			if !voucherVo.TimeRedeemed.IsZero() {
+				if Verbose {
+					log.Println("voucher " + voucherCode + " already redeemed ... skipping")
+				}
+				continue
+			}
+
+			pair := RuleVoucherPair{
+				Rule:    voucherPriceRule,
+				Voucher: voucherVo,
+			}
+			ruleVoucherPairsStep5 = append(ruleVoucherPairsStep5, pair)
 		}
-		//apply them
+	}
+	//apply them
 
-		//no products should be blacklisted
-		calculationParameters.blacklistedItemIDs = []string{}
+	//no products should be blacklisted
+	calculationParameters.blacklistedItemIDs = []string{}
 
-		// the bonus voucher should be applicable on shipping costs as well
-		calculationParameters.shippingGroupIDs = []string{}
+	// the bonus voucher should be applicable on shipping costs as well
+	calculationParameters.shippingGroupIDs = []string{}
 
-		for _, priceRulePair := range ruleVoucherPairsStep5 {
-			orderDiscounts = calculateRule(orderDiscounts, priceRulePair, calculationParameters)
-		}
+	for _, priceRulePair := range ruleVoucherPairsStep5 {
+		orderDiscounts = calculateRule(orderDiscounts, priceRulePair, calculationParameters)
 	}
 
 	timeTrack(nowAll, "All rules together")
@@ -720,9 +815,17 @@ func validatePriceRule(priceRule PriceRule, checkedPosition *Article, calculatio
 		if !checkedPosition.AllowCrossPriceCalculation {
 			return false, ValidationVoucherNotApplicableToAlreadyDiscountedItemsBySap
 		}
+
 		// Check if there is already any webshop promo discount
 		discounts, ok := orderDiscounts[checkedPosition.ID]
-		if ok && len(discounts.AppliedDiscounts) > 0 {
+		// filter all employee discounts, these are an exception for flag ExcludeAlreadyDiscountedItemsForVoucher
+		filteredDiscounts := filterDiscounts(discounts.AppliedDiscounts, func(d DiscountApplied) bool {
+			if !d.IsTypePromotionCustomer {
+				return true
+			}
+			return false
+		})
+		if ok && len(filteredDiscounts) > 0 {
 			return false, ValidationVoucherNotApplicableToAlreadyDiscountedItemsByWebshop
 		}
 	}
@@ -1001,4 +1104,14 @@ func getShippingGroupIDs() (itemIDs []string, err error) {
 	}
 	itemIDs = RemoveDuplicates(itemIDs)
 	return
+}
+
+func filterDiscounts(discounts []DiscountApplied, f func(DiscountApplied) bool) []DiscountApplied {
+	filtered := []DiscountApplied{}
+	for _, discount := range discounts {
+		if f(discount) {
+			filtered = append(filtered, discount)
+		}
+	}
+	return filtered
 }
