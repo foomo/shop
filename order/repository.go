@@ -1,12 +1,13 @@
 package order
 
 import (
-	"errors"
 	"fmt"
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
 	"log"
 	"strconv"
+
+	"github.com/pkg/errors"
+	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 )
 
 // OverrideID may be used to use a different than the automatially generated id (Unit tests)
@@ -78,11 +79,25 @@ func Find(query *bson.M, customProvider OrderCustomProvider) (iter func() (o *Or
 	return
 }
 
+// UpsertOrder will upsert the given order in DB and invalidate in-memory caches
 func UpsertOrder(o *Order) error {
-	// order is unlinked or not yet inserted in db
+	order, errUpsert := upsertOrderInDB(o)
+	if errUpsert != nil {
+		RemoveOrderCacheEntry(o.Id)
+		return errUpsert
+	}
 
+	if order == nil {
+		return RemoveOrderCacheEntry(o.Id)
+	}
+
+	return SetOrderCacheEntry(order)
+}
+
+func upsertOrderInDB(o *Order) (order *Order, err error) {
+	// order is unlinked or not yet inserted in db
 	if o.unlinkDB || o.BsonId == "" {
-		return nil
+		return nil, nil
 	}
 	session, collection := GetOrderPersistor().GetCollection()
 	defer session.Close()
@@ -91,18 +106,17 @@ func UpsertOrder(o *Order) error {
 	// If they are not identical, there must have been another upsert which would be overwritten by this one.
 	// In this case upsert is skipped and an error is returned,
 	orderLatestFromDb := &Order{}
-	err := collection.Find(&bson.M{"id": o.GetID()}).Select(&bson.M{"version": 1}).One(orderLatestFromDb)
-
-	if err != nil {
-		log.Println("Upsert failed: Could not find order with id", o.GetID(), "Error:", err)
-		return err
+	errFind := collection.Find(&bson.M{"id": o.GetID()}).Select(&bson.M{"version": 1}).One(orderLatestFromDb)
+	if errFind != nil {
+		err = errors.Wrap(errFind, "could not find order")
+		return
 	}
 
 	latestVersionInDb := orderLatestFromDb.Version.GetVersion()
 	if latestVersionInDb != o.Version.GetVersion() && !o.Flags.forceUpsert {
-		errMsg := fmt.Sprintln("WARNING: Cannot upsert latest version ", strconv.Itoa(latestVersionInDb), "in db with version", strconv.Itoa(o.Version.GetVersion()), "!")
-		log.Println(errMsg)
-		return errors.New(errMsg)
+		errMsg := fmt.Sprintln("cannot upsert latest version ", strconv.Itoa(latestVersionInDb), "in db with version", strconv.Itoa(o.Version.GetVersion()), "!")
+		err = errors.New(errMsg)
+		return
 	}
 
 	if o.Flags.forceUpsert {
@@ -119,12 +133,16 @@ func UpsertOrder(o *Order) error {
 	}
 
 	o.State.SetModified()
-	_, err = collection.UpsertId(o.BsonId, o)
-	if err != nil {
-		return err
+	_, errUpsert := collection.UpsertId(o.BsonId, o)
+	if errUpsert != nil {
+		err = errUpsert
+		return
 	}
 
-	return storeOrderVersionInHistory(o)
+	order = o
+	// @todo send save to history to a worker channel
+	err = storeOrderVersionInHistory(o)
+	return
 }
 
 func storeOrderVersionInHistory(o *Order) error {

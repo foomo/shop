@@ -87,6 +87,23 @@ func GetOrderVersionsPersistor() *persistence.Persistor {
 
 // GetOrderById returns the order with id
 func GetOrderById(id string, customProvider OrderCustomProvider) (*Order, error) {
+
+	order, errCacheHit := GetOrderCacheEntry(id, customProvider)
+	if errCacheHit == nil && order != nil {
+		return order, nil
+	}
+
+	orderUncached, errUncached := getUncachedOrderByIDFromDB(id, customProvider)
+	if errUncached != nil {
+		return nil, errUncached
+	}
+
+	SetOrderCacheEntry(orderUncached)
+
+	return orderUncached, nil
+}
+
+func getUncachedOrderByIDFromDB(id string, customProvider OrderCustomProvider) (*Order, error) {
 	return findOneOrder(&bson.M{"id": id}, nil, "", customProvider, false)
 }
 
