@@ -29,8 +29,8 @@ var (
 			Background: true,
 		},
 		{
-			Name:       "query for reservations",
-			Key:        []string{"confirmedat", "processing.type"},
+			Name:       "ReservationsQueryIndex",
+			Key:        []string{"confirmedat", "processing.type", "custom.storeid"},
 			Unique:     false,
 			Background: true,
 		},
