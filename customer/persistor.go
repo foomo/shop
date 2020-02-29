@@ -45,6 +45,14 @@ var (
 			Unique:     false,
 			Background: true,
 		},
+
+		// db.customers.createIndex({"custom.adsid":1}, {"background":true, "unique":false, "name":"adsid"});
+		mgo.Index{
+			Name:       "adsid",
+			Key:        []string{"custom.adsid"},
+			Unique:     false, // @todo: MUST BE TRUE
+			Background: true,
+		},
 	}
 )
 
@@ -271,6 +279,11 @@ func GetCustomerByQuery(query *bson.M, customProvider CustomerCustomProvider) (*
 // GetCustomerById returns the customer with id
 func GetCustomerById(id string, customProvider CustomerCustomProvider) (*Customer, error) {
 	return findOneCustomer(&bson.M{"id": id}, nil, "", customProvider, false)
+}
+
+// GetCustomerByAddrKey returns the customer with id
+func GetCustomerByAddrKey(addrkey string, customProvider CustomerCustomProvider) (*Customer, error) {
+	return findOneCustomer(&bson.M{"custom.adsid": addrkey}, nil, "", customProvider, false)
 }
 
 func GetCurrentCustomerByIdFromVersionsHistory(customerId string, customProvider CustomerCustomProvider) (*Customer, error) {
