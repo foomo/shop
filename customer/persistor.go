@@ -271,10 +271,10 @@ func DeleteCustomerById(id string) error {
 }
 
 func GetCustomerByAddrKey(addrKey string, customProvider CustomerCustomProvider) (*Customer, error) {
-	return getCustomerByQuery(&bson.M{KeyAddrKey: addrKey}, customProvider)
+	return GetCustomerByQuery(&bson.M{KeyAddrKey: addrKey}, customProvider)
 }
 
-func getCustomerByQuery(query *bson.M, customProvider CustomerCustomProvider) (*Customer, error) {
+func GetCustomerByQuery(query *bson.M, customProvider CustomerCustomProvider) (*Customer, error) {
 	return findOneCustomer(query, nil, "", customProvider, false)
 }
 
