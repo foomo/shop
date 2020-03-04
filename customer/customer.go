@@ -30,6 +30,8 @@ const (
 	LanguageCodeFrance      LanguageCode = "fr"
 	LanguageCodeGermany     LanguageCode = "de"
 	LanguageCodeSwitzerland LanguageCode = "ch"
+
+	KeyAddressKey = "addresskey"
 )
 
 //------------------------------------------------------------------
@@ -43,7 +45,8 @@ type CountryCode string
 // private, so that changes are limited by API
 type Customer struct {
 	BsonId         bson.ObjectId `bson:"_id,omitempty"`
-	Id             string        // Email is used as LoginID, but can change. This is never changes!
+	AddressKey     string        // unique id which will replace Id for primary way of retrieval
+	Id             string
 	ExternalID     string
 	unlinkDB       bool // if true, changes to Customer are not stored in database
 	Flags          *Flags

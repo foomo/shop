@@ -27,6 +27,12 @@ var (
 	globalCredentialsPersistor      *persistence.Persistor
 
 	customerEnsuredIndexes = []mgo.Index{
+		{
+			Name:       "AddressKey",
+			Key:        []string{KeyAddressKey},
+			Unique:     true,
+			Background: true,
+		},
 		mgo.Index{
 			Name:       "id",
 			Key:        []string{"id"},
@@ -264,7 +270,11 @@ func DeleteCustomerById(id string) error {
 	return err
 }
 
-func GetCustomerByQuery(query *bson.M, customProvider CustomerCustomProvider) (*Customer, error) {
+func GetCustomerByAddressKey(addressKey string, customProvider CustomerCustomProvider) (*Customer, error) {
+	return getCustomerByQuery(&bson.M{KeyAddressKey: addressKey}, customProvider)
+}
+
+func getCustomerByQuery(query *bson.M, customProvider CustomerCustomProvider) (*Customer, error) {
 	return findOneCustomer(query, nil, "", customProvider, false)
 }
 

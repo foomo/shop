@@ -25,12 +25,18 @@ var (
 		{
 			Name:       "id",
 			Key:        []string{"id"},
-			Unique:     false,
+			Unique:     true,
 			Background: true,
 		},
 		{
 			Name:       "ReservationsQueryIndex",
 			Key:        []string{"confirmedat", "processing.type", "custom.storeid"},
+			Unique:     false,
+			Background: true,
+		},
+		{
+			Name:       "AddressKey",
+			Key:        []string{"customerdata." + KeyAddressKey},
 			Unique:     false,
 			Background: true,
 		},
@@ -96,41 +102,18 @@ func GetOrderById(id string, customProvider OrderCustomProvider) (*Order, error)
 	return findOneOrder(&bson.M{"id": id}, nil, "", customProvider, false)
 }
 
-func GetOrderByQuery(query *bson.M, customProvider OrderCustomProvider) (*Order, error) {
+func getOrderByQuery(query *bson.M, customProvider OrderCustomProvider) (*Order, error) {
 	return findOneOrder(query, nil, "", customProvider, false)
 }
 
-// HasCart returns true if an order with state OrderStatusCart exist for customer
-func HasCart(customerId string) bool {
-	order, _ := GetCart(customerId, nil)
-	if order != nil {
-		return true
-	}
-	return false
-}
-
-// Get Order for customer which is in state OrderStatusCart
-func GetCart(customerId string, customProvider OrderCustomProvider) (*Order, error) {
-	query := &bson.M{"customerid:": customerId, "state.key": OrderStatusCart}
-	return GetOrderByQuery(query, customProvider)
-}
-func GetCartID(customerId string) (string, error) {
-	query := &bson.M{"customerid:": customerId, "state.key": OrderStatusCart}
-	order, err := GetOrderByQuery(query, nil)
-	if err != nil {
-		return "", err
-	}
-	return order.GetID(), nil
-}
-
-// GetOrdersPaginated returns a set of orders for the given query sorted by confirmation date descending 
+// GetOrdersPaginated returns a set of orders for the given query sorted by confirmation date descending
 // page: index of page starting with 0, limit: maximum number of returned orders
 func GetOrdersPaginated(query *bson.M, page int, limit int, customProvider OrderCustomProvider) ([]*Order, error) {
-	
+
 	if customProvider == nil {
 		return nil, errors.New("customerProvider is nil")
 	}
-	if limit <= 0 || page < 0  {
+	if limit <= 0 || page < 0 {
 		return nil, errors.New("could not load paged orders - limit <= 0 or page < 0")
 	}
 
