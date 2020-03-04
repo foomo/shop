@@ -30,7 +30,7 @@ var (
 		{
 			Name:       "AddrKey",
 			Key:        []string{KeyAddrKey},
-			Unique:     true,
+			Unique:     false, // @todo set true when migration is completed
 			Background: true,
 		},
 		mgo.Index{
