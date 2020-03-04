@@ -40,7 +40,7 @@ const (
 	LogisticProcessClickAndCollect LogisticProcess = "LogisticProcessClickAndCollect"
 	LogisticProcessClickAndReserve LogisticProcess = "LogisticProcessClickAndReserve"
 
-	KeyAddressKey = "addresskey"
+	KeyAddrKey = "addrkey"
 )
 
 //------------------------------------------------------------------
@@ -99,7 +99,7 @@ type Order struct {
 }
 
 type CustomerData struct {
-	AddressKey          string
+	AddrKey             string
 	CustomerId          string
 	GuestCustomerID     string
 	CustomerType        string // Private / Staff etc.

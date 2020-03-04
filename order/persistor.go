@@ -35,8 +35,8 @@ var (
 			Background: true,
 		},
 		{
-			Name:       "AddressKey",
-			Key:        []string{"customerdata." + KeyAddressKey},
+			Name:       "AddrKey",
+			Key:        []string{"customerdata." + KeyAddrKey},
 			Unique:     false,
 			Background: true,
 		},
