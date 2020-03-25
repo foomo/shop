@@ -42,24 +42,25 @@ type CountryCode string
 // TOP LEVEL OBJECT
 // private, so that changes are limited by API
 type Customer struct {
-	BsonId         bson.ObjectId `bson:"_id,omitempty"`
-	Id             string        // Email is used as LoginID, but can change. This is never changes!
-	ExternalID     string
-	unlinkDB       bool // if true, changes to Customer are not stored in database
-	Flags          *Flags
-	Version        *version.Version
-	CreatedAt      time.Time
-	LastModifiedAt time.Time
-	Email          string // unique, used as Login Credential
-	Person         *address.Person
-	IsGuest        bool
-	IsLoggedIn     bool
-	Company        *Company
-	Addresses      []*address.Address
-	Localization   *Localization
-	TacAgree       bool // Terms and Conditions
-	Tracking       *Tracking
-	Custom         interface{}
+	BsonId            bson.ObjectId `bson:"_id,omitempty"`
+	Id                string        // Email is used as LoginID, but can change. This is never changes!
+	ExternalID        string
+	unlinkDB          bool // if true, changes to Customer are not stored in database
+	Flags             *Flags
+	Version           *version.Version
+	CreatedAt         time.Time
+	LastModifiedAt    time.Time
+	Email             string // unique, used as Login Credential
+	Person            *address.Person
+	IsGuest           bool
+	IsLoggedIn        bool
+	Company           *Company
+	Addresses         []*address.Address
+	Localization      *Localization
+	TacAgree          bool // Terms and Conditions
+	Tracking          *Tracking
+	IsProfileComplete bool
+	Custom            interface{}
 }
 
 type Tracking struct {
