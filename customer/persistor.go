@@ -9,7 +9,6 @@ import (
 	"github.com/foomo/shop/configuration"
 	"github.com/foomo/shop/persistence"
 	"github.com/foomo/shop/shop_error"
-	"github.com/foomo/shop/utils"
 	"github.com/foomo/shop/version"
 	"github.com/mitchellh/mapstructure"
 	"gopkg.in/mgo.v2"
@@ -156,25 +155,23 @@ func Count(query *bson.M, customProvider CustomerCustomProvider) (count int, err
 
 // Find returns an iterator for all entries found matching on query.
 func Find(query *bson.M, customProvider CustomerCustomProvider) (iter func() (cust *Customer, err error), err error) {
-	collection := GetCustomerPersistor().GetGlobalSessionCollection()
+	q := GetCustomerPersistor().GetGlobalSessionCollection().Find(query)
 
-	_, err = collection.Find(query).Count()
-	if err != nil {
-		log.Println(err)
+	_, errCount := q.Count()
+	if errCount != nil {
+		if errors.Is(errCount, mgo.ErrNotFound) {
+			return nil, ErrCustomerNotFound
+		}
+		return nil, errCount
 	}
-	q := collection.Find(query)
 
-	_, err = q.Count()
-	if err != nil {
-		return
-	}
 	mgoiter := q.Iter()
 	iter = func() (cust *Customer, err error) {
 		cust = &Customer{}
 		if mgoiter.Next(cust) {
 			return mapDecode(cust, customProvider)
 		}
-		return nil, nil
+		return nil, mgoiter.Err()
 	}
 	return
 }
@@ -363,13 +360,22 @@ func findOneCustomer(find *bson.M, selection *bson.M, sort string, customProvide
 	if sort != "" {
 		err := collection.Find(find).Select(selection).Sort(sort).One(customer)
 		if err != nil {
+			if errors.Is(err, mgo.ErrNotFound) {
+				return nil, ErrCustomerNotFound
+			}
 			return nil, err
 		}
 	} else {
 		err := collection.Find(find).Select(selection).One(customer)
 		if err != nil {
+			if errors.Is(err, mgo.ErrNotFound) {
+				return nil, ErrCustomerNotFound
+			}
 			return nil, err
 		}
+	}
+	if customer == nil {
+		return nil, ErrCustomerNotFound
 	}
 	if customProvider != nil {
 		var err error
@@ -377,9 +383,6 @@ func findOneCustomer(find *bson.M, selection *bson.M, sort string, customProvide
 		if err != nil {
 			return nil, err
 		}
-	}
-	if customer == nil {
-		return nil, errors.New("No result for " + utils.ToJSON(find))
 	}
 
 	return customer, nil
