@@ -96,19 +96,22 @@ type CustomerCustomProvider interface {
 // NewCustomer creates a new customer in the database and returns it.
 // addrkey must be unique for a customer
 // customerProvider may be nil at this point.
-func NewCustomer(addrkey string, externalID string, email string, customProvider CustomerCustomProvider) (*Customer, error) {
-	if email == "" || addrkey == "" || externalID == "" {
+func NewCustomer(addrkey string, externalID string, mailContact *address.Contact, customProvider CustomerCustomProvider) (*Customer, error) {
+	if addrkey == "" || externalID == "" {
 		return nil, errors.New(shop_error.ErrorRequiredFieldMissing)
 	}
 
-	mailContact := address.CreateMailContact(email)
+	if mailContact.Value == "" || !mailContact.IsMail() {
+		return nil, errors.New(shop_error.ErrorRequiredFieldMissing)
+	}
+
 	customer := &Customer{
 		Flags:          &Flags{},
 		Version:        version.NewVersion(),
 		Id:             unique.GetNewID(),
 		ExternalID:     externalID,
 		AddrKey:        addrkey,
-		Email:          lc(email),
+		Email:          lc(mailContact.Value),
 		CreatedAt:      utils.TimeNow(),
 		LastModifiedAt: utils.TimeNow(),
 		Person: &address.Person{
