@@ -8,7 +8,7 @@ import (
 
 func TestCreateUniqueIdsSimple(t *testing.T) {
 	for i := 0; i < 100; i++ {
-		 GetNewID()
+		GetNewID()
 	}
 }
 func TestCreateUniqueIdsConcurrent(t *testing.T) {

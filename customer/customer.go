@@ -93,45 +93,21 @@ type CustomerCustomProvider interface {
 // ~ CONSTRUCTOR
 //------------------------------------------------------------------
 
-// NewGuestCustomer creates a new Customer in the database and returns it.
-// Per default, customers have an empty password which does not grant access at login.
-// To transform Guests to regular Customers, the password must be changed and the customer must be marked as regular
-func NewGuestCustomer(email string, customProvider CustomerCustomProvider) (*Customer, error) {
-	return NewCustomer(email, "", customProvider)
-}
-
-// NewCustomer creates a new Customer in the database and returns it.
-// Email must be unique for a customer. customerProvider may be nil at this point.
-func NewCustomer(email, password string, customProvider CustomerCustomProvider) (*Customer, error) {
-	//log.Println("=== Creating new customer ", email)
-	if email == "" {
+// NewCustomer creates a new customer in the database and returns it.
+// addrkey must be unique for a customer
+// customerProvider may be nil at this point.
+func NewCustomer(addrkey string, externalID string, email string, customProvider CustomerCustomProvider) (*Customer, error) {
+	if email == "" || addrkey == "" || externalID == "" {
 		return nil, errors.New(shop_error.ErrorRequiredFieldMissing)
 	}
-	//var err error
-	// We only create credentials if a customer is available.
-	// A guest customer gets a new entry in the customer db for each order!
-	// if !isGuest {
-	// 	// Check is desired Email is available
-	// 	available, err := CheckLoginAvailable(email)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// 	if !available {
-	// 		return nil, errors.New(shop_error.ErrorNotFound + " Login " + email + " is already taken!")
-	// 	}
-
-	// 	// These credentials are not used at the moment
-	// 	// err = CreateCustomerCredentials(email, password)
-	// 	// if err != nil {
-	// 	// 	return nil, err
-	// 	// }
-	// }
 
 	mailContact := address.CreateMailContact(email)
 	customer := &Customer{
 		Flags:          &Flags{},
 		Version:        version.NewVersion(),
 		Id:             unique.GetNewID(),
+		ExternalID:     externalID,
+		AddrKey:        addrkey,
 		Email:          lc(email),
 		CreatedAt:      utils.TimeNow(),
 		LastModifiedAt: utils.TimeNow(),

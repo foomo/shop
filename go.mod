@@ -4,7 +4,6 @@ go 1.13
 
 require (
 	github.com/beorn7/perks v1.0.0 // indirect
-	github.com/bwmarrin/snowflake v0.0.0-20160812182805-3107b1dd8c52
 	github.com/davecgh/go-spew v1.1.1
 	github.com/golang/protobuf v0.0.0-20171021043952-1643683e1b54 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
@@ -15,6 +14,7 @@ require (
 	github.com/prometheus/client_model v0.0.0-20150212101744-fa8ad6fec335 // indirect
 	github.com/prometheus/common v0.0.0-20161114134743-0d5de9d6d862 // indirect
 	github.com/prometheus/procfs v0.0.0-20160411190841-abf152e5f3e9 // indirect
+	github.com/satori/go.uuid v1.2.0
 	github.com/sergi/go-diff v1.0.0
 	github.com/stretchr/testify v1.4.0
 	github.com/ventu-io/go-shortid v0.0.0-20160104014424-6c56cef5189c

@@ -1,35 +1,16 @@
 package unique
 
 import (
-	"fmt"
-
-	"github.com/bwmarrin/snowflake"
 	"github.com/ventu-io/go-shortid"
+
+	uuid "github.com/satori/go.uuid"
 )
 
-var node *snowflake.Node
 var generator *shortid.Shortid
 
+// GetNewID generates a proper V4 UUID
 func GetNewID() string {
-	//return GetNewIDSnowFlake() // SnowFlake is default
-	id := GetNewIDSnowFlake() // SnowFlake is default
-	return id
-}
-
-// GetNewIDSnowFlake returns a new unique identifier string
-// Generates numeric strings
-func GetNewIDSnowFlake() string {
-	if node == nil {
-		var createNodeErr error
-		node, createNodeErr = snowflake.NewNode(1)
-		if createNodeErr != nil {
-			fmt.Println(createNodeErr)
-			return ""
-		}
-	}
-	// Generate a snowflake ID.
-	id := node.Generate()
-	return fmt.Sprintf("%s", id)
+	return uuid.NewV4().String()
 }
 
 // GetNewIDShortId returns a new unique identifier string

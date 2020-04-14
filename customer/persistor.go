@@ -29,13 +29,13 @@ var (
 		{
 			Name:       "AddrKey",
 			Key:        []string{KeyAddrKey},
-			Unique:     false, // @todo set true when migration is completed
+			Unique:     true,
 			Background: true,
 		},
 		mgo.Index{
 			Name:       "id",
 			Key:        []string{"id"},
-			Unique:     false,
+			Unique:     true,
 			Background: true,
 		},
 		mgo.Index{
@@ -47,7 +47,7 @@ var (
 		mgo.Index{
 			Name:       "externalid",
 			Key:        []string{"externalid"},
-			Unique:     false,
+			Unique:     true,
 			Background: true,
 		},
 	}

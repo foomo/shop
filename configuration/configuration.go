@@ -22,8 +22,8 @@ var (
 	MONGO_COLLECTION_CREDENTIALS       = "credentials"
 	MONGO_COLLECTION_ORDERS            = "orders"
 	MONGO_COLLECTION_ORDERS_HISTORY    = "orders_history"
-	MONGO_COLLECTION_CUSTOMERS_HISTORY = "customers_history"
-	MONGO_COLLECTION_CUSTOMERS         = "customers"
+	MONGO_COLLECTION_CUSTOMERS_HISTORY = "crm_customer_cache_history"
+	MONGO_COLLECTION_CUSTOMERS         = "crm_customer_cache"
 	MONGO_COLLECTION_WATCHLISTS        = "watchlists"
 
 	MONGO_COLLECTION_PRICERULES          = "pricerules"
