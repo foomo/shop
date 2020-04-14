@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/foomo/shop/address"
-	"github.com/foomo/shop/crypto"
 	"github.com/foomo/shop/shop_error"
 	"github.com/foomo/shop/unique"
 	"github.com/foomo/shop/utils"
@@ -31,7 +30,8 @@ const (
 	LanguageCodeGermany     LanguageCode = "de"
 	LanguageCodeSwitzerland LanguageCode = "ch"
 
-	KeyAddrKey = "addrkey"
+	KeyAddrKey     = "addrkey"
+	KeyAddrKeyHash = "addrkeyhash"
 )
 
 //------------------------------------------------------------------
@@ -46,8 +46,9 @@ type CountryCode string
 type Customer struct {
 	BsonId         bson.ObjectId `bson:"_id,omitempty"`
 	AddrKey        string        // unique id which will replace Id for primary way of retrieval
-	Id             string
+	AddrKeyHash    string        // unique id which will replace Id for primary way of retrieval
 	ExternalID     string
+	Id             string
 	unlinkDB       bool // if true, changes to Customer are not stored in database
 	Flags          *Flags
 	Version        *version.Version
@@ -61,13 +62,7 @@ type Customer struct {
 	Addresses      []*address.Address
 	Localization   *Localization
 	TacAgree       bool // Terms and Conditions
-	Tracking       *Tracking
 	Custom         interface{}
-}
-
-type Tracking struct {
-	TrackingID string
-	SessionIDs []string
 }
 
 type Flags struct {
@@ -96,8 +91,8 @@ type CustomerCustomProvider interface {
 // NewCustomer creates a new customer in the database and returns it.
 // addrkey must be unique for a customer
 // customerProvider may be nil at this point.
-func NewCustomer(addrkey string, externalID string, mailContact *address.Contact, customProvider CustomerCustomProvider) (*Customer, error) {
-	if addrkey == "" || externalID == "" {
+func NewCustomer(addrkey string, addrkeyHash string, externalID string, mailContact *address.Contact, customProvider CustomerCustomProvider) (*Customer, error) {
+	if addrkey == "" || addrkeyHash == "" || externalID == "" {
 		return nil, errors.New(shop_error.ErrorRequiredFieldMissing)
 	}
 
@@ -105,13 +100,20 @@ func NewCustomer(addrkey string, externalID string, mailContact *address.Contact
 		return nil, errors.New(shop_error.ErrorRequiredFieldMissing)
 	}
 
+	if customProvider == nil {
+		return nil, errors.New("custom provider not set")
+	}
+
+	email := lc(mailContact.Value)
 	customer := &Customer{
 		Flags:          &Flags{},
 		Version:        version.NewVersion(),
 		Id:             unique.GetNewID(),
 		ExternalID:     externalID,
 		AddrKey:        addrkey,
-		Email:          lc(mailContact.Value),
+		AddrKeyHash:    addrkeyHash,
+		Email:          email,
+		IsGuest:        false,
 		CreatedAt:      utils.TimeNow(),
 		LastModifiedAt: utils.TimeNow(),
 		Person: &address.Person{
@@ -123,25 +125,17 @@ func NewCustomer(addrkey string, externalID string, mailContact *address.Contact
 			},
 		},
 		Localization: &Localization{},
-		Tracking:     &Tracking{},
+		Custom:       customProvider.NewCustomerCustom(),
 	}
 
-	trackingID, err := crypto.CreateHash(customer.GetID())
-	if err != nil {
-		return nil, err
+	// persist customer in database
+	errInsert := customer.insert()
+	if errInsert != nil {
+		return nil, errInsert
 	}
-	customer.Tracking.TrackingID = "tid" + trackingID
-	customer.IsGuest = false
-	if customProvider != nil {
-		customer.Custom = customProvider.NewCustomerCustom()
-	}
-	// Store order in database
-	err = customer.insert()
-	if err != nil {
-		log.Println("Could not insert customer", email)
-		return nil, err
-	}
-	// Retrieve customer again from. (Otherwise upserts on customer would fail because of missing mongo ObjectID)
+
+	// retrieve customer again from database,
+	// otherwise upserts on customer would fail because of missing mongo ObjectID)
 	return GetCustomerById(customer.Id, customProvider)
 }
 

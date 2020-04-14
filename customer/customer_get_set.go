@@ -144,20 +144,9 @@ func (customer *Customer) GetDefaultBillingAddress() (*address.Address, error) {
 	return customer.Addresses[0], nil
 }
 
-func (customer *Customer) GetTrackingId() string {
-	return customer.Tracking.TrackingID
-}
-func (customer *Customer) GetSessionIds() []string {
-	return customer.Tracking.SessionIDs
-}
-
 //------------------------------------------------------------------
 // ~ PUBLIC SETTERS
 //------------------------------------------------------------------
-
-func (customer *Customer) AddSessionId(id string) {
-	customer.Tracking.SessionIDs = append(customer.Tracking.SessionIDs, id)
-}
 
 func (customer *Customer) SetDefaultShippingAddress(id string) error {
 	for _, addr := range customer.Addresses {

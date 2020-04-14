@@ -27,8 +27,14 @@ var (
 
 	customerEnsuredIndexes = []mgo.Index{
 		{
-			Name:       "AddrKey",
+			Name:       "addrkey",
 			Key:        []string{KeyAddrKey},
+			Unique:     true,
+			Background: true,
+		},
+		{
+			Name:       "addrkeyhash",
+			Key:        []string{KeyAddrKeyHash},
 			Unique:     true,
 			Background: true,
 		},
@@ -269,6 +275,10 @@ func DeleteCustomerById(id string) error {
 
 func GetCustomerByAddrKey(addrKey string, customProvider CustomerCustomProvider) (*Customer, error) {
 	return GetCustomerByQuery(&bson.M{KeyAddrKey: addrKey}, customProvider)
+}
+
+func GetCustomerByAddrKeyHash(addrKeyHash string, customProvider CustomerCustomProvider) (*Customer, error) {
+	return GetCustomerByQuery(&bson.M{KeyAddrKeyHash: addrKeyHash}, customProvider)
 }
 
 func GetCustomerByQuery(query *bson.M, customProvider CustomerCustomProvider) (*Customer, error) {
