@@ -57,7 +57,6 @@ type Customer struct {
 	Email          string // unique, used as Login Credential
 	Person         *address.Person
 	IsGuest        bool
-	IsLoggedIn     bool
 	Company        *Company
 	Addresses      []*address.Address
 	Localization   *Localization

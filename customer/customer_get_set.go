@@ -188,13 +188,3 @@ func (customer *Customer) SetPerson(person *address.Person) error {
 	customer.Person = person
 	return customer.Upsert()
 }
-
-func (customer *Customer) SetLoggedIn() error {
-	customer.IsLoggedIn = true
-	return customer.Upsert()
-}
-
-func (customer *Customer) SetLoggedOut() error {
-	customer.IsLoggedIn = false
-	return customer.Upsert()
-}
