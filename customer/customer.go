@@ -57,6 +57,7 @@ type Customer struct {
 	Email          string // unique, used as Login Credential
 	Person         *address.Person
 	IsGuest        bool
+	IsComplete     bool // upsert checks if customer data is complete, so that a customer could place an order
 	Company        *Company
 	Addresses      []*address.Address
 	Localization   *Localization
