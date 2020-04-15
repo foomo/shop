@@ -1,12 +1,15 @@
 package customer
 
 import (
+	"crypto/md5"
 	"fmt"
+	"io"
 	"log"
 	"testing"
 
 	"github.com/foomo/shop/address"
 	"github.com/foomo/shop/test_utils"
+	"github.com/foomo/shop/unique"
 	"github.com/foomo/shop/utils"
 )
 
@@ -18,9 +21,35 @@ const (
 	OPEN_DIFFS_IN_BROWSER = false
 )
 
+type FooCustomProvider struct{}
+type FooCustomer struct{}
+type FooAddress struct{}
+
+func (foo FooCustomProvider) NewAddressCustom() interface{} {
+	return &FooAddress{}
+}
+
+func (foo FooCustomProvider) NewCustomerCustom() interface{} {
+	return &FooCustomer{}
+}
+
+func createNewTestCustomer(email string) (*Customer, error) {
+	mailContact := address.CreateMailContact(email)
+	mailContact.ExternalID = unique.GetNewIDShortID()
+
+	externalID := unique.GetNewIDShortID()
+	addrKey := unique.GetNewIDShortID()
+
+	h := md5.New()
+	io.WriteString(h, addrKey)
+	addrKeyHash := string(h.Sum(nil))
+
+	return NewCustomer(addrKey, addrKeyHash, externalID, mailContact, FooCustomProvider{})
+}
+
 func TestCustomerGetLatestCustomerFromDb(t *testing.T) {
 	test_utils.DropAllCollections()
-	customer, err := NewCustomer(MOCK_EMAIL, MOCK_PASSWORD, nil)
+	customer, err := createNewTestCustomer(MOCK_EMAIL)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +115,7 @@ func TestCustomerRollback(t *testing.T) {
 
 func create2CustomersAndPerformSomeUpserts(t *testing.T) (*Customer, *Customer) {
 	test_utils.DropAllCollections()
-	customer, err := NewCustomer(MOCK_EMAIL, MOCK_PASSWORD, nil)
+	customer, err := createNewTestCustomer(MOCK_EMAIL)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,7 +141,7 @@ func create2CustomersAndPerformSomeUpserts(t *testing.T) (*Customer, *Customer) 
 	}
 	err = customer.Upsert()
 	// Create a second customer to make the history a little more interesting
-	customer2, err := NewCustomer(MOCK_EMAIL2, MOCK_PASSWORD2, nil)
+	customer2, err := createNewTestCustomer(MOCK_EMAIL2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,39 +172,25 @@ func create2CustomersAndPerformSomeUpserts(t *testing.T) (*Customer, *Customer) 
 	return customer, customer2
 }
 
-func TestCustomerCreateGuest(t *testing.T) {
-	test_utils.DropAllCollections()
-	guest, err := NewGuestCustomer(MOCK_EMAIL, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if guest.IsGuest {
-		t.Fatal("Expected isGuest to be false, but is true")
-	}
-}
-
 func TestCustomerDelete(t *testing.T) {
 	test_utils.DropAllCollections()
-	guest, err := NewGuestCustomer(MOCK_EMAIL, nil)
+	customer, err := createNewTestCustomer(MOCK_EMAIL)
 	if err != nil {
 		t.Fatal(err)
-	}
-	if guest.IsGuest {
-		t.Fatal("Expected isGuest to be false, but is true")
 	}
 
 	// test user
-	testCustomer, testCustomerErr := GetCustomerById(guest.Id, nil)
+	testCustomer, testCustomerErr := GetCustomerById(customer.Id, nil)
 	if testCustomerErr != nil {
 		t.Fatal(testCustomerErr)
 	}
 
-	if testCustomer.BsonId != guest.BsonId {
+	if testCustomer.BsonId != customer.BsonId {
 		t.Fatal("customer missmatch")
 	}
 
 	// delete guest
-	delErr := guest.Delete()
+	delErr := customer.Delete()
 	if delErr != nil {
 		t.Fatal(delErr)
 	}
@@ -183,7 +198,7 @@ func TestCustomerDelete(t *testing.T) {
 
 func TestCustomerChangeAddress(t *testing.T) {
 	test_utils.DropAllCollections()
-	customer, err := NewCustomer(MOCK_EMAIL, MOCK_PASSWORD, nil)
+	customer, err := createNewTestCustomer(MOCK_EMAIL)
 	if err != nil {
 		t.Fatal(err)
 	}
