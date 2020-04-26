@@ -43,18 +43,16 @@ func TestPersonContactsMigration(t *testing.T) {
 		FirstName:  "Max",
 		LastName:   "Mustermann",
 		Birthday:   "1973-12-22",
-		Contacts: []*Contact{
-			&Contact{
-				ID:        unique.GetNewIDShortID(),
-				IsDefault: true,
-				Type:      ContactTypeEmail,
-				Value:     "foo@example.com",
+		Contacts: map[string]*Contact{
+			"1": {
+				ID:    unique.GetNewIDShortID(),
+				Type:  ContactTypeEmail,
+				Value: "foo@example.com",
 			},
-			&Contact{
-				ID:        unique.GetNewIDShortID(),
-				IsDefault: true,
-				Type:      ContactTypePhone,
-				Value:     "+49 1234 56 78 990",
+			"2": {
+				ID:    unique.GetNewIDShortID(),
+				Type:  ContactTypePhone,
+				Value: "+49 1234 56 78 990",
 			},
 		},
 	}
