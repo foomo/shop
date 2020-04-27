@@ -1,13 +1,5 @@
 package address
 
-import (
-	"errors"
-	"fmt"
-	"gopkg.in/validator.v2"
-	"reflect"
-	"strconv"
-)
-
 type AddressType string
 type ContactType string
 type SalutationType string
@@ -42,17 +34,17 @@ const (
 )
 
 type Address struct {
-	Id            string      `validate:"nonzero"` // is automatically set on AddAddress()
-	ExternalID    string      `validate:"nonzero"`
-	Person        *Person     `validate:"nonzero"`
-	Type          AddressType `validate:"nonzero"`
-	Street        string      `validate:"nonzero, min=2, max=189"`
-	StreetNumber  string      `validate:"nonzero, max=60"`
-	ZIP           string      `validate:"nonzero, min=4,max=5"`
-	City          string      `validate:"nonzero, min=3,max=60"`
-	Country       string      `validate:"nonzero"`
-	CountryCode   string      `validate:"nonzero"`
-	Company       string      `validate:"max=250"`
+	Id            string // is automatically set on AddAddress()
+	ExternalID    string
+	Person        *Person
+	Type          AddressType
+	Street        string
+	StreetNumber  string
+	ZIP           string
+	City          string
+	Country       string
+	CountryCode   string
+	Company       string
 	Department    string
 	Building      string
 	PostOfficeBox string
@@ -63,13 +55,13 @@ type Address struct {
 // Person is a field Customer and of Address
 // Only Customer->Person has Contacts
 type Person struct {
-	FirstName       string `validate:"nonzero, max=60"`
+	FirstName       string
 	MiddleName      string
-	LastName        string `validate:"nonzero, max=60"`
+	LastName        string
 	Title           TitleType
-	Salutation      SalutationType `validate:"nonzero"`
+	Salutation      SalutationType
 	Birthday        string
-	Contacts        map[string]*Contact    `validate:"vpMax=250"` // key must be contactID
+	Contacts        map[string]*Contact    // key must be contactID
 	DefaultContacts map[ContactType]string // reference by contactID
 }
 
@@ -104,31 +96,4 @@ func (address *Address) Equals(otherAddress *Address) bool {
 	equal = equal && address.Country == otherAddress.Country
 
 	return equal
-}
-
-// validatePhoneMax validates Contacts. If there os contact with type Phone present, it checks for maximum characters length
-func validatePhoneMax(v interface{}, param string) error {
-	max, _ := strconv.Atoi(param)
-	st := reflect.ValueOf(v)
-	keys := st.MapKeys()
-	for _, key := range keys {
-		v := st.MapIndex(key)
-		ttype := v.Interface().(*Contact).Type
-		value := v.Interface().(*Contact).Value
-		if ttype == "" {
-			return errors.New("type must be set")
-		}
-		if ttype == ContactTypePhone {
-			if len(value) > max {
-				return fmt.Errorf("phone cannot be longer then %d characters", max)
-			}
-		}
-	}
-	return nil
-}
-
-// IsValid checks if address contents are valid based on validation specified
-func (address *Address) Validate() error {
-	validator.SetValidationFunc("vpMax", validatePhoneMax)
-	return validator.Validate(address)
 }
