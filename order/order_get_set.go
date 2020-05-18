@@ -175,12 +175,21 @@ func (order *Order) SetPriceOverrideGroup(groupID string) error {
 	return order.Upsert()
 }
 
-func (order *Order) SetCustomerIdAndTypeAndPriceOverrideGroup(id string, customerType string, priceOverrideGroup string) error {
+func (order *Order) SetBasicCustomerData(id string, addrKey string, customerType string, priceOverrideGroup string) error {
 
 	if order.CustomerData == nil {
 		order.CustomerData = &CustomerData{}
 	}
+
+	if order.CustomerData.CustomerId == id &&
+		order.CustomerData.AddrKey == addrKey &&
+		order.CustomerData.CustomerType == customerType &&
+		order.CustomerData.PriceOverrideGroup == priceOverrideGroup {
+		return nil
+	}
+
 	order.CustomerData.CustomerId = id
+	order.CustomerData.AddrKey = id
 	order.CustomerData.CustomerType = customerType
 	order.CustomerData.PriceOverrideGroup = priceOverrideGroup
 	return order.Upsert()
