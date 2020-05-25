@@ -22,12 +22,12 @@ var (
 	globalOrderVersionsPersistor *persistence.Persistor
 
 	orderEnsuredIndexes = []mgo.Index{
-		{
-			Name:       "id",
-			Key:        []string{"id"},
-			Unique:     false,
-			Background: true,
-		},
+//		{
+//			Name:       "id",
+//			Key:        []string{"id"},
+//			Unique:     false,
+//			Background: true,
+//		},
 		{
 			Name:       "ReservationsQueryIndex",
 			Key:        []string{"confirmedat", "processing.type", "custom.storeid"},
