@@ -2,15 +2,16 @@ package customer
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"strconv"
 	"time"
 
 	"github.com/foomo/shop/address"
-	"github.com/foomo/shop/shop_error"
 	"github.com/foomo/shop/unique"
 	"github.com/foomo/shop/utils"
 	"github.com/foomo/shop/version"
+	"github.com/hashicorp/go-multierror"
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -38,8 +39,10 @@ const (
 // ~ PUBLIC TYPES
 //------------------------------------------------------------------
 
-type LanguageCode string
-type CountryCode string
+type (
+	LanguageCode string
+	CountryCode  string
+)
 
 // TOP LEVEL OBJECT
 // private, so that changes are limited by API
@@ -92,16 +95,33 @@ type CustomerCustomProvider interface {
 // addrkey must be unique for a customer
 // customerProvider may be nil at this point.
 func NewCustomer(addrkey string, addrkeyHash string, externalID string, mailContact *address.Contact, customProvider CustomerCustomProvider) (*Customer, error) {
-	if addrkey == "" || addrkeyHash == "" || externalID == "" {
-		return nil, errors.New(shop_error.ErrorRequiredFieldMissing)
-	}
+	var mErr *multierror.Error
 
-	if mailContact.Value == "" || !mailContact.IsMail() {
-		return nil, errors.New(shop_error.ErrorRequiredFieldMissing)
+	if addrkey == "" {
+		mErr = multierror.Append(mErr, errors.New("required addrkey is empty"))
 	}
-
+	if addrkeyHash == "" {
+		mErr = multierror.Append(mErr, errors.New("required addrkeyHash is empty"))
+	}
+	if externalID == "" {
+		mErr = multierror.Append(mErr, errors.New("required externalID is empty"))
+	}
+	if mailContact == nil {
+		mErr = multierror.Append(mErr, errors.New("required mailContact is empty"))
+	} else {
+		if mailContact.Value == "" {
+			mErr = multierror.Append(mErr, errors.New("required email address in mailContact.Value is empty"))
+		}
+		if !mailContact.IsMail() {
+			mErr = multierror.Append(mErr, fmt.Errorf("required mailContact must have string type %q", address.ContactTypeEmail))
+		}
+	}
 	if customProvider == nil {
-		return nil, errors.New("custom provider not set")
+		mErr = multierror.Append(mErr, errors.New("custom provider not set"))
+	}
+
+	if mErr.ErrorOrNil() != nil {
+		return nil, mErr.ErrorOrNil()
 	}
 
 	email := lc(mailContact.Value)
@@ -172,6 +192,7 @@ func (customer *Customer) ChangePassword(password, passwordNew string, force boo
 func (customer *Customer) UnlinkFromDB() {
 	customer.unlinkDB = true
 }
+
 func (customer *Customer) LinkDB() {
 	customer.unlinkDB = false
 }
@@ -183,9 +204,11 @@ func (customer *Customer) insert() error {
 func (customer *Customer) Upsert() error {
 	return UpsertCustomer(customer)
 }
+
 func (customer *Customer) UpsertAndGetCustomer(customProvider CustomerCustomProvider) (*Customer, error) {
 	return UpsertAndGetCustomer(customer, customProvider)
 }
+
 func (customer *Customer) Delete() error {
 	return DeleteCustomer(customer)
 }
@@ -203,15 +226,45 @@ func (customer *Customer) OverrideId(id string) error {
 // @TODO which are teh required fields
 func CheckRequiredAddressFields(address *address.Address) error {
 	// Return error if required field is missing
-	if address.Person == nil || address.Person.Salutation == "" || address.Person.FirstName == "" || address.Person.LastName == "" || address.Street == "" || address.StreetNumber == "" || address.ZIP == "" || address.City == "" || address.Country == "" {
-		return errors.New(shop_error.ErrorRequiredFieldMissing + "\n" + utils.ToJSON(address))
+	var mErr *multierror.Error
+
+	if address.Person == nil {
+		mErr = multierror.Append(mErr, errors.New("required person is nil"))
+	} else {
+		if address.Person.Salutation == "" {
+			mErr = multierror.Append(mErr, errors.New("required person salutation is empty"))
+		}
+		if address.Person.FirstName == "" {
+			mErr = multierror.Append(mErr, errors.New("required person firstname is empty"))
+		}
+		if address.Person.LastName == "" {
+			mErr = multierror.Append(mErr, errors.New("required person lastname is empty"))
+		}
 	}
-	return nil
+	if address.Street == "" {
+		mErr = multierror.Append(mErr, errors.New("required address street is empty"))
+	}
+	if address.StreetNumber == "" {
+		mErr = multierror.Append(mErr, errors.New("required address street number is empty"))
+	}
+	if address.ZIP == "" {
+		mErr = multierror.Append(mErr, errors.New("required address zip is empty"))
+	}
+	if address.City == "" {
+		mErr = multierror.Append(mErr, errors.New("required address city is empty"))
+	}
+	if address.Country == "" {
+		mErr = multierror.Append(mErr, errors.New("required address country is empty"))
+	}
+
+	return mErr.ErrorOrNil()
 }
+
 func (customer *Customer) AddDefaultBillingAddress(addr *address.Address) (string, error) {
 	addr.Type = address.AddressDefaultBilling
 	return customer.AddAddress(addr)
 }
+
 func (customer *Customer) AddDefaultShippingAddress(addr *address.Address) (string, error) {
 	addr.Type = address.AddressDefaultShipping
 	return customer.AddAddress(addr)
@@ -219,7 +272,6 @@ func (customer *Customer) AddDefaultShippingAddress(addr *address.Address) (stri
 
 // AddAddress adds a new address to the customers profile and returns its unique id
 func (customer *Customer) AddAddress(addr *address.Address) (string, error) {
-
 	err := CheckRequiredAddressFields(addr)
 	if err != nil {
 		log.Println("Error", err)
@@ -269,8 +321,8 @@ func (customer *Customer) AddAddress(addr *address.Address) (string, error) {
 	}
 	return addr.Id, customer.Upsert()
 }
-func (customer *Customer) RemoveAddress(id string) error {
 
+func (customer *Customer) RemoveAddress(id string) error {
 	addresses := []*address.Address{}
 	for _, address := range customer.Addresses {
 		if address.Id == id {

@@ -11,6 +11,7 @@ import (
 	"github.com/foomo/shop/test_utils"
 	"github.com/foomo/shop/unique"
 	"github.com/foomo/shop/utils"
+	assert "github.com/stretchr/testify/require"
 )
 
 const (
@@ -21,9 +22,11 @@ const (
 	OPEN_DIFFS_IN_BROWSER = false
 )
 
-type FooCustomProvider struct{}
-type FooCustomer struct{}
-type FooAddress struct{}
+type (
+	FooCustomProvider struct{}
+	FooCustomer       struct{}
+	FooAddress        struct{}
+)
 
 func (foo FooCustomProvider) NewAddressCustom() interface{} {
 	return &FooAddress{}
@@ -64,14 +67,14 @@ func TestCustomerGetLatestCustomerFromDb(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	//Check if version number is 3
+	// Check if version number is 3
 	customer, err = GetCurrentCustomerByIdFromVersionsHistory(customer.GetID(), nil)
 	if customer.GetVersion().Current != 3 {
 		log.Println("Version is ", customer.GetVersion().Current, "- should have been 3.")
 		t.Fail()
 	}
-
 }
+
 func TestCustomerDiff2LatestCustomerVersions(t *testing.T) {
 	customer1, _ := create2CustomersAndPerformSomeUpserts(t)
 
@@ -80,6 +83,7 @@ func TestCustomerDiff2LatestCustomerVersions(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
 func TestCustomerRollbackAndDiff(t *testing.T) {
 	customer1, _ := create2CustomersAndPerformSomeUpserts(t)
 
@@ -94,6 +98,7 @@ func TestCustomerRollbackAndDiff(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
 func TestCustomerRollback(t *testing.T) {
 	customer1, _ := create2CustomersAndPerformSomeUpserts(t)
 	utils.PrintJSON(customer1)
@@ -255,5 +260,122 @@ func TestCustomerChangeAddress(t *testing.T) {
 	if changedAddress.Person.FirstName != "FooChanged" {
 		t.Fatal("Expected changedAddress.Person.FirstName == \"FooChanged\" but got " + changedAddress.Person.FirstName)
 	}
+}
 
+func TestCheckRequiredAddressFields(t *testing.T) {
+	type args struct {
+		address *address.Address
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr string
+	}{
+		{
+			name: "all fields empty",
+			args: args{
+				address: &address.Address{},
+			},
+			wantErr: "6 errors occurred:\n\t* required person is nil\n\t* required address street is empty\n\t* required address street number is empty\n\t* required address zip is empty\n\t* required address city is empty\n\t* required address country is empty\n\n",
+		},
+		{
+			name: "all person fields empty",
+			args: args{
+				address: &address.Address{
+					Person:       &address.Person{},
+					Street:       "x",
+					StreetNumber: "x",
+					ZIP:          "x",
+					City:         "x",
+					Country:      "x",
+				},
+			},
+			wantErr: "3 errors occurred:\n\t* required person salutation is empty\n\t* required person firstname is empty\n\t* required person lastname is empty\n\n",
+		},
+		{
+			name: "all fields set",
+			args: args{
+				address: &address.Address{
+					Person: &address.Person{
+						FirstName:  "x",
+						LastName:   "x",
+						Salutation: "x",
+					},
+					Street:       "x",
+					StreetNumber: "x",
+					ZIP:          "x",
+					City:         "x",
+					Country:      "x",
+				},
+			},
+			wantErr: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := CheckRequiredAddressFields(tt.args.address)
+			if tt.wantErr != "" {
+				assert.EqualError(t, err, tt.wantErr)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestNewCustomer(t *testing.T) {
+	type args struct {
+		addrkey        string
+		addrkeyHash    string
+		externalID     string
+		mailContact    *address.Contact
+		customProvider CustomerCustomProvider
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *Customer
+		wantErr string
+	}{
+		{
+			name: "all fields empty",
+			args: args{
+				addrkey:        "",
+				addrkeyHash:    "",
+				externalID:     "",
+				mailContact:    nil,
+				customProvider: nil,
+			},
+			want:    nil,
+			wantErr: "5 errors occurred:\n\t* required addrkey is empty\n\t* required addrkeyHash is empty\n\t* required externalID is empty\n\t* required mailContact is empty\n\t* custom provider not set\n\n",
+		},
+		{
+			name: "all fields empty except mail contact",
+			args: args{
+				addrkey:     "",
+				addrkeyHash: "",
+				externalID:  "",
+				mailContact: &address.Contact{
+					ID:         "",
+					ExternalID: "",
+					Type:       "",
+					Value:      "",
+				},
+				customProvider: nil,
+			},
+			want:    nil,
+			wantErr: "6 errors occurred:\n\t* required addrkey is empty\n\t* required addrkeyHash is empty\n\t* required externalID is empty\n\t* required email address in mailContact.Value is empty\n\t* required mailContact must have string type \"email\"\n\t* custom provider not set\n\n",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := NewCustomer(tt.args.addrkey, tt.args.addrkeyHash, tt.args.externalID, tt.args.mailContact, tt.args.customProvider)
+			if tt.wantErr != "" {
+				assert.EqualError(t, err, tt.wantErr)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Exactly(t, tt.want, got)
+		})
+	}
 }
