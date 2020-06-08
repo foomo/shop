@@ -175,7 +175,7 @@ func Find(query *bson.M, customProvider CustomerCustomProvider) (iter func() (cu
 	iter = func() (cust *Customer, err error) {
 		cust = &Customer{}
 		if mgoiter.Next(cust) {
-			return mapDecode(cust, customProvider)
+			return MapDecode(cust, customProvider)
 		}
 		return nil, mgoiter.Err()
 	}
@@ -389,7 +389,7 @@ func findOneCustomer(find *bson.M, selection *bson.M, sort string, customProvide
 	}
 	if customProvider != nil {
 		var err error
-		customer, err = mapDecode(customer, customProvider)
+		customer, err = MapDecode(customer, customProvider)
 		if err != nil {
 			return nil, err
 		}
@@ -421,8 +421,8 @@ func insertCustomer(c *Customer) error {
 	return err
 }
 
-// mapDecode maps interfaces to specific types provided by customProvider
-func mapDecode(cust *Customer, customProvider CustomerCustomProvider) (customer *Customer, err error) {
+// MapDecode maps interfaces to specific types provided by customProvider
+func MapDecode(cust *Customer, customProvider CustomerCustomProvider) (customer *Customer, err error) {
 	/* Map CustomerCustom */
 	customerCustom := customProvider.NewCustomerCustom()
 	if customerCustom != nil && cust.Custom != nil {
