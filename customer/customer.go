@@ -8,10 +8,12 @@ import (
 	"time"
 
 	"github.com/foomo/shop/address"
+	"github.com/foomo/shop/shop_error"
 	"github.com/foomo/shop/unique"
 	"github.com/foomo/shop/utils"
 	"github.com/foomo/shop/version"
 	"github.com/hashicorp/go-multierror"
+	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -148,6 +150,9 @@ func NewCustomer(addrkey string, addrkeyHash string, externalID string, mailCont
 	// persist customer in database
 	errInsert := customer.insert()
 	if errInsert != nil {
+		if mgo.IsDup(errInsert) {
+			return nil, shop_error.ErrorDuplicateKey
+		}
 		return nil, errInsert
 	}
 
