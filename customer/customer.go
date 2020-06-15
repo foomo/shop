@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"strconv"
+	"strings"
 	"time"
 
 	"github.com/foomo/shop/address"
@@ -53,7 +53,6 @@ type Customer struct {
 	ExternalID     string
 	Id             string
 	unlinkDB       bool // if true, changes to Customer are not stored in database
-	Flags          *Flags
 	Version        *version.Version
 	CreatedAt      time.Time
 	LastModifiedAt time.Time
@@ -66,10 +65,6 @@ type Customer struct {
 	Localization   *Localization
 	TacAgree       bool // Terms and Conditions
 	Custom         interface{}
-}
-
-type Flags struct {
-	forceUpsert bool // if true, Upsert is performed even if there is a version conflict. This is important for rollbacks.
 }
 
 type Company struct {
@@ -126,7 +121,6 @@ func NewCustomer(addrkey string, addrkeyHash string, externalID string, mailCont
 
 	email := lc(mailContact.Value)
 	customer := &Customer{
-		Flags:          &Flags{},
 		Version:        version.NewVersion(),
 		Id:             unique.GetNewID(),
 		ExternalID:     externalID,
@@ -148,6 +142,9 @@ func NewCustomer(addrkey string, addrkeyHash string, externalID string, mailCont
 		Custom:       customProvider.NewCustomerCustom(),
 	}
 
+	// initial version should be 1
+	customer.Version.Increment()
+
 	// persist customer in database
 	errInsert := customer.insert()
 	if errInsert != nil {
@@ -163,40 +160,6 @@ func NewCustomer(addrkey string, addrkeyHash string, externalID string, mailCont
 // ~ PUBLIC METHODS ON CUSTOMER
 //------------------------------------------------------------------
 
-func (customer *Customer) ChangeEmail(email, newEmail string) error {
-	// lower case
-	email = lc(email)
-	newEmail = lc(newEmail)
-
-	customer.Email = newEmail
-	for _, addr := range customer.GetAddresses() {
-		for _, contact := range addr.Person.Contacts {
-			if contact.IsMail() && contact.Value == email {
-				contact.Value = newEmail
-			}
-		}
-	}
-	return customer.Upsert()
-}
-
-func (customer *Customer) ChangePassword(password, passwordNew string, force bool) error {
-	err := ChangePassword(customer.Email, password, passwordNew, force)
-	if err != nil {
-		return err
-	}
-	return customer.Upsert()
-}
-
-// Unlinks customer from database
-// After unlink, persistent changes on customer are no longer possible until it is retrieved again from db.
-func (customer *Customer) UnlinkFromDB() {
-	customer.unlinkDB = true
-}
-
-func (customer *Customer) LinkDB() {
-	customer.unlinkDB = false
-}
-
 func (customer *Customer) insert() error {
 	return insertCustomer(customer)
 }
@@ -211,10 +174,6 @@ func (customer *Customer) UpsertAndGetCustomer(customProvider CustomerCustomProv
 
 func (customer *Customer) Delete() error {
 	return DeleteCustomer(customer)
-}
-
-func (customer *Customer) Rollback(version int) error {
-	return Rollback(customer.GetID(), version)
 }
 
 func (customer *Customer) OverrideId(id string) error {
@@ -350,43 +309,10 @@ func (customer *Customer) ChangeAddress(addr *address.Address) error {
 }
 
 //------------------------------------------------------------------
-// ~ PUBLIC METHODS
+// ~ PRIVATE METHODS
 //------------------------------------------------------------------
 
-// DiffTwoLatestCustomerVersions compares the two latest Versions of Customer found in version.
-// If openInBrowser, the result is automatically displayed in the default browser.
-func DiffTwoLatestCustomerVersions(customerId string, customProvider CustomerCustomProvider, openInBrowser bool) (string, error) {
-	version, err := GetCurrentVersionOfCustomerFromVersionsHistory(customerId)
-	if err != nil {
-		return "", err
-	}
-
-	return DiffCustomerVersions(customerId, version.Current-1, version.Current, customProvider, openInBrowser)
-}
-
-func DiffCustomerVersions(customerId string, versionA int, versionB int, customProvider CustomerCustomProvider, openInBrowser bool) (string, error) {
-	if versionA <= 0 || versionB <= 0 {
-		return "", errors.New("Error: Version must be greater than 0")
-	}
-	name := "customer_v" + strconv.Itoa(versionA) + "_vs_v" + strconv.Itoa(versionB)
-	customerVersionA, err := GetCustomerByVersion(customerId, versionA, customProvider)
-	if err != nil {
-		return "", err
-	}
-	customerVersionB, err := GetCustomerByVersion(customerId, versionB, customProvider)
-	if err != nil {
-		return "", err
-	}
-
-	html, err := version.DiffVersions(customerVersionA, customerVersionB)
-	if err != nil {
-		return "", err
-	}
-	if openInBrowser {
-		err := utils.OpenInBrowser(name, html)
-		if err != nil {
-			log.Println(err)
-		}
-	}
-	return html, err
+// lc returns lowercase version of string
+func lc(s string) string {
+	return strings.ToLower(s)
 }

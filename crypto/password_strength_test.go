@@ -11,13 +11,13 @@ func TestCryptoPasswordStrength(t *testing.T) {
 	passwords := []string{"mypassword", "summertablecactus+", "osome+#,,brassford"}
 	for _, password := range passwords {
 		fmt.Println("---------- Password:", password, "-------------")
-		utils.PrintJSON(DeterminePasswordStrength(password, nil))
+		utils.PrintJSON(determinePasswordStrength(password, nil))
 	}
 
 	fmt.Println("---------- Password with userInput-------------")
 	// Test with user input, expected score 1
-	DeterminePasswordStrength(passwords[1], []string{"Table"})
-	utils.PrintJSON(DeterminePasswordStrength(passwords[1], []string{"Table"}))
+	determinePasswordStrength(passwords[1], []string{"Table"})
+	utils.PrintJSON(determinePasswordStrength(passwords[1], []string{"Table"}))
 
 	//for i := 0; i < 1000; i++ {
 	for _, password := range passwords {

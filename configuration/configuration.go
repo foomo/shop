@@ -19,12 +19,10 @@ var (
 	MONGO_URL          = "mongodb://" + WithDocker
 	MONGO_URL_PRODUCTS = "mongodb://" + ProductsLocal
 
-	MONGO_COLLECTION_CREDENTIALS       = "credentials"
-	MONGO_COLLECTION_ORDERS            = "orders"
-	MONGO_COLLECTION_ORDERS_HISTORY    = "orders_history"
-	MONGO_COLLECTION_CUSTOMERS_HISTORY = "crm_customer_cache_history"
-	MONGO_COLLECTION_CUSTOMERS         = "crm_customer_cache"
-	MONGO_COLLECTION_WATCHLISTS        = "watchlists"
+	MONGO_COLLECTION_ORDERS         = "orders"
+	MONGO_COLLECTION_ORDERS_HISTORY = "orders_history"
+	MONGO_COLLECTION_CUSTOMERS      = "customerscrm"
+	MONGO_COLLECTION_WATCHLISTS     = "watchlists"
 
 	MONGO_COLLECTION_PRICERULES          = "pricerules"
 	MONGO_COLLECTION_PRICERULES_VOUCHERS = "pricerules_vouchers"

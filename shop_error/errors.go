@@ -1,6 +1,15 @@
 package shop_error
 
-import "strings"
+import (
+	"errors"
+	"strings"
+)
+
+// ErrorVersionConflict version conflict while upserting to mongo
+var ErrorVersionConflict = errors.New("version conflict")
+
+// ErrorDuplicateKey an index key constraint mismatch
+var ErrorDuplicateKey = errors.New("duplicate key")
 
 const (
 	ErrorAlreadyExists        = "already existing in db" // do not change, this string is returned by MongoDB

@@ -5,9 +5,10 @@ package crypto
 
 import (
 	"errors"
+	"strconv"
+
 	zxcbvn "github.com/nbutton23/zxcvbn-go"
 	"github.com/nbutton23/zxcvbn-go/scoring"
-	"strconv"
 )
 
 var minLength int = -1
@@ -22,7 +23,7 @@ func SetMaxLength(max int) {
 
 // DeterminePasswordStrength returns a detailed info about the strength of the given password
 // @userInput e.g. user name. Given strings are matched against password to prohibit similarities between username and password
-func DeterminePasswordStrength(password string, userInput []string) scoring.MinEntropyMatch {
+func determinePasswordStrength(password string, userInput []string) scoring.MinEntropyMatch {
 	return zxcbvn.PasswordStrength(password, userInput)
 }
 
@@ -34,8 +35,6 @@ func GetPasswordScore(password string, userInput []string) (int, error) {
 	if maxLength != -1 && len(password) > maxLength {
 		return 0, errors.New("Password must be not longer than " + strconv.Itoa(maxLength) + " characters!")
 	}
-	match := DeterminePasswordStrength(password, userInput)
+	match := determinePasswordStrength(password, userInput)
 	return match.Score, nil
 }
-
-
