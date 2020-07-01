@@ -278,7 +278,7 @@ func TestNewCustomer(t *testing.T) {
 				customProvider: nil,
 			},
 			want:    nil,
-			wantErr: "5 errors occurred:\n\t* required addrkey is empty\n\t* required addrkeyHash is empty\n\t* required externalID is empty\n\t* required mailContact is empty\n\t* custom provider not set\n\n",
+			wantErr: "4 errors occurred:\n\t* required addrkey is empty\n\t* required addrkeyHash is empty\n\t* required externalID is empty\n\t* custom provider not set\n\n",
 		},
 		{
 			name: "all fields empty except mail contact",
