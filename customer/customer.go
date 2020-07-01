@@ -89,8 +89,9 @@ type CustomerCustomProvider interface {
 //------------------------------------------------------------------
 
 // NewCustomer creates a new customer in the database and returns it.
-// addrkey must be unique for a customer
-// customerProvider may be nil at this point.
+// addrkey must be unique for a customer.
+// customerProvider is required.
+// mailContact can be nil, if not nil a valid email address is required.
 func NewCustomer(addrkey string, addrkeyHash string, externalID string, mailContact *address.Contact, customProvider CustomerCustomProvider) (*Customer, error) {
 	var mErr *multierror.Error
 
@@ -103,10 +104,8 @@ func NewCustomer(addrkey string, addrkeyHash string, externalID string, mailCont
 	if externalID == "" {
 		mErr = multierror.Append(mErr, errors.New("required externalID is empty"))
 	}
-	if mailContact == nil {
-		mErr = multierror.Append(mErr, errors.New("required mailContact is empty"))
-	} else {
-		if mailContact.Value == "" {
+	if mailContact != nil {
+		if !strings.ContainsRune(mailContact.Value, '@') {
 			mErr = multierror.Append(mErr, errors.New("required email address in mailContact.Value is empty"))
 		}
 		if !mailContact.IsMail() {
@@ -121,7 +120,19 @@ func NewCustomer(addrkey string, addrkeyHash string, externalID string, mailCont
 		return nil, mErr.ErrorOrNil()
 	}
 
-	email := lc(mailContact.Value)
+	var person *address.Person
+	var email string
+	if mailContact != nil {
+		email = lc(mailContact.Value)
+		person = &address.Person{
+			Contacts: map[string]*address.Contact{
+				mailContact.ID: mailContact,
+			},
+			DefaultContacts: map[address.ContactType]string{
+				address.ContactTypeEmail: mailContact.ID,
+			},
+		}
+	}
 	customer := &Customer{
 		Version:        version.NewVersion(),
 		Id:             unique.GetNewID(),
@@ -132,28 +143,20 @@ func NewCustomer(addrkey string, addrkeyHash string, externalID string, mailCont
 		IsGuest:        false,
 		CreatedAt:      utils.TimeNow(),
 		LastModifiedAt: utils.TimeNow(),
-		Person: &address.Person{
-			Contacts: map[string]*address.Contact{
-				mailContact.ID: mailContact,
-			},
-			DefaultContacts: map[address.ContactType]string{
-				address.ContactTypeEmail: mailContact.ID,
-			},
-		},
-		Localization: &Localization{},
-		Custom:       customProvider.NewCustomerCustom(),
+		Person:         person,
+		Localization:   &Localization{},
+		Custom:         customProvider.NewCustomerCustom(),
 	}
 
 	// initial version should be 1
 	customer.Version.Increment()
 
 	// persist customer in database
-	errInsert := customer.insert()
-	if errInsert != nil {
-		if mgo.IsDup(errInsert) {
+	if err := customer.insert(); err != nil {
+		if mgo.IsDup(err) {
 			return nil, shop_error.ErrorDuplicateKey
 		}
-		return nil, errInsert
+		return nil, err
 	}
 
 	// retrieve customer again from database,
