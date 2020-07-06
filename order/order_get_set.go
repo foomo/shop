@@ -189,7 +189,7 @@ func (order *Order) SetBasicCustomerData(id string, addrKey string, customerType
 	}
 
 	order.CustomerData.CustomerId = id
-	order.CustomerData.AddrKey = id
+	order.CustomerData.AddrKey = addrKey
 	order.CustomerData.CustomerType = customerType
 	order.CustomerData.PriceOverrideGroup = priceOverrideGroup
 	return order.Upsert()
