@@ -97,6 +97,7 @@ type Order struct {
 }
 
 type CustomerData struct {
+	AddrKey             string
 	CustomerId          string
 	GuestCustomerID     string
 	CustomerType        string // Private / Staff etc.
