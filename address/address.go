@@ -1,5 +1,7 @@
 package address
 
+import "strings"
+
 type AddressType string
 type ContactType string
 type SalutationType string
@@ -52,19 +54,6 @@ type Address struct {
 	Custom        interface{}
 }
 
-// Person is a field Customer and of Address
-// Only Customer->Person has Contacts
-type Person struct {
-	FirstName       string
-	MiddleName      string
-	LastName        string
-	Title           TitleType
-	Salutation      SalutationType
-	Birthday        string
-	Contacts        map[string]*Contact    // key must be contactID
-	DefaultContacts map[ContactType]string // reference by contactID
-}
-
 func (address *Address) GetID() string {
 	return address.Id
 }
@@ -96,4 +85,17 @@ func (address *Address) Equals(otherAddress *Address) bool {
 	equal = equal && address.Country == otherAddress.Country
 
 	return equal
+}
+
+func (address *Address) TrimSpace() {
+	if address == nil {
+		return
+	}
+	address.Person.TrimSpace()
+	address.Street = strings.TrimSpace(address.Street)
+	address.StreetNumber = strings.TrimSpace(address.StreetNumber)
+	address.ZIP = strings.TrimSpace(address.ZIP)
+	address.City = strings.TrimSpace(address.City)
+	address.Country = strings.TrimSpace(address.Country)
+	address.CountryCode = strings.TrimSpace(address.CountryCode)
 }

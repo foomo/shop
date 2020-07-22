@@ -61,7 +61,6 @@ type Customer struct {
 	Email          string // unique, used as Login Credential
 	Person         *address.Person
 	IsGuest        bool
-	IsComplete     bool // upsert checks if customer data is complete, so that a customer could place an order
 	Company        *Company
 	Addresses      []*address.Address
 	Localization   *Localization
@@ -189,44 +188,6 @@ func (customer *Customer) OverrideId(id string) error {
 	return customer.Upsert()
 }
 
-// checkFields Checks if all required fields are specified
-// @TODO which are teh required fields
-func CheckRequiredAddressFields(address *address.Address) error {
-	// Return error if required field is missing
-	var mErr *multierror.Error
-
-	if address.Person == nil {
-		mErr = multierror.Append(mErr, errors.New("required person is nil"))
-	} else {
-		if address.Person.Salutation == "" {
-			mErr = multierror.Append(mErr, errors.New("required person salutation is empty"))
-		}
-		if address.Person.FirstName == "" {
-			mErr = multierror.Append(mErr, errors.New("required person firstname is empty"))
-		}
-		if address.Person.LastName == "" {
-			mErr = multierror.Append(mErr, errors.New("required person lastname is empty"))
-		}
-	}
-	if address.Street == "" {
-		mErr = multierror.Append(mErr, errors.New("required address street is empty"))
-	}
-	if address.StreetNumber == "" {
-		mErr = multierror.Append(mErr, errors.New("required address street number is empty"))
-	}
-	if address.ZIP == "" {
-		mErr = multierror.Append(mErr, errors.New("required address zip is empty"))
-	}
-	if address.City == "" {
-		mErr = multierror.Append(mErr, errors.New("required address city is empty"))
-	}
-	if address.Country == "" {
-		mErr = multierror.Append(mErr, errors.New("required address country is empty"))
-	}
-
-	return mErr.ErrorOrNil()
-}
-
 func (customer *Customer) AddDefaultBillingAddress(addr *address.Address) (string, error) {
 	addr.Type = address.AddressDefaultBilling
 	return customer.AddAddress(addr)
@@ -239,7 +200,7 @@ func (customer *Customer) AddDefaultShippingAddress(addr *address.Address) (stri
 
 // AddAddress adds a new address to the customers profile and returns its unique id
 func (customer *Customer) AddAddress(addr *address.Address) (string, error) {
-	err := CheckRequiredAddressFields(addr)
+	err := addr.IsComplete()
 	if err != nil {
 		log.Println("Error", err)
 		return "", err
@@ -307,7 +268,7 @@ func (customer *Customer) ChangeAddress(addr *address.Address) error {
 		log.Println("Error: Could not find address with id "+addr.GetID(), "for customer ", customer.Person.LastName)
 		return err
 	}
-	err = CheckRequiredAddressFields(addr)
+	err = addr.IsComplete()
 	if err != nil {
 		return err
 	}

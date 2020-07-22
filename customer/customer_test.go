@@ -149,7 +149,8 @@ func TestCustomerChangeAddress(t *testing.T) {
 		Street:       "Holzweg",
 		StreetNumber: "5",
 		City:         "Bern",
-		Country:      "CH",
+		Country:      "Schweiz",
+		CountryCode:  "CH",
 		ZIP:          "1234",
 	}
 	log.Println("Original Address:")
@@ -170,7 +171,8 @@ func TestCustomerChangeAddress(t *testing.T) {
 		Street:       "Steinweg",
 		StreetNumber: "5",
 		City:         "Bern",
-		Country:      "CH",
+		Country:      "Schweiz",
+		CountryCode:  "CH",
 		ZIP:          "1234",
 	}
 	err = customer.ChangeAddress(addressNew)
@@ -193,7 +195,7 @@ func TestCustomerChangeAddress(t *testing.T) {
 	}
 }
 
-func TestCheckRequiredAddressFields(t *testing.T) {
+func TestAddressComplete(t *testing.T) {
 	type args struct {
 		address *address.Address
 	}
@@ -207,7 +209,7 @@ func TestCheckRequiredAddressFields(t *testing.T) {
 			args: args{
 				address: &address.Address{},
 			},
-			wantErr: "6 errors occurred:\n\t* required person is nil\n\t* required address street is empty\n\t* required address street number is empty\n\t* required address zip is empty\n\t* required address city is empty\n\t* required address country is empty\n\n",
+			wantErr: "7 errors occurred:\n\t* person is nil\n\t* address street is empty\n\t* address street number is empty\n\t* address zip is not valid\n\t* address city is empty\n\t* address country is empty\n\t* address country code is empty\n\n",
 		},
 		{
 			name: "all person fields empty",
@@ -216,12 +218,13 @@ func TestCheckRequiredAddressFields(t *testing.T) {
 					Person:       &address.Person{},
 					Street:       "x",
 					StreetNumber: "x",
-					ZIP:          "x",
+					ZIP:          "xxxx",
 					City:         "x",
 					Country:      "x",
+					CountryCode:  "x",
 				},
 			},
-			wantErr: "3 errors occurred:\n\t* required person salutation is empty\n\t* required person firstname is empty\n\t* required person lastname is empty\n\n",
+			wantErr: "3 errors occurred:\n\t* person salutation is empty\n\t* person firstname is empty\n\t* person lastname is empty\n\n",
 		},
 		{
 			name: "all fields set",
@@ -234,9 +237,10 @@ func TestCheckRequiredAddressFields(t *testing.T) {
 					},
 					Street:       "x",
 					StreetNumber: "x",
-					ZIP:          "x",
+					ZIP:          "xxxx",
 					City:         "x",
 					Country:      "x",
+					CountryCode:  "x",
 				},
 			},
 			wantErr: "",
@@ -244,7 +248,7 @@ func TestCheckRequiredAddressFields(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := CheckRequiredAddressFields(tt.args.address)
+			err := tt.args.address.IsComplete()
 			if tt.wantErr != "" {
 				assert.EqualError(t, err, tt.wantErr)
 			} else {
