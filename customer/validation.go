@@ -11,7 +11,7 @@ import (
 func (customer *Customer) IsComplete() error {
 	addr, err := customer.GetDefaultBillingAddress()
 	if err != nil {
-		fmt.Errorf("could not load default billing address: %q", err)
+		return fmt.Errorf("could not load default billing address: %q", err)
 	}
 
 	var mErr *multierror.Error
