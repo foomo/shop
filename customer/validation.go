@@ -8,7 +8,7 @@ import (
 )
 
 // IsCustomerComplete returns an error if not all mandatory data is set
-func (customer *Customer) IsCustomerComplete() error {
+func (customer *Customer) IsComplete() error {
 	addr, err := customer.GetDefaultBillingAddress()
 	if err != nil {
 		return err
