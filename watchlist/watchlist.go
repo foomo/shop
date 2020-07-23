@@ -11,6 +11,7 @@ import (
 
 type CustomerWatchLists struct {
 	BsonId     bson.ObjectId `bson:"_id,omitempty"`
+	AddrKey    string        `bson:"addrkey"`
 	CustomerID string        `bson:"customerID"`
 	SessionID  string        `bson:"sessionID"`
 	Email      string        `bson:"email"`
