@@ -23,10 +23,10 @@ var (
 
 	orderEnsuredIndexes = []mgo.Index{
 		{
-			Name:       "id",
-			Key:        []string{"id"},
-			Unique:     true,
-			Background: true,
+			Name: "id",
+			Key:  []string{"id"},
+			// Unique:     true,
+			// Background: true,
 		},
 		{
 			Name:       "ReservationsQueryIndex",
