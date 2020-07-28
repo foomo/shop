@@ -39,6 +39,8 @@ const (
 	LogisticProcessDefault         LogisticProcess = "LogisticProcessDefault"
 	LogisticProcessClickAndCollect LogisticProcess = "LogisticProcessClickAndCollect"
 	LogisticProcessClickAndReserve LogisticProcess = "LogisticProcessClickAndReserve"
+
+	KeyAddrKey = "addrkey"
 )
 
 //------------------------------------------------------------------

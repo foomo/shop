@@ -2,7 +2,6 @@ package watchlist
 
 import (
 	"errors"
-	"log"
 
 	"gopkg.in/mgo.v2/bson"
 
@@ -15,6 +14,12 @@ import (
 //------------------------------------------------------------------
 
 var globalWatchListPersistor *persistence.Persistor
+
+const (
+	KeyAddrkey   = "addrkey"
+	KeySessionID = "sessionID"
+	KeyEmail     = "email"
+)
 
 //------------------------------------------------------------------
 // ~ CONSTRUCTOR
@@ -54,23 +59,22 @@ func GetWatchListPersistor() *persistence.Persistor {
 	return globalWatchListPersistor
 }
 
-func NewCustomerWatchListsFromCustomerID(customerID string) (*CustomerWatchLists, error) {
-	exists, err := CustomerWatchListsExists(customerID, "", "")
+func NewCustomerWatchListsFromAddrKey(addrKey string) (*CustomerWatchLists, error) {
+	exists, err := CustomerWatchListsExists(addrKey, "", "")
 	if err != nil {
 		return nil, err
 	}
 	if exists {
-		log.Println("Did not insert CustomerWatchLists for customer", customerID, "- vo already exists")
-		return nil, errors.New("CustomerWatchLists for customerID " + customerID + " already exists.")
+		return nil, errors.New("CustomerWatchLists for addrKey " + addrKey + " already exists.")
 	}
 	err = insertCustomerWatchLists(&CustomerWatchLists{
-		CustomerID: customerID,
-		Lists:      []*WatchList{},
+		AddrKey: addrKey,
+		Lists:   []*WatchList{},
 	})
 	if err != nil {
 		return nil, err
 	}
-	return GetCustomerWatchListsByCustomerID(customerID)
+	return GetCustomerWatchListsByAddrKey(addrKey)
 }
 func NewCustomerWatchListsFromSessionID(sessionID string) (*CustomerWatchLists, error) {
 	exists, err := CustomerWatchListsExists("", sessionID, "")
@@ -78,7 +82,6 @@ func NewCustomerWatchListsFromSessionID(sessionID string) (*CustomerWatchLists, 
 		return nil, err
 	}
 	if exists {
-		log.Println("Did not insert CustomerWatchLists for session", sessionID, "- vo already exists")
 		return nil, errors.New("CustomerWatchLists for sessionID " + sessionID + " already exists.")
 	}
 	err = insertCustomerWatchLists(&CustomerWatchLists{
@@ -91,19 +94,18 @@ func NewCustomerWatchListsFromSessionID(sessionID string) (*CustomerWatchLists, 
 	return GetCustomerWatchListsBySessionID(sessionID)
 }
 
-func CustomerWatchListsExists(customerId, sessionId, email string) (bool, error) {
-
+func CustomerWatchListsExists(addrKey, sessionId, email string) (bool, error) {
 
 	key := ""
 	value := ""
-	if customerId != "" {
-		key = "customerID"
-		value = customerId
+	if addrKey != "" {
+		key = KeyAddrkey
+		value = addrKey
 	} else if sessionId != "" {
-		key = "sessionID"
+		key = KeySessionID
 		value = sessionId
 	} else if email != "" {
-		key = "email"
+		key = KeyEmail
 		value = email
 	}
 	session, collection := GetWatchListPersistor().GetCollection()
@@ -123,31 +125,31 @@ func DeleteCustomerWatchLists(cw *CustomerWatchLists) error {
 
 	return collection.Remove(bson.M{"_id": cw.BsonId})
 }
-func DeleteCustomerWatchListsByCustomerId(id string) error {
+func DeleteCustomerWatchListsByAddrKey(addrKey string) error {
 	session, collection := GetWatchListPersistor().GetCollection()
 	defer session.Close()
 
-	return collection.Remove(bson.M{"customerID": id})
+	return collection.Remove(bson.M{KeyAddrkey: addrKey})
 }
 func DeleteCustomerWatchListsBySessionId(id string) error {
 	session, collection := GetWatchListPersistor().GetCollection()
 	defer session.Close()
 
-	return collection.Remove(bson.M{"sessionID": id})
+	return collection.Remove(bson.M{KeySessionID: id})
 }
 func DeleteCustomerWatchListsByEmail(email string) error {
 	session, collection := GetWatchListPersistor().GetCollection()
 	defer session.Close()
 
-	return collection.Remove(bson.M{"email": email})
+	return collection.Remove(bson.M{KeyEmail: email})
 }
 
 // GetCustomerWatchListsByURIHash returns the CustomerWatchLists VO which contains a WatchList with the given URI hash
 func GetCustomerWatchListsByURIHash(uriHash string) (*CustomerWatchLists, error) {
 	return findOneByQuery(&bson.M{"lists.publicurihash": uriHash})
 }
-func GetCustomerWatchListsByCustomerID(customerID string) (*CustomerWatchLists, error) {
-	return findOne(customerID, "", "")
+func GetCustomerWatchListsByAddrKey(addrKey string) (*CustomerWatchLists, error) {
+	return findOne(addrKey, "", "")
 }
 func GetCustomerWatchListsBySessionID(sessionID string) (*CustomerWatchLists, error) {
 	return findOne("", sessionID, "")
@@ -173,22 +175,22 @@ func insertCustomerWatchLists(cw *CustomerWatchLists) error {
 	return collection.Insert(cw)
 }
 
-func findOne(customerID, sessionID, email string) (*CustomerWatchLists, error) {
-	if customerID == "" && sessionID == "" && email == "" {
-		return nil, errors.New("Error: Either customerID, sessionID or email of Customer must be provided.")
+func findOne(addrKey, sessionID, email string) (*CustomerWatchLists, error) {
+	if addrKey == "" && sessionID == "" && email == "" {
+		return nil, errors.New("Error: Either addrKey, sessionID or email of Customer must be provided.")
 	}
 	session, collection := GetWatchListPersistor().GetCollection()
 	defer session.Close()
 
 	find := &bson.M{}
-	if customerID != "" {
-		find = &bson.M{"customerID": customerID}
+	if addrKey != "" {
+		find = &bson.M{KeyAddrkey: addrKey}
 	}
 	if sessionID != "" {
-		find = &bson.M{"sessionID": sessionID}
+		find = &bson.M{KeySessionID: sessionID}
 	}
 	if email != "" {
-		find = &bson.M{"email": email}
+		find = &bson.M{KeyEmail: email}
 	}
 
 	customerWatchLists := &CustomerWatchLists{}

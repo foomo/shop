@@ -2,16 +2,18 @@ package customer
 
 import (
 	"errors"
+	"fmt"
 	"log"
-	"strconv"
+	"strings"
 	"time"
 
 	"github.com/foomo/shop/address"
-	"github.com/foomo/shop/crypto"
 	"github.com/foomo/shop/shop_error"
 	"github.com/foomo/shop/unique"
 	"github.com/foomo/shop/utils"
 	"github.com/foomo/shop/version"
+	"github.com/hashicorp/go-multierror"
+	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -30,46 +32,40 @@ const (
 	LanguageCodeFrance      LanguageCode = "fr"
 	LanguageCodeGermany     LanguageCode = "de"
 	LanguageCodeSwitzerland LanguageCode = "ch"
+
+	KeyAddrKey     = "addrkey"
+	KeyAddrKeyHash = "addrkeyhash"
 )
 
 //------------------------------------------------------------------
 // ~ PUBLIC TYPES
 //------------------------------------------------------------------
 
-type LanguageCode string
-type CountryCode string
+type (
+	LanguageCode string
+	CountryCode  string
+)
 
 // TOP LEVEL OBJECT
 // private, so that changes are limited by API
 type Customer struct {
-	BsonId            bson.ObjectId `bson:"_id,omitempty"`
-	Id                string        // Email is used as LoginID, but can change. This is never changes!
-	ExternalID        string
-	unlinkDB          bool // if true, changes to Customer are not stored in database
-	Flags             *Flags
-	Version           *version.Version
-	CreatedAt         time.Time
-	LastModifiedAt    time.Time
-	Email             string // unique, used as Login Credential
-	Person            *address.Person
-	IsGuest           bool
-	IsLoggedIn        bool
-	Company           *Company
-	Addresses         []*address.Address
-	Localization      *Localization
-	TacAgree          bool // Terms and Conditions
-	Tracking          *Tracking
-	IsProfileComplete bool
-	Custom            interface{}
-}
-
-type Tracking struct {
-	TrackingID string
-	SessionIDs []string
-}
-
-type Flags struct {
-	forceUpsert bool // if true, Upsert is performed even if there is a version conflict. This is important for rollbacks.
+	BsonId         bson.ObjectId `bson:"_id,omitempty"`
+	AddrKey        string        // unique id which will replace Id for primary way of retrieval
+	AddrKeyHash    string        // unique id which will replace Id for primary way of retrieval
+	ExternalID     string
+	Id             string
+	unlinkDB       bool // if true, changes to Customer are not stored in database
+	Version        *version.Version
+	CreatedAt      time.Time
+	LastModifiedAt time.Time
+	Email          string // unique, used as Login Credential
+	Person         *address.Person
+	IsGuest        bool
+	Company        *Company
+	Addresses      []*address.Address
+	Localization   *Localization
+	TacAgree       bool // Terms and Conditions
+	Custom         interface{}
 }
 
 type Company struct {
@@ -91,115 +87,85 @@ type CustomerCustomProvider interface {
 // ~ CONSTRUCTOR
 //------------------------------------------------------------------
 
-// NewGuestCustomer creates a new Customer in the database and returns it.
-// Per default, customers have an empty password which does not grant access at login.
-// To transform Guests to regular Customers, the password must be changed and the customer must be marked as regular
-func NewGuestCustomer(email string, customProvider CustomerCustomProvider) (*Customer, error) {
-	return NewCustomer(email, "", customProvider)
-}
+// NewCustomer creates a new customer in the database and returns it.
+// addrkey must be unique for a customer.
+// customerProvider is required.
+// mailContact can be nil, if not nil a valid email address is required.
+func NewCustomer(addrkey string, addrkeyHash string, externalID string, mailContact *address.Contact, customProvider CustomerCustomProvider) (*Customer, error) {
+	var mErr *multierror.Error
 
-// NewCustomer creates a new Customer in the database and returns it.
-// Email must be unique for a customer. customerProvider may be nil at this point.
-func NewCustomer(email, password string, customProvider CustomerCustomProvider) (*Customer, error) {
-	//log.Println("=== Creating new customer ", email)
-	if email == "" {
-		return nil, errors.New(shop_error.ErrorRequiredFieldMissing)
+	if addrkey == "" {
+		mErr = multierror.Append(mErr, errors.New("required addrkey is empty"))
 	}
-	//var err error
-	// We only create credentials if a customer is available.
-	// A guest customer gets a new entry in the customer db for each order!
-	// if !isGuest {
-	// 	// Check is desired Email is available
-	// 	available, err := CheckLoginAvailable(email)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// 	if !available {
-	// 		return nil, errors.New(shop_error.ErrorNotFound + " Login " + email + " is already taken!")
-	// 	}
+	if addrkeyHash == "" {
+		mErr = multierror.Append(mErr, errors.New("required addrkeyHash is empty"))
+	}
+	if externalID == "" {
+		mErr = multierror.Append(mErr, errors.New("required externalID is empty"))
+	}
+	if mailContact != nil {
+		if !strings.ContainsRune(mailContact.Value, '@') {
+			mErr = multierror.Append(mErr, errors.New("required email address in mailContact.Value is empty"))
+		}
+		if !mailContact.IsMail() {
+			mErr = multierror.Append(mErr, fmt.Errorf("required mailContact must have string type %q", address.ContactTypeEmail))
+		}
+	}
+	if customProvider == nil {
+		mErr = multierror.Append(mErr, errors.New("custom provider not set"))
+	}
 
-	// 	// These credentials are not used at the moment
-	// 	// err = CreateCustomerCredentials(email, password)
-	// 	// if err != nil {
-	// 	// 	return nil, err
-	// 	// }
-	// }
+	if mErr.ErrorOrNil() != nil {
+		return nil, mErr.ErrorOrNil()
+	}
 
-	mailContact := address.CreateMailContact(email)
-	customer := &Customer{
-		Flags:          &Flags{},
-		Version:        version.NewVersion(),
-		Id:             unique.GetNewID(),
-		Email:          lc(email),
-		CreatedAt:      utils.TimeNow(),
-		LastModifiedAt: utils.TimeNow(),
-		Person: &address.Person{
+	var person *address.Person
+	var email string
+	if mailContact != nil {
+		email = lc(mailContact.Value)
+		person = &address.Person{
 			Contacts: map[string]*address.Contact{
 				mailContact.ID: mailContact,
 			},
 			DefaultContacts: map[address.ContactType]string{
 				address.ContactTypeEmail: mailContact.ID,
 			},
-		},
-		Localization: &Localization{},
-		Tracking:     &Tracking{},
+		}
+	}
+	customer := &Customer{
+		Version:        version.NewVersion(),
+		Id:             unique.GetNewID(),
+		ExternalID:     externalID,
+		AddrKey:        addrkey,
+		AddrKeyHash:    addrkeyHash,
+		Email:          email,
+		IsGuest:        false,
+		CreatedAt:      utils.TimeNow(),
+		LastModifiedAt: utils.TimeNow(),
+		Person:         person,
+		Localization:   &Localization{},
+		Custom:         customProvider.NewCustomerCustom(),
 	}
 
-	trackingID, err := crypto.CreateHash(customer.GetID())
-	if err != nil {
+	// initial version should be 1
+	customer.Version.Increment()
+
+	// persist customer in database
+	if err := customer.insert(); err != nil {
+		if mgo.IsDup(err) {
+			return nil, shop_error.ErrorDuplicateKey
+		}
 		return nil, err
 	}
-	customer.Tracking.TrackingID = "tid" + trackingID
-	customer.IsGuest = false
-	if customProvider != nil {
-		customer.Custom = customProvider.NewCustomerCustom()
-	}
-	// Store order in database
-	err = customer.insert()
-	if err != nil {
-		log.Println("Could not insert customer", email)
-		return nil, err
-	}
-	// Retrieve customer again from. (Otherwise upserts on customer would fail because of missing mongo ObjectID)
+
+	// retrieve customer again from database,
+	// otherwise upserts on customer would fail because of missing mongo ObjectID)
 	return GetCustomerById(customer.Id, customProvider)
 }
 
 //------------------------------------------------------------------
 // ~ PUBLIC METHODS ON CUSTOMER
 //------------------------------------------------------------------
-
-func (customer *Customer) ChangeEmail(email, newEmail string) error {
-	// lower case
-	email = lc(email)
-	newEmail = lc(newEmail)
-
-	customer.Email = newEmail
-	for _, addr := range customer.GetAddresses() {
-		for _, contact := range addr.Person.Contacts {
-			if contact.IsMail() && contact.Value == email {
-				contact.Value = newEmail
-			}
-		}
-	}
-	return customer.Upsert()
-}
-
-func (customer *Customer) ChangePassword(password, passwordNew string, force bool) error {
-	err := ChangePassword(customer.Email, password, passwordNew, force)
-	if err != nil {
-		return err
-	}
-	return customer.Upsert()
-}
-
-// Unlinks customer from database
-// After unlink, persistent changes on customer are no longer possible until it is retrieved again from db.
-func (customer *Customer) UnlinkFromDB() {
-	customer.unlinkDB = true
-}
-func (customer *Customer) LinkDB() {
-	customer.unlinkDB = false
-}
 
 func (customer *Customer) insert() error {
 	return insertCustomer(customer)
@@ -208,15 +174,13 @@ func (customer *Customer) insert() error {
 func (customer *Customer) Upsert() error {
 	return UpsertCustomer(customer)
 }
+
 func (customer *Customer) UpsertAndGetCustomer(customProvider CustomerCustomProvider) (*Customer, error) {
 	return UpsertAndGetCustomer(customer, customProvider)
 }
+
 func (customer *Customer) Delete() error {
 	return DeleteCustomer(customer)
-}
-
-func (customer *Customer) Rollback(version int) error {
-	return Rollback(customer.GetID(), version)
 }
 
 func (customer *Customer) OverrideId(id string) error {
@@ -224,19 +188,11 @@ func (customer *Customer) OverrideId(id string) error {
 	return customer.Upsert()
 }
 
-// checkFields Checks if all required fields are specified
-// @TODO which are teh required fields
-func CheckRequiredAddressFields(address *address.Address) error {
-	// Return error if required field is missing
-	if address.Person == nil || address.Person.Salutation == "" || address.Person.FirstName == "" || address.Person.LastName == "" || address.Street == "" || address.StreetNumber == "" || address.ZIP == "" || address.City == "" || address.Country == "" {
-		return errors.New(shop_error.ErrorRequiredFieldMissing + "\n" + utils.ToJSON(address))
-	}
-	return nil
-}
 func (customer *Customer) AddDefaultBillingAddress(addr *address.Address) (string, error) {
 	addr.Type = address.AddressDefaultBilling
 	return customer.AddAddress(addr)
 }
+
 func (customer *Customer) AddDefaultShippingAddress(addr *address.Address) (string, error) {
 	addr.Type = address.AddressDefaultShipping
 	return customer.AddAddress(addr)
@@ -244,8 +200,7 @@ func (customer *Customer) AddDefaultShippingAddress(addr *address.Address) (stri
 
 // AddAddress adds a new address to the customers profile and returns its unique id
 func (customer *Customer) AddAddress(addr *address.Address) (string, error) {
-
-	err := CheckRequiredAddressFields(addr)
+	err := addr.IsComplete()
 	if err != nil {
 		log.Println("Error", err)
 		return "", err
@@ -294,8 +249,8 @@ func (customer *Customer) AddAddress(addr *address.Address) (string, error) {
 	}
 	return addr.Id, customer.Upsert()
 }
-func (customer *Customer) RemoveAddress(id string) error {
 
+func (customer *Customer) RemoveAddress(id string) error {
 	addresses := []*address.Address{}
 	for _, address := range customer.Addresses {
 		if address.Id == id {
@@ -313,7 +268,7 @@ func (customer *Customer) ChangeAddress(addr *address.Address) error {
 		log.Println("Error: Could not find address with id "+addr.GetID(), "for customer ", customer.Person.LastName)
 		return err
 	}
-	err = CheckRequiredAddressFields(addr)
+	err = addr.IsComplete()
 	if err != nil {
 		return err
 	}
@@ -323,43 +278,10 @@ func (customer *Customer) ChangeAddress(addr *address.Address) error {
 }
 
 //------------------------------------------------------------------
-// ~ PUBLIC METHODS
+// ~ PRIVATE METHODS
 //------------------------------------------------------------------
 
-// DiffTwoLatestCustomerVersions compares the two latest Versions of Customer found in version.
-// If openInBrowser, the result is automatically displayed in the default browser.
-func DiffTwoLatestCustomerVersions(customerId string, customProvider CustomerCustomProvider, openInBrowser bool) (string, error) {
-	version, err := GetCurrentVersionOfCustomerFromVersionsHistory(customerId)
-	if err != nil {
-		return "", err
-	}
-
-	return DiffCustomerVersions(customerId, version.Current-1, version.Current, customProvider, openInBrowser)
-}
-
-func DiffCustomerVersions(customerId string, versionA int, versionB int, customProvider CustomerCustomProvider, openInBrowser bool) (string, error) {
-	if versionA <= 0 || versionB <= 0 {
-		return "", errors.New("Error: Version must be greater than 0")
-	}
-	name := "customer_v" + strconv.Itoa(versionA) + "_vs_v" + strconv.Itoa(versionB)
-	customerVersionA, err := GetCustomerByVersion(customerId, versionA, customProvider)
-	if err != nil {
-		return "", err
-	}
-	customerVersionB, err := GetCustomerByVersion(customerId, versionB, customProvider)
-	if err != nil {
-		return "", err
-	}
-
-	html, err := version.DiffVersions(customerVersionA, customerVersionB)
-	if err != nil {
-		return "", err
-	}
-	if openInBrowser {
-		err := utils.OpenInBrowser(name, html)
-		if err != nil {
-			log.Println(err)
-		}
-	}
-	return html, err
+// lc returns lowercase version of string
+func lc(s string) string {
+	return strings.ToLower(s)
 }

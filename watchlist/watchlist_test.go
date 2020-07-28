@@ -10,12 +10,12 @@ import (
 
 func TestWatchListsManipulate(t *testing.T) {
 	test_utils.DropAllCollections()
-	customerID := unique.GetNewID()
-	_, err := NewCustomerWatchListsFromCustomerID(customerID)
+	addrKey := unique.GetNewID()
+	_, err := NewCustomerWatchListsFromAddrKey(addrKey)
 	if err != nil {
 		t.Fatal(err)
 	}
-	cw, err := GetCustomerWatchListsByCustomerID(customerID)
+	cw, err := GetCustomerWatchListsByAddrKey(addrKey)
 	if err != nil {
 		utils.PrintJSON(cw)
 		t.Fatal(err)
@@ -133,14 +133,14 @@ func TestWatchListsManipulate(t *testing.T) {
 	}
 
 	// Test Getter
-	cw, err = GetCustomerWatchListsByCustomerID(customerID)
+	cw, err = GetCustomerWatchListsByAddrKey(addrKey)
 	if err != nil {
 		utils.PrintJSON(cw)
 		t.Fatal(err)
 	}
 
 	// Test for non existant Id
-	_, err = GetCustomerWatchListsByCustomerID("InvalidID")
+	_, err = GetCustomerWatchListsByAddrKey("InvalidID")
 	if err == nil {
 		t.Fatal("Expected error not found", err)
 	}
