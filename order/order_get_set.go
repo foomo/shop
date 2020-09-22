@@ -202,3 +202,14 @@ func (order *Order) SetForceUpsert(force bool) {
 	order.Flags.forceUpsert = force
 	return
 }
+
+func (order *Order) SetFraudInvestigationState(state FraudInvestigationState) error {
+	if order.Processing == nil {
+		return errors.New("Processing is nil")
+	}
+	order.Processing.FraudInvestigationState = state
+	return order.Upsert()
+}
+func (order *Order) IsFraudInvestigationState(state FraudInvestigationState) bool {
+	return order.Processing != nil && order.Processing.FraudInvestigationState == state
+}
