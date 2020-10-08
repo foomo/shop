@@ -179,7 +179,7 @@ func findOne(addrKey, sessionID string) (*CustomerWatchLists, error) {
 	}
 
 	customerWatchLists := &CustomerWatchLists{}
-	err := collection.Find(find).One(customerWatchLists)
+	err := collection.Find(find).Sort("-_id").One(customerWatchLists)
 	if err != nil {
 		return nil, err
 	}
@@ -194,7 +194,7 @@ func findOneByQuery(query *bson.M) (*CustomerWatchLists, error) {
 	defer session.Close()
 
 	customerWatchLists := &CustomerWatchLists{}
-	err := collection.Find(query).One(customerWatchLists)
+	err := collection.Find(query).Sort("-_id").One(customerWatchLists)
 	if err != nil {
 		return nil, err
 	}
