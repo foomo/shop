@@ -10,12 +10,10 @@ import (
 )
 
 type CustomerWatchLists struct {
-	BsonId     bson.ObjectId `bson:"_id,omitempty"`
-	AddrKey    string        `bson:"addrkey"`
-	CustomerID string        `bson:"customerID"`
-	SessionID  string        `bson:"sessionID"`
-	Email      string        `bson:"email"`
-	Lists      []*WatchList  `bson:"lists"`
+	BsonId    bson.ObjectId `bson:"_id,omitempty"`
+	AddrKey   string        `bson:"addrkey"`
+	SessionID string        `bson:"sessionID"`
+	Lists     []*WatchList  `bson:"lists"`
 }
 
 type WatchList struct {
