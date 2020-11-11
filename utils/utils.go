@@ -2,48 +2,21 @@ package utils
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"os"
 	"reflect"
 	"runtime"
 	"strconv"
-	"strings"
 	"time"
 )
-
-const UTCOffsetSummer = time.Duration(2)
-const UTCOffsetWinter = time.Duration(1)
-
-var UTCOffset time.Duration = UTCOffsetSummer
 
 func GetTimeHHMMSS(t time.Time) string {
 	return t.Format("150405")
 }
 
 var CET, _ = time.LoadLocation("Europe/Zurich")
-
-// GetTimeForDay returns the time for 0:00 for the given date
-// GetTimeForDay returns the time for 0:00 for the given date
-func GetTimeForDay(date time.Time) (time.Time, error) {
-	year, month, day := date.Date()
-	pad := func(s string) string {
-		if len(s) < 2 {
-			return "0" + s
-		}
-		return s
-	}
-	// get time for same day 0:00
-	sameDay, err := GetTimeFromYYYYMMDD(strconv.Itoa(year) + pad(strconv.Itoa(int(month))) + pad(strconv.Itoa(day)))
-	if err != nil {
-		return time.Time{}, err
-	}
-
-	sameDay = sameDay
-
-	return sameDay, nil
-
-}
 
 func TimeIsOnSameDay(date time.Time, refDate time.Time) (bool, error) {
 	// get time for reference date 0:00
@@ -104,29 +77,60 @@ func GetFormattedTimeShort(t time.Time) string {
 	return t.Format("Mon Jan 2 2006 150405")
 }
 
+// GetTimeForDay returns the time for 0:00 for the given date
+func GetTimeForDay(date time.Time) (time.Time, error) {
+	year, month, day := date.Date()
+	return time.Date(year, month, day, 0, 0, 0, 0, CET), nil
+}
+
 func GetTimeFromYYYYMMDD(date string) (time.Time, error) {
-	t, err := time.Parse("20060102", date)
+	if len(date) != 8 {
+		return time.Time{}, errors.New("date string has unexpected length")
+	}
+
+	yearStr := date[0:4]
+	monthStr := date[4:6]
+	dayStr := date[6:8]
+
+	year, err := strconv.Atoi(yearStr)
 	if err != nil {
 		return time.Time{}, err
 	}
-	if IsSummerTime(t.In(CET)) {
-		UTCOffset = UTCOffsetSummer
-	} else {
-		UTCOffset = UTCOffsetWinter
+	month, err := strconv.Atoi(monthStr)
+	if err != nil {
+		return time.Time{}, err
 	}
-	return t.In(CET).Add(-time.Hour * UTCOffset), nil
+	day, err := strconv.Atoi(dayStr)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	return time.Date(year, time.Month(month), day, 0, 0, 0, 0, CET), nil
+
 }
 func GetTimeFromYYY_MM_DD(date string) (time.Time, error) {
-	t, err := time.Parse("2006-01-02", date)
+	if len(date) != 10 {
+		return time.Time{}, errors.New("date string has unexpected length")
+	}
+
+	yearStr := date[0:4]
+	monthStr := date[5:7]
+	dayStr := date[8:10]
+
+	year, err := strconv.Atoi(yearStr)
 	if err != nil {
 		return time.Time{}, err
 	}
-	if IsSummerTime(t.In(CET)) {
-		UTCOffset = UTCOffsetSummer
-	} else {
-		UTCOffset = UTCOffsetWinter
+	month, err := strconv.Atoi(monthStr)
+	if err != nil {
+		return time.Time{}, err
 	}
-	return t.In(CET).Add(-time.Hour * UTCOffset), nil
+	day, err := strconv.Atoi(dayStr)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	return time.Date(year, time.Month(month), day, 0, 0, 0, 0, CET), nil
 }
 
 func TimeNow() time.Time {
@@ -191,12 +195,4 @@ func Round(input float64, decimals int) float64 {
 		return math.Ceil(input-0.5) / math.Pow10(decimals)
 	}
 	return math.Floor(input+0.5) / math.Pow10(decimals)
-}
-
-func IsSummerTime(ti time.Time) bool {
-	s := ti.String()
-	if strings.Contains(s, "+0200") {
-		return true
-	}
-	return false
 }
