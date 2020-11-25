@@ -23,22 +23,88 @@ var (
 
 	orderEnsuredIndexes = []mgo.Index{
 		{
-			Name: "id",
-			Key:  []string{"id"},
-			// Unique:     true,
-			// Background: true,
+			Name:       "id",
+			Key:        []string{"id"},
+			Unique:     false, // true
+			Background: false,
+		},
+		{
+			Name:       "cartid_1",
+			Key:        []string{"cartid"},
+			Unique:     false, // true
+			Background: false, // true
+		},
+		{
+			Name:       "confirmedat_1",
+			Key:        []string{"confirmedat"},
+			Unique:     false,
+			Background: false, // true
+		},
+		{
+			Name:       "state.key_1",
+			Key:        []string{"state.key"},
+			Unique:     false,
+			Background: false, // true
+		},
+		{
+			Name:       "AddrKey",
+			Key:        []string{"customerdata.addrkey"},
+			Unique:     false,
+			Background: true, // true
+		},
+		{
+			Name:       "customer_email",
+			Key:        []string{"customerdata.email"},
+			Unique:     false,
+			Background: false, // true
+		},
+		{
+			Name:       "site",
+			Key:        []string{"site"},
+			Unique:     false,
+			Background: false, // true
+		},
+		{
+			Name:       "state.key_1_confirmedat_1",
+			Key:        []string{"state.key", "confirmedat"},
+			Unique:     false,
+			Background: false, // true
+		},
+		{
+			Name:       "state.key_1_confirmedat_1",
+			Key:        []string{"state.key", "confirmedat"},
+			Unique:     false,
+			Background: false, // true
 		},
 		{
 			Name:       "ReservationsQueryIndex",
 			Key:        []string{"confirmedat", "processing.type", "custom.storeid"},
 			Unique:     false,
-			Background: true,
+			Background: false, // true
 		},
 		{
-			Name:       "AddrKey",
-			Key:        []string{"customerdata." + KeyAddrKey},
+			Name:       "processing.type_1_transmittedasreservationat_1_state.key_1",
+			Key:        []string{"processing.type", "transmittedasreservationat", "state.key"},
 			Unique:     false,
-			Background: true,
+			Background: false, // true
+		},
+		{
+			Name:       "positions.itemid_1_state.key_1_confirmedat_1",
+			Key:        []string{"positions.itemid", "state.key", "confirmedat"},
+			Unique:     false,
+			Background: false, // true
+		},
+		{
+			Name:       "processing",
+			Key:        []string{"processing.type", "processing.paymentprocessor", "processing.logisticprocess"},
+			Unique:     false,
+			Background: false, // true
+		},
+		{
+			Name:       "processing_fraud",
+			Key:        []string{"processing.fraudinvestigationstate"},
+			Unique:     false,
+			Background: false, // true
 		},
 	}
 )
