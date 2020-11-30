@@ -58,10 +58,7 @@ func TestTimeCompare(t *testing.T) {
 }
 
 func TestTimeSameDay(t *testing.T) {
-	today, err := GetTimeForDay(time.Now())
-	if err != nil {
-		t.Fatal(err)
-	}
+	today := GetTimeForDay(time.Now())
 
 	isOnSameDay, err := TimeIsOnSameDay(time.Now(), today)
 	if err != nil {

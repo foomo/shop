@@ -20,10 +20,8 @@ var CET, _ = time.LoadLocation("Europe/Zurich")
 
 func TimeIsOnSameDay(date time.Time, refDate time.Time) (bool, error) {
 	// get time for reference date 0:00
-	sameDay, err := GetTimeForDay(refDate)
-	if err != nil {
-		return false, err
-	}
+	sameDay := GetTimeForDay(refDate)
+
 	// get time for next day 0:00
 	nextDay := sameDay.Add(time.Hour * 24)
 
@@ -78,9 +76,9 @@ func GetFormattedTimeShort(t time.Time) string {
 }
 
 // GetTimeForDay returns the time for 0:00 for the given date
-func GetTimeForDay(date time.Time) (time.Time, error) {
+func GetTimeForDay(date time.Time) time.Time {
 	year, month, day := date.Date()
-	return time.Date(year, month, day, 0, 0, 0, 0, CET), nil
+	return time.Date(year, month, day, 0, 0, 0, 0, CET)
 }
 
 func GetTimeFromYYYYMMDD(date string) (time.Time, error) {
