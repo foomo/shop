@@ -40,6 +40,11 @@ const (
 	LogisticProcessClickAndCollect LogisticProcess = "LogisticProcessClickAndCollect"
 	LogisticProcessClickAndReserve LogisticProcess = "LogisticProcessClickAndReserve"
 
+	FraudInvestigationStateNone     FraudInvestigationState = "none"
+	FraudInvestigationStateOnHold   FraudInvestigationState = "onHold"
+	FraudInvestigationStateApproved FraudInvestigationState = "approved"
+	FraudInvestigationStateRejected FraudInvestigationState = "rejected"
+
 	KeyAddrKey = "addrkey"
 )
 
@@ -56,11 +61,15 @@ type ProcessingType string
 type PaymentProcessor string
 type LogisticProcess string
 
-type Processing struct {
-	Type             ProcessingType
-	PaymentProcessor PaymentProcessor
-	LogisticProcess  LogisticProcess
+type FraudInvestigationState string
 
+type Processing struct {
+	Type                    ProcessingType
+	PaymentProcessor        PaymentProcessor
+	LogisticProcess         LogisticProcess
+	FraudInvestigationState FraudInvestigationState
+
+	// Does not have effect despite being explicetly considered in respective processing job!
 	PausedUntil       time.Time // Order will not be further processed before specified time. If time.Zero() is set, order will be processed.
 	RequiresManualFix bool
 	Note              string
@@ -69,26 +78,29 @@ type Processing struct {
 // Order of item
 // create revisions
 type Order struct {
-	BsonId                     bson.ObjectId `bson:"_id,omitempty"`
-	CartId                     string        // unique cartId. This is the initial id when the cart is created
-	Id                         string        // unique orderId. This is set when the order is confirmed and sent
-	Site                       string
-	ShopID                     string
-	Version                    *version.Version
-	referenceVersion           int  // Version of final order as it was submitted by customer
-	unlinkDB                   bool // if true, changes to Customer are not stored in database
-	Flags                      *Flags
-	State                      *state.State
-	Processing                 *Processing
-	CustomerData               *CustomerData
-	CreatedAt                  time.Time
-	ConfirmedAt                time.Time
-	TransmittedAsReservationAt time.Time // before TransmittedAt for Reservations
-	TransmittedAt              time.Time
-	LastModifiedAt             time.Time
-	CompletedAt                time.Time
-	ATPAt                      time.Time
-	Positions                  []*Position
+	BsonId                                    bson.ObjectId `bson:"_id,omitempty"`
+	CartId                                    string        // unique cartId. This is the initial id when the cart is created
+	Id                                        string        // unique orderId. This is set when the order is confirmed and sent
+	Site                                      string
+	ShopID                                    string
+	Version                                   *version.Version
+	referenceVersion                          int  // Version of final order as it was submitted by customer
+	unlinkDB                                  bool // if true, changes to Customer are not stored in database
+	Flags                                     *Flags
+	State                                     *state.State
+	Processing                                *Processing
+	CustomerData                              *CustomerData
+	CreatedAt                                 time.Time
+	ConfirmedAt                               time.Time
+	TransmittedAsReservationAt                time.Time // before TransmittedAt for Reservations
+	TransmittedAt                             time.Time
+	TransmittedAsFraudInvestigationApprovedAt time.Time // optional second transmisson after fraud check (after TransmittedAt)
+	TransmittedAsFraudInvestigationRejectedAt time.Time // optional second transmisson after fraud check (after TransmittedAt)
+
+	LastModifiedAt time.Time
+	CompletedAt    time.Time
+	ATPAt          time.Time
+	Positions      []*Position
 	//	Payment          *payment.Payment
 	//	PriceInfo        *OrderPriceInfo
 	//	Shipping         *shipping.ShippingProperties
