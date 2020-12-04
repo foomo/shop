@@ -11,6 +11,8 @@ import (
 	"github.com/foomo/shop/version"
 )
 
+var ErrorInconsistentStateTransition = errors.New("state transition now allowed")
+
 //------------------------------------------------------------------
 // ~ SIMPLE GETTERS ON ORDER
 //------------------------------------------------------------------
@@ -201,4 +203,25 @@ func (order *Order) SetForceUpsert(force bool) {
 	}
 	order.Flags.forceUpsert = force
 	return
+}
+
+func (order *Order) SetFraudInvestigationState(state FraudInvestigationState) error {
+	if order.Processing == nil {
+		return errors.New("Processing is nil")
+	}
+	currentState := order.Processing.FraudInvestigationState
+	if currentState == state {
+		return nil // state is already set
+	}
+
+	// avoid overriding of "final" states approved and rejected
+	if currentState == FraudInvestigationStateApproved || currentState == FraudInvestigationStateRejected {
+		return ErrorInconsistentStateTransition
+	}
+
+	order.Processing.FraudInvestigationState = state
+	return order.Upsert()
+}
+func (order *Order) IsFraudInvestigationState(state FraudInvestigationState) bool {
+	return order.Processing != nil && order.Processing.FraudInvestigationState == state
 }
