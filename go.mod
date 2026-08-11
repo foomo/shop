@@ -18,7 +18,7 @@ require (
 	github.com/teris-io/shortid v0.0.0-20171029131806-771a37caa5cf // indirect
 	github.com/ventu-io/go-shortid v0.0.0-20171029131806-771a37caa5cf
 	golang.org/x/crypto v0.0.0-20200429183012-4b2356b1ed79
-	golang.org/x/sys v0.0.0-20200501145240-bc7a7d42d5c3 // indirect
+	golang.org/x/sys v0.0.0-20220412211240-33da011f77ad // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22
 	gopkg.in/yaml.v2 v2.2.8 // indirect
